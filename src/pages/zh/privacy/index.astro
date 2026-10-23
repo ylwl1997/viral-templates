@@ -1,0 +1,20 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { SITE } from '../../../lib/site';
+const lang = 'zh' as const;
+---
+<Layout
+  title={`隐私政策 — ${SITE.name}`}
+  description="摘要页；完整以英文为准。"
+  canonicalPath="/privacy/"
+  lang={lang}
+>
+  <div class="page-head wrap">
+    <h1>隐私政策</h1>
+    <p>摘要页；完整以英文为准。</p>
+  </div>
+
+  <article class="section wrap prose">
+    <p>完整政策以 <a href="/privacy/">英文 Privacy</a> 为准。摘要：上传图约 30 天删除；可选 GA4 / Adsterra；支付经 Waffo；生成经 fal；P0 不需要 R2。</p>
+  </article>
+</Layout>

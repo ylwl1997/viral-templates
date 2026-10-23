@@ -1,0 +1,64 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { SITE, TEMPLATES, pathFor } from '../../lib/site';
+const lang = 'en' as const;
+---
+<Layout
+  title={`Terms of Service — ${SITE.name}`}
+  description="Terms: adult consent, no minors, credits/refunds, no Coldplay/Karol G/CapCut affiliation, no song license, ~30-day photos, ceiling-fan safety."
+  canonicalPath="/terms/"
+  lang={lang}
+>
+  <article class="section wrap prose">
+    <h1>Terms of Service</h1>
+    <p style="color:var(--muted)">Last updated: 2026-10-23</p>
+
+    <h2>1. Service</h2>
+    <p>
+      {SITE.name} provides a credits-based AI template wall that turns user-uploaded photos into short vertical videos
+      across multiple trends ({TEMPLATES.map((t) => t.nameEn).join(', ')}).
+      Features may be stubbed until environment keys (e.g. <code>FAL_*</code>, <code>WAFFO_*</code>) are configured.
+    </p>
+
+    <h2>2. Adult consent &amp; prohibited content</h2>
+    <ul>
+      <li>You may only upload photos of adults (18+) who consented (pets allowed where the Create UI states).</li>
+      <li>Minors are strictly prohibited.</li>
+      <li>No non-consensual deepfakes of real people.</li>
+      <li>You warrant you own or have rights to each image.</li>
+    </ul>
+
+    <h2>3. No affiliation / no song license / no concert footage</h2>
+    <p>
+      We are not affiliated with Coldplay, Karol G, CapCut, ByteDance, any record label, or any venue.
+      We do not grant or claim a license to any commercial song. Outputs are visual/motion remixes; audio is your responsibility.
+      Kiss Cam templates do <strong>not</strong> use real concert footage.
+    </p>
+
+    <h2>4. Ceiling Fan safety</h2>
+    <p>
+      The Ceiling Fan Transition template is an AI effect. You agree not to strap phones or other devices to real spinning fans
+      or otherwise create dangerous physical stunts in connection with the Service.
+    </p>
+
+    <h2>5. Credits, payments, refunds</h2>
+    <ul>
+      <li>Generates consume credits (default 1 credit per job).</li>
+      <li>Payments are processed via Waffo when configured; P0 may show a checkout stub.</li>
+      <li>If a paid generate fails due to our pipeline/provider error after debit, we refund that credit.</li>
+      <li>Successful renders are generally non-refundable in cash; unused credits remain available subject to these Terms.</li>
+    </ul>
+
+    <h2>6. Photos &amp; retention</h2>
+    <p>
+      Uploaded photos are retained approximately {SITE.photoRetentionDays} days for generation and abuse review, then deleted —
+      see <a href={pathFor(lang, '/privacy/')}>Privacy</a>.
+    </p>
+
+    <h2>7. Disclaimer</h2>
+    <p>Service is provided “as is.” AI outputs may be imperfect. You are responsible for how you publish results.</p>
+
+    <h2>8. Contact</h2>
+    <p>For legal notices, use the contact channel published by the site operator (GitHub owner <code>ylwl1997</code> / project issues).</p>
+  </article>
+</Layout>

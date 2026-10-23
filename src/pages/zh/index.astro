@@ -1,0 +1,48 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { SITE, TEMPLATES, pathFor } from '../../lib/site';
+const lang = 'zh' as const;
+---
+<Layout
+  title={`${SITE.name} — AI 视频模板墙`}
+  description="一词多站：Bby Wow、Coldplay Kiss Cam、Ceiling Fan Transition 三个爆款模板。成人同意；非官方 Coldplay/Karol G/CapCut。"
+  canonicalPath="/"
+  lang={lang}
+>
+  <section class="hero wrap">
+    <div class="eyebrow">多词一站 · 模板墙</div>
+    <h1>选趋势。<span class="grad">上传。生成。</span></h1>
+    <p class="lede">{SITE.taglineZh}。积分制工作室；FAL / Waffo 可先 stub。仅限成人同意照片。</p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="#templates">浏览模板</a>
+      <a class="btn btn-ghost" href={pathFor(lang, '/how-it-works/')}>如何使用</a>
+    </div>
+  </section>
+  <section class="section wrap" id="templates">
+    <h2>模板墙</h2>
+    <p class="sub">三个创作路径，照片数量正确（Kiss Cam 为 2 张）。</p>
+    <div class="template-wall">
+      {TEMPLATES.map((t) => (
+        <article class="template-card">
+          <div class={`template-preview ${t.accent}`}>
+            <span class="dur">9:16 · {t.durationZh}</span>
+            <strong style="text-align:center;font-size:0.9rem;">{t.nameZh}</strong>
+          </div>
+          <div class="template-body">
+            <span class:list={['badge', t.photos === 2 && 'photos-2']}>{t.badgeZh}</span>
+            <h3>{t.nameZh}</h3>
+            <p>{t.taglineZh}</p>
+            <div class="template-actions">
+              <a class="btn btn-primary btn-sm" href={pathFor(lang, t.createPath)}>去创作</a>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+  <section class="section wrap">
+    <div class="callout warn">
+      <strong>声明：</strong>非 Coldplay / Karol G / CapCut 官方。Kiss Cam 不含真实演唱会素材。吊扇模板为纯 AI——切勿把手机绑在风扇上。照片约 30 天删除。
+    </div>
+  </section>
+</Layout>

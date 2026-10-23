@@ -1,0 +1,27 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { SITE, BLOG_POSTS, pathFor } from '../../lib/site';
+const lang = 'en' as const;
+---
+<Layout
+  title={`Blog — ${SITE.name}`}
+  description="Guides on Bby Wow, Coldplay Kiss Cam, and Ceiling Fan Transition AI — how-tos and CapCut comparisons."
+  canonicalPath="/blog/"
+  lang={lang}
+>
+  <div class="page-head wrap">
+    <h1>Blog</h1>
+    <p>Thick posts covering the three trends, how-tos, and vs CapCut — with tables and dated sources.</p>
+  </div>
+  <section class="section wrap">
+    <div class="blog-list">
+      {BLOG_POSTS.map((p) => (
+        <a class="blog-item" href={pathFor(lang, `/blog/${p.slug}/`)}>
+          <div class="meta">{p.date} · ~{p.minutes} min read</div>
+          <h3>{p.titleEn}</h3>
+          <p>{p.descEn}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+</Layout>

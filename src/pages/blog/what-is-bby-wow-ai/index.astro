@@ -1,0 +1,73 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { SITE, pathFor } from '../../../lib/site';
+---
+<Layout
+  title="What is Bby Wow AI? — trend + 1-photo product"
+  description="Bby Wow / Dime Dime Baby trend explained: 1 photo → ~10s party-dance AI video, timeline, consent, vs CapCut (Oct 2026)."
+  canonicalPath="/blog/what-is-bby-wow-ai/"
+  ogType="article"
+>
+  <article class="section wrap prose">
+    <p class="meta">Published 2026-10-20 · Updated 2026-10-23 · ~9 min</p>
+    <h1>What is Bby Wow AI?</h1>
+    <p>
+      <strong>Bby Wow AI</strong> (also searched as “Dime Dime Baby” style clips) is a short-form video trend:
+      take <strong>one photo</strong> and turn it into an approximately <strong>10-second</strong> vertical party-dance motion clip.
+      On <a href={pathFor('en', '/')}>{SITE.name}</a> it is one card on the template wall, with Create at
+      <a href={pathFor('en', '/create/bby-wow/')}>/create/bby-wow/</a>.
+    </p>
+
+    <h2>Product shape (this site)</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Item</th><th>Spec (P0 target, Oct 2026)</th></tr></thead>
+        <tbody>
+          <tr><td>Input</td><td>1 user photo (JPG/PNG/WebP)</td></tr>
+          <tr><td>Output</td><td>~10s · 9:16 vertical</td></tr>
+          <tr><td>Credits</td><td>1 credit / generate · one-shot from ${SITE.pricing.oneShotUsd}</td></tr>
+          <tr><td>Music license</td><td><strong>None claimed</strong> — AI motion; add your own licensed audio</td></tr>
+          <tr><td>Affiliation</td><td>Not Karol G / CapCut / any label</td></tr>
+          <tr><td>Consent</td><td>Adult (18+) checkbox required; minors prohibited</td></tr>
+          <tr><td>Retention</td><td>~{SITE.photoRetentionDays} days then delete</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Trend timeline (sourced notes)</h2>
+    <ul>
+      <li><strong>2024–2025:</strong> Short-form apps popularized one-photo “dance” and “character move” AI templates; CapCut’s public template library remained the default DIY path for many creators (CapCut help / template docs — verify current library yourself).</li>
+      <li><strong>2025–2026:</strong> Search interest clustered around “Bby Wow” / “Dime Dime Baby” style party-dance remixes — users want upload → render without a full editor timeline.</li>
+      <li><strong>2026-10:</strong> This wall ships a dedicated Create path with fal stub + credits, separate from Kiss Cam (2 photos) and Ceiling Fan.</li>
+    </ul>
+    <p style="font-size:0.9rem;color:var(--muted)">
+      Numbers for CapCut free vs Pro tiers change often; treat any “free export” claims as <em>as of the date you check CapCut’s own pricing page</em>, not a permanent fact.
+    </p>
+
+    <h2>How it differs from a CapCut template</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Dimension</th><th>Bby Wow on Viral Templates</th><th>Typical CapCut template</th></tr></thead>
+        <tbody>
+          <tr><td>Workflow</td><td>Upload → consent → Generate</td><td>Replace slots / trim on timeline</td></tr>
+          <tr><td>Skill</td><td>Minimal</td><td>Low–medium editing</td></tr>
+          <tr><td>Song rights</td><td>Not included by us</td><td>CapCut library + CapCut ToS</td></tr>
+          <tr><td>Refund on AI fail</td><td>Credit refund on provider failure</td><td>N/A (local editor)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Checklist before you create</h2>
+    <ul class="checklist">
+      <li>Photo of an adult who consented (or you have clear rights).</li>
+      <li>Clear face or full body; avoid heavy occlusion.</li>
+      <li>You accept no song license is granted.</li>
+      <li>You will not upload minors.</li>
+    </ul>
+
+    <p style="margin-top:2rem">
+      <a class="btn btn-primary" href={pathFor('en', '/create/bby-wow/')}>Create Bby Wow</a>
+      <a class="btn btn-ghost" href={pathFor('en', '/blog/ceiling-fan-transition-vs-capcut/')} style="margin-left:0.5rem">Also: vs CapCut (Ceiling Fan)</a>
+    </p>
+  </article>
+</Layout>

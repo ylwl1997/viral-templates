@@ -1,0 +1,83 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { SITE, TEMPLATES, pathFor } from '../../lib/site';
+const lang = 'en' as const;
+---
+<Layout
+  title={`How it works — ${SITE.name}`}
+  description="How Viral Templates turns 1–2 adult-consent photos into short vertical AI videos across three trends."
+  canonicalPath="/how-it-works/"
+  lang={lang}
+>
+  <div class="page-head wrap">
+    <h1>How it works</h1>
+    <p>Pick a template on the wall → upload the required photos → consent → spend 1 credit → download when ready.</p>
+  </div>
+
+  <section class="section wrap">
+    <div class="steps">
+      <div class="step">
+        <h3>Choose a template</h3>
+        <p>Bby Wow, Kiss Cam (2 photos), or Ceiling Fan — each has its own Create path.</p>
+      </div>
+      <div class="step">
+        <h3>Upload + consent</h3>
+        <p>Adults only (18+). Pets OK on Kiss Cam. You must own rights / have permission.</p>
+      </div>
+      <div class="step">
+        <h3>Generate</h3>
+        <p>1 credit. fal.ai when <code>FAL_*</code> is set; otherwise Create demos a queued job.</p>
+      </div>
+      <div class="step">
+        <h3>Download &amp; share</h3>
+        <p>Vertical 9:16. Add your own licensed audio if needed — we claim no song license.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <h2>Per-template inputs</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Template</th><th>Photos</th><th>Target length</th><th>Special rules</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href={pathFor(lang, '/create/bby-wow/')}>Bby Wow AI</a></td>
+            <td>1</td>
+            <td>~10s</td>
+            <td>Not Karol G / CapCut official; no song license</td>
+          </tr>
+          <tr>
+            <td><a href={pathFor(lang, '/create/kiss-cam/')}>Coldplay Kiss Cam AI</a></td>
+            <td>2</td>
+            <td>~11–12s</td>
+            <td>No real concert footage; not Coldplay official</td>
+          </tr>
+          <tr>
+            <td><a href={pathFor(lang, '/create/ceiling-fan/')}>Ceiling Fan Transition AI</a></td>
+            <td>1</td>
+            <td>~12–15s</td>
+            <td>AI only — never strap a phone to a fan</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <h2>Checklist before you upload</h2>
+    <ul class="checklist">
+      <li>Subjects are adults (18+) who consented — or pets you own / have permission to depict.</li>
+      <li>No minors, no non-consensual deepfakes of real people.</li>
+      <li>You understand outputs are AI remixes, not official artist / CapCut products.</li>
+      <li>Photos are deleted from active storage after ~{SITE.photoRetentionDays} days (see Privacy).</li>
+      <li>For Ceiling Fan: you will not attempt a physical fan + phone stunt.</li>
+    </ul>
+    <p style="margin-top:1.5rem">
+      <a class="btn btn-primary" href={pathFor(lang, '/#templates')}>Browse templates</a>
+      <a class="btn btn-ghost" href={pathFor(lang, '/faq/')} style="margin-left:0.5rem">Read FAQ</a>
+    </p>
+  </section>
+</Layout>

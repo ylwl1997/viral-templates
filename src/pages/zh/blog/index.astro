@@ -1,0 +1,24 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { SITE } from '../../../lib/site';
+const lang = 'zh' as const;
+---
+<Layout
+  title={`博客 — ${SITE.name}`}
+  description="三篇英文厚文。"
+  canonicalPath="/blog/"
+  lang={lang}
+>
+  <div class="page-head wrap">
+    <h1>博客</h1>
+    <p>三篇英文厚文。</p>
+  </div>
+
+  <section class="section wrap">
+    <div class="blog-list">
+      <a class="blog-item" href="/blog/what-is-bby-wow-ai/"><h3>What is Bby Wow AI?</h3><p>英文全文</p></a>
+      <a class="blog-item" href="/blog/how-to-make-kiss-cam-from-two-photos/"><h3>Kiss Cam 两图教程</h3><p>英文全文</p></a>
+      <a class="blog-item" href="/blog/ceiling-fan-transition-vs-capcut/"><h3>吊扇 vs CapCut</h3><p>英文全文</p></a>
+    </div>
+  </section>
+</Layout>

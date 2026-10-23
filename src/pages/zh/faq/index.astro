@@ -1,0 +1,25 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { SITE } from '../../../lib/site';
+const lang = 'zh' as const;
+---
+<Layout
+  title={`常见问题 — ${SITE.name}`}
+  description="一词多站、版权、同意、退款、吊扇安全。"
+  canonicalPath="/faq/"
+  lang={lang}
+>
+  <div class="page-head wrap">
+    <h1>常见问题</h1>
+    <p>一词多站、版权、同意、退款、吊扇安全。</p>
+  </div>
+
+  <section class="section wrap faq">
+    <details open><summary>这是一个站还是三个站？</summary><p><strong>一个站</strong>（多词一站）。旧三个 P0 站仍可访问但不作主推。</p></details>
+    <details><summary>Kiss Cam 为什么要两张照片？</summary><p>大屏梗需要两个主体。</p></details>
+    <details><summary>与 Coldplay / CapCut 有关吗？</summary><p>无关。粉丝向 AI 混剪；无真实演唱会素材。</p></details>
+    <details><summary>吊扇能绑手机吗？</summary><p><strong>不能。</strong>纯 AI 转场。</p></details>
+    <details><summary>照片保留多久？</summary><p>约 30 天删除。</p></details>
+    <p><a href="/faq/">完整英文 FAQ</a></p>
+  </section>
+</Layout>

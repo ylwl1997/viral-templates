@@ -1,0 +1,25 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { SITE } from '../../../lib/site';
+const lang = 'zh' as const;
+---
+<Layout
+  title={`如何使用 — ${SITE.name}`}
+  description="选模板 → 上传 → 同意 → 生成。"
+  canonicalPath="/how-it-works/"
+  lang={lang}
+>
+  <div class="page-head wrap">
+    <h1>如何使用</h1>
+    <p>选模板 → 上传 → 同意 → 生成。</p>
+  </div>
+
+  <section class="section wrap">
+    <div class="steps">
+      <div class="step"><h3>选模板</h3><p>Bby Wow / Kiss Cam（2 张）/ Ceiling Fan。</p></div>
+      <div class="step"><h3>上传并同意</h3><p>仅限成人；禁止未成年人。</p></div>
+      <div class="step"><h3>生成</h3><p>配置 FAL_* 后真实渲染。</p></div>
+      <div class="step"><h3>下载</h3><p>竖屏 9:16；音频版权自理。</p></div>
+    </div>
+  </section>
+</Layout>

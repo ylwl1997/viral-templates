@@ -1,0 +1,50 @@
+---
+import Layout from '../../../../layouts/Layout.astro';
+import { SITE, pathFor, getTemplate } from '../../../../lib/site';
+const lang = 'zh' as const;
+const t = getTemplate('kiss-cam');
+---
+<Layout
+  title={`创作 ${t.nameZh} — ${SITE.name}`}
+  description="上传两张成人同意照片，生成球场大屏风 AI 短片。"
+  canonicalPath="/create/kiss-cam/"
+  lang={lang}
+>
+  <div class="page-head wrap">
+    <h1>创作 — {t.nameZh}</h1>
+    <p>2 张照片 · 约 11–12 秒 · 无演唱会素材</p>
+  </div>
+  <section class="section wrap">
+    <div class="callout warn"><strong>成人同意 · 无演唱会素材。</strong>非 Coldplay / CapCut 官方。</div>
+    <div class="studio">
+      <div class="card" style="padding:1.35rem">
+        <h2 style="margin-top:0;font-size:1.15rem;">上传 2 张照片</h2>
+        <div class="upload-slots">
+          <label class="slot" id="slot-a"><input type="file" accept="image/jpeg,image/png,image/webp" id="file-a" /><span class="slot-label">照片 A</span></label>
+          <label class="slot" id="slot-b"><input type="file" accept="image/jpeg,image/png,image/webp" id="file-b" /><span class="slot-label">照片 B</span></label>
+        </div>
+        <label style="display:flex;gap:0.5rem;align-items:flex-start;margin:0.5rem 0 1rem;font-size:0.92rem;color:var(--secondary)">
+          <input type="checkbox" id="consent" style="margin-top:0.25rem" />
+          <span>我确认主体为成人（18+）或宠物，并已获授权；此为 AI 混剪，非官方演唱会素材。</span>
+        </label>
+        <button type="button" class="btn btn-primary" id="generate-btn" style="width:100%;" disabled>生成 · 1 积分</button>
+        <div class="status-box cfg" id="status">请选择两张照片并勾选同意。</div>
+      </div>
+      <aside class="card">
+        <h3>说明</h3>
+        <p>FAL / Waffo 为 stub。</p>
+        <p><a href={pathFor(lang, '/')}>← 模板墙</a></p>
+      </aside>
+    </div>
+  </section>
+  <script is:inline>
+    (function(){
+      var a=document.getElementById('file-a'),b=document.getElementById('file-b'),c=document.getElementById('consent'),btn=document.getElementById('generate-btn'),st=document.getElementById('status');
+      var ha=false,hb=false;
+      function ref(){btn.disabled=!(ha&&hb&&c.checked);}
+      function bind(inp,slot,w){inp.addEventListener('change',function(){var f=inp.files&&inp.files[0];if(!f)return;if(w==='a')ha=true;else hb=true;slot.style.backgroundImage='url('+URL.createObjectURL(f)+')';slot.classList.add('has-file');ref();});}
+      bind(a,document.getElementById('slot-a'),'a');bind(b,document.getElementById('slot-b'),'b');c.addEventListener('change',ref);
+      btn.addEventListener('click',function(){st.className='status-box ok';st.textContent='演示完成。配置 FAL_* 以真实渲染。';});
+    })();
+  </script>
+</Layout>

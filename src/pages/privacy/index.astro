@@ -1,0 +1,54 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { SITE, pathFor } from '../../lib/site';
+const lang = 'en' as const;
+---
+<Layout
+  title={`Privacy Policy — ${SITE.name}`}
+  description="Privacy: ~30-day photo deletion, adult consent, fal/Waffo/GA4/Adsterra processors, no R2 required for P0."
+  canonicalPath="/privacy/"
+  lang={lang}
+>
+  <article class="section wrap prose">
+    <h1>Privacy Policy</h1>
+    <p style="color:var(--muted)">Last updated: 2026-10-23</p>
+
+    <h2>What we collect</h2>
+    <ul>
+      <li>Photos you upload for generation.</li>
+      <li>Account / order metadata from Waffo when payments are enabled (<code>WAFFO_*</code>).</li>
+      <li>Basic analytics if GA4 is configured (<code>PUBLIC_GA4_MEASUREMENT_ID</code>).</li>
+      <li>Optional ad scripts (Adsterra Social Bar) when a zone id is pasted — placeholder until configured.</li>
+    </ul>
+
+    <h2>Photo retention (~{SITE.photoRetentionDays} days)</h2>
+    <p>
+      Uploaded images are kept only as long as needed to render, debug failures, and handle abuse reports —
+      targeted retention about <strong>{SITE.photoRetentionDays} days</strong>, then deletion from active storage.
+      Do not upload government IDs or sensitive documents.
+    </p>
+
+    <h2>Adult consent</h2>
+    <p>Use of Create flows requires confirming adult consent. We may remove content that appears to violate this rule.</p>
+
+    <h2>Processors</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Purpose</th><th>Provider (when configured)</th><th>Env keys</th></tr></thead>
+        <tbody>
+          <tr><td>Image-to-video</td><td>fal.ai</td><td><code>FAL_KEY</code> / <code>FAL_API_KEY</code>, <code>FAL_MODEL</code></td></tr>
+          <tr><td>Payments</td><td>Waffo</td><td><code>WAFFO_API_KEY</code>, <code>WAFFO_MERCHANT_ID</code>, <code>WAFFO_WEBHOOK_SECRET</code>, <code>WAFFO_CHECKOUT_BASE</code></td></tr>
+          <tr><td>Analytics</td><td>Google Analytics 4</td><td><code>PUBLIC_GA4_MEASUREMENT_ID</code></td></tr>
+          <tr><td>Ads</td><td>Adsterra Social Bar</td><td><code>PUBLIC_ADSTERRA_SOCIAL_BAR_ZONE</code></td></tr>
+          <tr><td>Hosting</td><td>Cloudflare Pages</td><td>Cloudflare account token</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>No R2 requirement</h2>
+    <p>P0 marketing and Create shell do not require Cloudflare R2. Generated URLs may be direct provider links until object storage is optionally added later.</p>
+
+    <h2>Your choices</h2>
+    <p>Request deletion of uploads via the operator contact. See also <a href={pathFor(lang, '/terms/')}>Terms</a>.</p>
+  </article>
+</Layout>

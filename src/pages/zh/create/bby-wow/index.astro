@@ -1,0 +1,46 @@
+---
+import Layout from '../../../../layouts/Layout.astro';
+import { SITE, pathFor, getTemplate } from '../../../../lib/site';
+const lang = 'zh' as const;
+const t = getTemplate('bby-wow');
+---
+<Layout
+  title={`创作 ${t.nameZh} — ${SITE.name}`}
+  description="1 张照片 · 约 10 秒派对舞"
+  canonicalPath="/create/bby-wow/"
+  lang={lang}
+>
+  <div class="page-head wrap">
+    <h1>创作 — {t.nameZh}</h1>
+    <p>1 张照片 · 约 10 秒派对舞</p>
+  </div>
+  <section class="section wrap">
+    <div class="callout warn"><strong>仅限成人同意照片。</strong>禁止未成年人。</div>
+    <div class="studio">
+      <div>
+        <label class="upload-zone" for="photo-input">
+          <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp" />
+          <div id="ph"><strong>点击或拖拽上传</strong><div class="hint">JPG / PNG / WebP</div></div>
+          <img id="preview" class="preview-img" alt="" hidden />
+        </label>
+        <label style="display:flex;gap:0.5rem;align-items:flex-start;margin-top:1rem;font-size:0.92rem;color:var(--secondary)">
+          <input id="consent" type="checkbox" style="margin-top:0.25rem" />
+          <span>我确认照片主体为已同意的成人（18+），我拥有使用权。</span>
+        </label>
+      </div>
+      <div class="card">
+        <h3>生成</h3>
+        <button class="btn btn-primary" id="generate-btn" type="button" style="width:100%">生成视频</button>
+        <div class="status-box cfg" id="status">等待照片与同意…</div>
+        <p style="margin-top:1rem;font-size:0.88rem;"><a href={pathFor(lang, '/')}>← 模板墙</a></p>
+      </div>
+    </div>
+  </section>
+  <script is:inline>
+    (function(){
+      var input=document.getElementById('photo-input'),preview=document.getElementById('preview'),ph=document.getElementById('ph'),consent=document.getElementById('consent'),btn=document.getElementById('generate-btn'),st=document.getElementById('status'),has=false;
+      input.addEventListener('change',function(){var f=input.files&&input.files[0];if(!f)return;has=true;preview.src=URL.createObjectURL(f);preview.hidden=false;ph.hidden=true;});
+      btn.addEventListener('click',function(){if(!has){st.className='status-box err';st.textContent='请先上传照片';return;}if(!consent.checked){st.className='status-box err';st.textContent='请勾选同意';return;}st.className='status-box ok';st.textContent='演示完成。配置 FAL_* 以真实渲染。';});
+    })();
+  </script>
+</Layout>

@@ -1,0 +1,90 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { SITE, TEMPLATES, pathFor } from '../../lib/site';
+const lang = 'en' as const;
+const { oneShotUsd, kissCamOneShotUsd, packs, creditPerGenerate } = SITE.pricing;
+---
+<Layout
+  title={`Pricing — ${SITE.name}`}
+  description="Credits and one-shot pricing for Bby Wow, Kiss Cam, and Ceiling Fan templates. Waffo checkout stub until WAFFO_* is configured."
+  canonicalPath="/pricing/"
+  lang={lang}
+>
+  <div class="page-head wrap">
+    <h1>Pricing</h1>
+    <p>Same credit wallet across all templates. {creditPerGenerate} credit per generate. Waffo checkout is stubbed until keys are set.</p>
+  </div>
+
+  <section class="section wrap">
+    <div class="callout info">
+      <strong>Payment stub.</strong> Buttons below open a demo notice. Configure
+      <code>WAFFO_API_KEY</code>, <code>WAFFO_MERCHANT_ID</code>, <code>WAFFO_WEBHOOK_SECRET</code>, <code>WAFFO_CHECKOUT_BASE</code>
+      on Cloudflare Pages for live checkout.
+    </div>
+
+    <h2>One-shot</h2>
+    <p class="sub">Pay once for a single generate without buying a pack.</p>
+    <div class="pricing-grid" style="margin-bottom:2rem">
+      <div class="price-card">
+        <h3>Bby Wow / Ceiling Fan</h3>
+        <div class="amount">${oneShotUsd}</div>
+        <div class="meta">1 credit · 1 photo templates</div>
+        <button class="btn btn-primary btn-sm" type="button" style="margin-top:1rem;width:100%" id="buy-oneshot">Buy one-shot (stub)</button>
+      </div>
+      <div class="price-card">
+        <h3>Kiss Cam</h3>
+        <div class="amount">${kissCamOneShotUsd}</div>
+        <div class="meta">1 credit · 2 photo template</div>
+        <button class="btn btn-primary btn-sm" type="button" style="margin-top:1rem;width:100%" id="buy-kiss">Buy one-shot (stub)</button>
+      </div>
+    </div>
+
+    <h2>Credit packs</h2>
+    <p class="sub">Best value for repeating across the template wall.</p>
+    <div class="pricing-grid">
+      {packs.map((p) => (
+        <div class:list={['price-card', 'popular' in p && p.popular && 'popular']}>
+          {'popular' in p && p.popular && <span class="badge" style="margin-bottom:0.5rem">Popular</span>}
+          <h3>{p.label}</h3>
+          <div class="amount">${p.usd}</div>
+          <div class="meta">{p.credits} credits · ~${(p.usd / p.credits).toFixed(2)} / clip</div>
+          <button class="btn btn-ghost btn-sm buy-pack" type="button" style="margin-top:1rem;width:100%" data-pack={p.label}>Buy {p.label} (stub)</button>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <h2>What credits unlock</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Template</th><th>Photos</th><th>Length</th><th>Credits</th><th>Create</th></tr>
+        </thead>
+        <tbody>
+          {TEMPLATES.map((t) => (
+            <tr>
+              <td><strong>{t.nameEn}</strong></td>
+              <td>{t.photos}</td>
+              <td>{t.durationEn}</td>
+              <td>1</td>
+              <td><a href={pathFor(lang, t.createPath)}>Open</a></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p style="color:var(--muted);font-size:0.9rem">Failed provider jobs refund the debited credit — see <a href={pathFor(lang, '/terms/')}>Terms</a>.</p>
+  </section>
+
+  <script is:inline>
+    function stub() {
+      alert('Waffo checkout stub — set WAFFO_* env vars on Cloudflare Pages for live payments.');
+    }
+    document.getElementById('buy-oneshot')?.addEventListener('click', stub);
+    document.getElementById('buy-kiss')?.addEventListener('click', stub);
+    document.querySelectorAll('.buy-pack').forEach(function (el) {
+      el.addEventListener('click', stub);
+    });
+  </script>
+</Layout>

@@ -1,0 +1,90 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { SITE, TEMPLATES, BLOG_POSTS, pathFor } from '../lib/site';
+const lang = 'en' as const;
+---
+<Layout
+  title={`${SITE.name} — AI video template wall`}
+  description="One site, three viral AI video templates: Bby Wow (1 photo party dance), Coldplay Kiss Cam (2 photos), Ceiling Fan Transition (1 photo outfit change). Adult consent only."
+  canonicalPath="/"
+  lang={lang}
+>
+  <section class="hero wrap">
+    <div class="eyebrow">多词一站 · template wall</div>
+    <h1>Pick a trend. <span class="grad">Upload. Generate.</span></h1>
+    <p class="lede">
+      {SITE.taglineEn}. Credits-based studio with Waffo + fal stubs — Create is demoable without API keys.
+      Adult consent required; not official Coldplay, Karol G, or CapCut.
+    </p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="#templates">Browse templates</a>
+      <a class="btn btn-ghost" href={pathFor(lang, '/how-it-works/')}>How it works</a>
+    </div>
+  </section>
+
+  <section class="section wrap" id="templates">
+    <h2>Template wall</h2>
+    <p class="sub">Three create paths with the correct photo count. Same credits wallet across templates.</p>
+    <div class="template-wall">
+      {TEMPLATES.map((t) => (
+        <article class="template-card">
+          <div class={`template-preview ${t.accent}`}>
+            <span class="dur">9:16 · {t.durationEn}</span>
+            <strong style="text-align:center;font-size:0.9rem;">{t.nameEn}</strong>
+          </div>
+          <div class="template-body">
+            <div>
+              <span class:list={['badge', t.photos === 2 && 'photos-2']}>{t.badgeEn}</span>
+            </div>
+            <h3>{t.nameEn}</h3>
+            <div class="alias">{t.alias}</div>
+            <p>{t.taglineEn}</p>
+            <div class="template-actions">
+              <a class="btn btn-primary btn-sm" href={pathFor(lang, t.createPath)}>Create</a>
+              <a class="btn btn-ghost btn-sm" href={pathFor(lang, '/faq/')}>FAQ</a>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <h2>Why one wall?</h2>
+    <div class="card-grid">
+      <div class="card">
+        <h3>Correct photo UI</h3>
+        <p>Kiss Cam needs <strong>2 photos</strong>; Bby Wow and Ceiling Fan need <strong>1</strong>. Each Create path enforces that.</p>
+      </div>
+      <div class="card">
+        <h3>Compliance built-in</h3>
+        <p>Adult consent checkbox, no minors, no real concert footage, ceiling-fan safety (never strap a phone to a fan), ~30-day photo delete.</p>
+      </div>
+      <div class="card">
+        <h3>Demo without keys</h3>
+        <p>fal generate + Waffo checkout are stubbed. Wire <code>FAL_*</code> / <code>WAFFO_*</code> in Pages env when ready.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <h2>From the blog</h2>
+    <p class="sub">Thick guides covering the three trends, how-tos, and CapCut comparisons.</p>
+    <div class="blog-list">
+      {BLOG_POSTS.map((p) => (
+        <a class="blog-item" href={pathFor(lang, `/blog/${p.slug}/`)}>
+          <div class="meta">{p.date} · ~{p.minutes} min</div>
+          <h3>{p.titleEn}</h3>
+          <p>{p.descEn}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <div class="callout warn">
+      <strong>Not affiliated.</strong> Independent fan-made AI remix tools. Not official Coldplay, Karol G, CapCut, ByteDance, or any label/venue.
+      Kiss Cam does not use real concert footage. Ceiling Fan Transition is pure AI — do not attach phones to spinning fans.
+    </div>
+  </section>
+</Layout>

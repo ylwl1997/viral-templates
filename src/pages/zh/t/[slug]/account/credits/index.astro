@@ -1,0 +1,73 @@
+---
+import AccountShell from '../../../../../../components/account/AccountShell.astro';
+import { SITE } from '../../../../../../lib/site';
+import { TEMPLATES, type Template } from '../../../../../../lib/templates';
+import { MOCK_CREDIT_BALANCE, MOCK_LEDGER } from '../../../../../../lib/account-mock';
+
+export function getStaticPaths() {
+  return TEMPLATES.map((template) => ({
+    params: { slug: template.slug },
+    props: { template },
+  }));
+}
+
+interface Props { template: Template }
+const { template: t } = Astro.props;
+const lang = 'zh' as const;
+---
+<AccountShell
+  lang={lang}
+  template={t}
+  active="credits"
+  title={`积分 · ${t.displayNameZh}`}
+  description={`${t.displayNameZh} 积分余额与流水（P0 为演示数据）。`}
+>
+  <header class="account-page-head">
+    <h1>积分</h1>
+    <p>余额仅为演示。充值与扣费未连接结账。</p>
+  </header>
+
+  <div class="card account-stat" style="margin-bottom:1.25rem">
+    <p class="account-stat-label">当前余额</p>
+    <p class="account-stat-value">{MOCK_CREDIT_BALANCE}</p>
+    <p class="account-stat-meta"><span class="badge">演示余额</span> · 计划每次生成 {SITE.pricing.creditPerGenerate} 积分</p>
+  </div>
+
+  <section class="account-block">
+    <div class="account-block-head">
+      <h2>流水</h2>
+    </div>
+    <ul class="ledger-list">
+      {MOCK_LEDGER.map((row) => (
+        <li class="ledger-row card">
+          <div>
+            <strong class:list={[row.delta > 0 ? 'delta-pos' : 'delta-neg']}>
+              {row.delta > 0 ? `+${row.delta}` : row.delta}
+            </strong>
+            <span>{row.label_zh}</span>
+          </div>
+          <time datetime={row.at}>{row.at}</time>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="account-block">
+    <div class="account-block-head">
+      <h2>充值</h2>
+    </div>
+    <div class="card callout info">
+      <strong>占位 — 结账未连接。</strong>
+      {' '}套餐（{SITE.pricing.packs.map((p) => `${p.label} ${p.credits} 积分 / $${p.usd}`).join(' · ')}）
+      稍后接入支付。本页不会产生任何扣款。
+    </div>
+    <div class="pack-row">
+      {SITE.pricing.packs.map((p) => (
+        <button type="button" class="btn btn-ghost pack-btn" disabled aria-disabled="true">
+          {p.label} · {p.credits} 积分 · ${p.usd}
+          {p.popular ? ' · 热门' : ''}
+        </button>
+      ))}
+    </div>
+  </section>
+</AccountShell>

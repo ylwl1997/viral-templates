@@ -39,10 +39,14 @@ export const SITE = {
 export type Lang = 'en' | 'zh';
 
 /** Internal path helper for template shells (`/t/…` or `/zh/t/…`). Not shown in customer copy. */
-export function keywordPath(lang: Lang, slug: string, sub: '' | 'create' = ''): string {
+export function keywordPath(
+  lang: Lang,
+  slug: string,
+  sub: '' | 'create' | 'account' | 'account/sign-in' | 'account/creations' | 'account/credits' | 'account/settings' = '',
+): string {
   const base = lang === 'zh' ? `/zh/t/${slug}` : `/t/${slug}`;
-  if (sub === 'create') return `${base}/create/`;
-  return `${base}/`;
+  if (!sub) return `${base}/`;
+  return `${base}/${sub}/`;
 }
 
 /** Locale-neutral shared path → localized href. */

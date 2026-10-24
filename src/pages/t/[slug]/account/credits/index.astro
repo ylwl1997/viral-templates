@@ -1,0 +1,73 @@
+---
+import AccountShell from '../../../../../components/account/AccountShell.astro';
+import { SITE } from '../../../../../lib/site';
+import { TEMPLATES, type Template } from '../../../../../lib/templates';
+import { MOCK_CREDIT_BALANCE, MOCK_LEDGER } from '../../../../../lib/account-mock';
+
+export function getStaticPaths() {
+  return TEMPLATES.map((template) => ({
+    params: { slug: template.slug },
+    props: { template },
+  }));
+}
+
+interface Props { template: Template }
+const { template: t } = Astro.props;
+const lang = 'en' as const;
+---
+<AccountShell
+  lang={lang}
+  template={t}
+  active="credits"
+  title={`Credits · ${t.displayName}`}
+  description={`Credit balance and ledger for ${t.displayName} (demo data in P0).`}
+>
+  <header class="account-page-head">
+    <h1>Credits</h1>
+    <p>Balance is demo-only. Top-up and debit are not connected to checkout.</p>
+  </header>
+
+  <div class="card account-stat" style="margin-bottom:1.25rem">
+    <p class="account-stat-label">Current balance</p>
+    <p class="account-stat-value">{MOCK_CREDIT_BALANCE}</p>
+    <p class="account-stat-meta"><span class="badge">demo balance</span> · {SITE.pricing.creditPerGenerate} credit / generate (planned)</p>
+  </div>
+
+  <section class="account-block">
+    <div class="account-block-head">
+      <h2>Ledger</h2>
+    </div>
+    <ul class="ledger-list">
+      {MOCK_LEDGER.map((row) => (
+        <li class="ledger-row card">
+          <div>
+            <strong class:list={[row.delta > 0 ? 'delta-pos' : 'delta-neg']}>
+              {row.delta > 0 ? `+${row.delta}` : row.delta}
+            </strong>
+            <span>{row.label_en}</span>
+          </div>
+          <time datetime={row.at}>{row.at}</time>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="account-block">
+    <div class="account-block-head">
+      <h2>Top up</h2>
+    </div>
+    <div class="card callout info">
+      <strong>Stub — checkout not connected.</strong>
+      {' '}Packs ({SITE.pricing.packs.map((p) => `${p.label} ${p.credits} credits / $${p.usd}`).join(' · ')})
+      will use a payment provider later. No charge is made from this page.
+    </div>
+    <div class="pack-row">
+      {SITE.pricing.packs.map((p) => (
+        <button type="button" class="btn btn-ghost pack-btn" disabled aria-disabled="true">
+          {p.label} · {p.credits} credits · ${p.usd}
+          {p.popular ? ' · Popular' : ''}
+        </button>
+      ))}
+    </div>
+  </section>
+</AccountShell>

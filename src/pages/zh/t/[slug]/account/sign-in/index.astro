@@ -1,0 +1,25 @@
+---
+import KeywordLayout from '../../../../../../layouts/KeywordLayout.astro';
+import SignInPanel from '../../../../../../components/account/SignInPanel.astro';
+import { TEMPLATES, type Template } from '../../../../../../lib/templates';
+
+export function getStaticPaths() {
+  return TEMPLATES.map((template) => ({
+    params: { slug: template.slug },
+    props: { template },
+  }));
+}
+
+interface Props { template: Template }
+const { template: t } = Astro.props;
+const lang = 'zh' as const;
+---
+<KeywordLayout
+  template={t}
+  title={`登录 · ${t.displayNameZh}`}
+  description={`登录 ${t.displayNameZh}，管理作品与积分。`}
+  page="account/sign-in"
+  lang={lang}
+>
+  <SignInPanel lang={lang} template={t} />
+</KeywordLayout>

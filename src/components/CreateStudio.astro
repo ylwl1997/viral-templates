@@ -1,6 +1,6 @@
 ---
 import { SITE, type Lang, keywordPath, pathFor } from '../lib/site';
-import { apexSignInHref } from '../lib/auth';
+import { accountHref, signInHref } from '../lib/auth';
 import type { Template } from '../lib/templates';
 
 interface Props {
@@ -14,8 +14,8 @@ const price =
   t.photoCount === 2 ? SITE.pricing.kissCamOneShotUsd : SITE.pricing.oneShotUsd;
 const slots = t.photoCount === 2 ? [0, 1] : [0];
 const uid = `cs-${t.slug}`;
-const signInBase = apexSignInHref(lang);
-const creditsHref = `${SITE.url}${pathFor(lang, '/account/credits/')}`;
+const signInBase = signInHref(lang);
+const creditsHref = accountHref(lang, 'credits');
 ---
 <section class="section wrap create-studio" id={uid}>
   <div class="callout warn">
@@ -139,14 +139,13 @@ const creditsHref = `${SITE.url}${pathFor(lang, '/account/credits/')}`;
     }
     function goSignIn() {
       var next = location.pathname + location.search + location.hash;
-      var url = signInBase;
+      var url = '/account/sign-in/?next=' + encodeURIComponent(next);
       try {
-        var u = new URL(signInBase, location.origin);
+        var u = new URL(signInBase || '/account/sign-in/', location.origin);
         u.searchParams.set('next', next);
-        // Prefer absolute apex URL when signInBase is absolute; else same-origin path.
-        url = u.href.indexOf('http') === 0 ? u.href : (u.pathname + u.search);
+        url = u.pathname + u.search;
       } catch (e) {
-        url = signInBase + (signInBase.indexOf('?') >= 0 ? '&' : '?') + 'next=' + encodeURIComponent(next);
+        url = '/account/sign-in/?next=' + encodeURIComponent(next);
       }
       location.href = url;
     }

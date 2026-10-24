@@ -1,9 +1,8 @@
 ---
 import Layout from '../../../../layouts/Layout.astro';
-import { pathFor } from '../../../../lib/site';
+import SignInPanel from '../../../../components/account/SignInPanel.astro';
 
 const lang = 'zh' as const;
-const nextDefault = pathFor(lang, '/account/');
 ---
 <Layout
   title="登录 · Viral Templates"
@@ -11,35 +10,5 @@ const nextDefault = pathFor(lang, '/account/');
   canonicalPath="/account/sign-in/"
   lang={lang}
 >
-  <section class="section wrap sign-in-section" id="sign-in-panel" data-lang={lang} data-next-default={nextDefault}>
-    <p class="account-kicker">账户</p>
-    <h1>登录</h1>
-    <p class="lede">
-      配置完成后可使用 Google 登录。预览环境可用一键假登录完成验收。
-    </p>
-    <div class="card sign-in-card">
-      <p class="sign-in-error" id="sign-in-error" hidden></p>
-      <button type="button" class="btn btn-ghost" id="sign-in-google" style="width:100%">
-        使用 Google 继续
-      </button>
-      <p class="sign-in-google-note">Google OAuth 占位 — P0 未接线。</p>
-      <div id="preview-wrap" hidden>
-        <div class="sign-in-divider"><span>或预览登录</span></div>
-        <form id="preview-form" class="preview-form">
-          <label>
-            <span>邮箱</span>
-            <input name="email" type="email" value="preview@viral-templates.local" autocomplete="username" />
-          </label>
-          <label>
-            <span>显示名</span>
-            <input name="name" type="text" maxlength="80" value="预览用户" autocomplete="nickname" />
-          </label>
-          <button class="btn btn-primary" type="submit" style="width:100%">预览登录</button>
-        </form>
-      </div>
-      <p class="sign-in-status" id="sign-in-status"></p>
-      <p class="sign-in-back"><a href={pathFor(lang, '/')}>← 返回模板</a></p>
-    </div>
-  </section>
-  <script is:inline src="/scripts/sign-in.js" defer></script>
+  <SignInPanel lang={lang} />
 </Layout>

@@ -1,0 +1,64 @@
+---
+import AccountShell from '../../../../components/account/AccountShell.astro';
+import { TEMPLATES, type Template } from '../../../../lib/templates';
+import { accountHref } from '../../../../lib/auth';
+import { MOCK_CREDIT_BALANCE, MOCK_CREATIONS, statusLabel } from '../../../../lib/account-mock';
+
+export function getStaticPaths() {
+  return TEMPLATES.map((template) => ({
+    params: { slug: template.slug },
+    props: { template },
+  }));
+}
+
+interface Props { template: Template }
+const { template: t } = Astro.props;
+const lang = 'en' as const;
+const recent = MOCK_CREATIONS.slice(0, 3);
+---
+<AccountShell
+  lang={lang}
+  template={t}
+  active="overview"
+  title={`Account · ${t.displayName}`}
+  description={`Your ${t.displayName} account overview — balance and recent creations.`}
+>
+  <header class="account-page-head">
+    <h1>Overview</h1>
+    <p>Signed in as <strong data-session-name>—</strong></p>
+  </header>
+
+  <div class="account-stat-grid">
+    <div class="card account-stat">
+      <p class="account-stat-label">Credits</p>
+      <p class="account-stat-value">{MOCK_CREDIT_BALANCE}</p>
+      <p class="account-stat-meta"><span class="badge">demo balance</span></p>
+      <a href={accountHref(lang, 'credits')}>View credits →</a>
+    </div>
+    <div class="card account-stat">
+      <p class="account-stat-label">Creations</p>
+      <p class="account-stat-value">{MOCK_CREATIONS.length}</p>
+      <p class="account-stat-meta">Demo jobs across templates</p>
+      <a href={accountHref(lang, 'creations')}>View creations →</a>
+    </div>
+  </div>
+
+  <section class="account-block">
+    <div class="account-block-head">
+      <h2>Recent creations</h2>
+      <a href={accountHref(lang, 'creations')}>See all</a>
+    </div>
+    <ul class="creation-list">
+      {recent.map((job) => (
+        <li class="creation-row card">
+          <div>
+            <strong>{job.template_name}</strong>
+            <span class={`status-pill status-${job.status}`}>{statusLabel(job.status, lang)}</span>
+          </div>
+          <p>{job.note_en}</p>
+          <time datetime={job.created_at}>{job.created_at}</time>
+        </li>
+      ))}
+    </ul>
+  </section>
+</AccountShell>

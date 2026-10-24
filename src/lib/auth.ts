@@ -1,22 +1,14 @@
-import { SITE, type Lang, pathFor } from './site';
+import { type Lang, pathFor } from './site';
 
-/** Absolute apex origin (no trailing slash). Account login always happens here in P0. */
-export function apexOrigin(): string {
-  return SITE.url.replace(/\/$/, '');
+/** Relative account href (EN/ZH). Same backend session on every brand shell. */
+export function accountHref(lang: Lang, sub: '' | 'sign-in' | 'creations' | 'credits' | 'settings' = ''): string {
+  if (sub === '') return pathFor(lang, '/account/');
+  return pathFor(lang, `/account/${sub}/`);
 }
 
-/** Absolute account path on apex (EN/ZH). */
-export function apexAccountHref(lang: Lang, sub: '' | 'sign-in' | 'creations' | 'credits' | 'settings' = ''): string {
-  const path =
-    sub === ''
-      ? pathFor(lang, '/account/')
-      : pathFor(lang, `/account/${sub}/`);
-  return `${apexOrigin()}${path}`;
-}
-
-/** Sign-in URL on apex with safe next (relative path preferred). */
-export function apexSignInHref(lang: Lang, nextPath?: string): string {
-  const base = apexAccountHref(lang, 'sign-in');
+/** Relative sign-in href with safe next (relative path only). */
+export function signInHref(lang: Lang, nextPath?: string): string {
+  const base = accountHref(lang, 'sign-in');
   if (!nextPath) return base;
   const next = nextPath.startsWith('/') ? nextPath : `/${nextPath}`;
   return `${base}?next=${encodeURIComponent(next)}`;

@@ -102,12 +102,13 @@ Auth APIs (Pages Functions):
 
 **How to fake-login (acceptance):** open `/account/sign-in/` → **Preview sign-in** (shown on `*.pages.dev` / localhost when Google OAuth is not configured) → lands on `/account/` with avatar in the header.
 
-Brand shells (`/t/{slug}/`) link **Sign in / Account** to absolute `PUBLIC_SITE_APEX` URLs with `?next=` so login happens on apex; after login, `next` returns to the child path (relative, same host on path-fallback).
+Brand shells use **relative** `/account/` and `/account/sign-in/?next=` (same host, same `vt_session` / `/api/auth/*`). Middleware keeps that brand’s chrome when context is known (`vt_brand` cookie after visiting `/t/{slug}/`, safe `next=/t/{slug}/…`, or brand host). Static brand account pages also exist at `/t/{slug}/account/…` under the brand layout.
 
 ### Known limits (P0)
 
 - No real Google OAuth / Waffo / fal
-- Session cookie is **host-only** (not shared across `*.apex` subdomains). Future custom parent-domain cookie is P2.
+- Session cookie is **host-only** (not shared across brand hosts). Future parent-domain cookie is P2.
+- Brand Account link needs a prior brand-page visit (cookie) or open Sign in with `?next=/t/{slug}/…`
 - Ready creations are demo rows only — no generated video files
 - No delete-account / export
 

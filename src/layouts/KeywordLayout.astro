@@ -8,8 +8,8 @@ interface Props {
   template: Template;
   title: string;
   description: string;
-  /** Page key: '' | 'create' */
-  page?: '' | 'create';
+  /** Page key: '' | 'create' | account subpath e.g. 'account' | 'account/sign-in' */
+  page?: '' | 'create' | 'account' | 'account/sign-in' | 'account/creations' | 'account/credits' | 'account/settings';
   lang?: Lang;
 }
 
@@ -17,7 +17,12 @@ const { template: t, title, description, page = '', lang = 'en' } = Astro.props;
 const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
 const home = keywordPath(lang, t.slug, '');
 const createHref = keywordPath(lang, t.slug, 'create');
-const canonicalPath = page === 'create' ? `/t/${t.slug}/create/` : `/t/${t.slug}/`;
+const canonicalPath =
+  page === 'create'
+    ? `/t/${t.slug}/create/`
+    : page && String(page).startsWith('account')
+      ? `/t/${t.slug}/${page}/`
+      : `/t/${t.slug}/`;
 const pagePath = lang === 'zh' ? `/zh${canonicalPath}` : canonicalPath;
 const canonical = `${SITE.url}${pagePath}`;
 const enUrl = `${SITE.url}${canonicalPath}`;
@@ -85,7 +90,6 @@ const ga4 = SITE.ga4Id;
           </div>
           <HeaderAuth
             lang={lang}
-            apexLinks={true}
             nextPath={Astro.url.pathname + (Astro.url.search || '')}
           />
           {isLive ? (

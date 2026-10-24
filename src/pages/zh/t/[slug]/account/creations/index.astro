@@ -1,0 +1,41 @@
+---
+import AccountShell from '../../../../../../components/account/AccountShell.astro';
+import { TEMPLATES, type Template } from '../../../../../../lib/templates';
+import { MOCK_CREATIONS, statusLabel } from '../../../../../../lib/account-mock';
+
+export function getStaticPaths() {
+  return TEMPLATES.map((template) => ({
+    params: { slug: template.slug },
+    props: { template },
+  }));
+}
+
+interface Props { template: Template }
+const { template: t } = Astro.props;
+const lang = 'zh' as const;
+---
+<AccountShell
+  lang={lang}
+  template={t}
+  active="creations"
+  title={`作品 · ${t.displayNameZh}`}
+  description={`你的 ${t.displayNameZh} 作品历史（P0 为演示数据）。`}
+>
+  <header class="account-page-head">
+    <h1>作品</h1>
+    <p>仅演示任务 — 「已完成」条目不包含可下载视频文件。</p>
+  </header>
+  <ul class="creation-list">
+    {MOCK_CREATIONS.map((job) => (
+      <li class="creation-row card">
+        <div>
+          <strong>{job.template_name_zh}</strong>
+          <span class={`status-pill status-${job.status}`}>{statusLabel(job.status, lang)}</span>
+        </div>
+        <p class="creation-meta">模板：{job.template_name_zh} · Id：{job.id}</p>
+        <p>{job.note_zh}</p>
+        <time datetime={job.created_at}>{job.created_at}</time>
+      </li>
+    ))}
+  </ul>
+</AccountShell>

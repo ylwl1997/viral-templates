@@ -1,100 +1,65 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { SITE, keywordPath } from '../../lib/site';
+import { SITE, pathFor } from '../../lib/site';
 import { LIVE_TEMPLATES, SOON_TEMPLATES } from '../../lib/templates';
+import TemplateGallery from '../../design/components/TemplateGallery.astro';
+import StepsHow from '../../design/components/StepsHow.astro';
+import FinalCta from '../../design/components/FinalCta.astro';
+
+const lang = 'zh' as const;
 ---
 <Layout
   title={`${SITE.name} — AI 爆款视频模板`}
-  description="选择潮流 AI 模板，上传照片，生成竖屏短片。需成人同意。"
+  description="选择爆款 AI 风格，上传照片，生成竖屏短片。需成人同意。"
   canonicalPath="/"
-  lang="zh"
+  lang={lang}
 >
-  <section class="hero wrap">
-    <div class="eyebrow">潮流模板</div>
+  <section class="hero wrap hero-preset-centered">
+    <div class="eyebrow">热门风格</div>
     <h1>AI 爆款视频 <span class="grad">模板</span></h1>
     <p class="lede">
-      选一个造型，上传照片，生成竖屏短片。已上线模板可直接创作 — 生成与支付在接入前保持诚实占位。
+      选风格、上传照片、生成竖屏短片。已上线模板可创作 — 生成与支付在接入后端前保持诚实占位。
     </p>
     <div class="hero-cta">
       <a class="btn btn-primary" href="#templates">浏览模板</a>
-      <a class="btn btn-ghost" href="/zh/create/">创作</a>
+      <a class="btn btn-ghost" href={pathFor(lang, '/create/')}>创作</a>
     </div>
   </section>
 
   <section class="section wrap" id="templates">
     <div class="section-head">
       <h2>模板</h2>
-      <p class="sub">可打开并创作的已上线造型。每个都有独立工作室页。</p>
+      <p class="sub">可打开并创作的已上线风格。每个品牌都有独立工作室 — 不是换色主站。</p>
     </div>
-    <div class="template-wall">
-      {LIVE_TEMPLATES.map((t) => (
-        <article class="template-card">
-          <a class="template-preview-link" href={keywordPath('zh', t.slug, '')} aria-label={t.displayNameZh}>
-            <div class:list={['template-preview', t.accent]}>
-              <span class="dur">{t.durationZh} · {t.photoCount} 张</span>
-              <img class="template-mark" src={t.logo} width="56" height="56" alt="" />
-            </div>
-          </a>
-          <div class="template-body">
-            <div class="template-title-row">
-              <img class="template-logo-sm" src={t.logo} width="28" height="28" alt="" />
-              <h3>{t.displayNameZh}</h3>
-            </div>
-            <p>{t.taglineZh}</p>
-            <div class="template-actions">
-              <a class="btn btn-primary btn-sm" href={keywordPath('zh', t.slug, 'create')}>创作</a>
-              <a class="btn btn-ghost btn-sm" href={keywordPath('zh', t.slug, '')}>查看</a>
-              <span class="badge">已上线</span>
-            </div>
-          </div>
-        </article>
-      ))}
-    </div>
+    <TemplateGallery lang={lang} templates={LIVE_TEMPLATES} mode="live" />
   </section>
 
   <section class="section wrap" id="soon">
     <div class="section-head">
       <h2>即将上线</h2>
-      <p class="sub">更多造型筹备中 — 可打开品牌页了解。</p>
+      <p class="sub">更多风格筹备中 — 可打开品牌页关注。</p>
     </div>
-    <div class="template-wall soon-wall">
-      {SOON_TEMPLATES.map((t) => (
-        <article class="template-card soon">
-          <a class="template-preview-link" href={keywordPath('zh', t.slug, '')} aria-label={t.displayNameZh}>
-            <div class:list={['template-preview', t.accent, 'is-soon']}>
-              <span class="dur">即将上线</span>
-              <img class="template-mark" src={t.logo} width="48" height="48" alt="" />
-            </div>
-          </a>
-          <div class="template-body">
-            <div class="template-title-row">
-              <img class="template-logo-sm" src={t.logo} width="28" height="28" alt="" />
-              <h3>{t.displayNameZh}</h3>
-            </div>
-            <p>{t.taglineZh}</p>
-            <div class="template-actions">
-              <a class="btn btn-ghost btn-sm" href={keywordPath('zh', t.slug, '')}>预览</a>
-              <span class="badge">即将上线</span>
-            </div>
-          </div>
-        </article>
-      ))}
-    </div>
+    <TemplateGallery lang={lang} templates={SOON_TEMPLATES} mode="soon" />
   </section>
 
   <section class="section wrap" id="how">
     <div class="section-head">
       <h2>如何使用</h2>
-      <p class="sub">主站或任意已上线模板页，同一套工作室流程。</p>
+      <p class="sub">主站与任意已上线品牌页共用同一套工作室流程。</p>
     </div>
-    <div class="card-grid">
-      <div class="card"><h3>1. 选择模板</h3><p>浏览潮流造型，打开创作。</p></div>
-      <div class="card"><h3>2. 上传与授权</h3><p>仅限成人同意照片。禁止未成年人。</p></div>
-      <div class="card"><h3>3. 生成（占位）</h3><p>按钮说明占位状态 — 接入 fal 前不伪造成功视频。</p></div>
-    </div>
-    <div class="hero-cta" style="margin-top:1.75rem;justify-content:flex-start">
-      <a class="btn btn-primary" href="/zh/create/">开始创作</a>
-      <a class="btn btn-ghost" href="/zh/pricing/">价格</a>
-    </div>
+    <StepsHow
+      steps={[
+        { title: '选择模板', body: '浏览热门风格并打开创作。' },
+        { title: '上传与授权', body: '仅限成人同意照片。禁止未成年人。' },
+        { title: '生成（占位）', body: '按钮会说明占位状态 — 接入 fal 前不会伪造成功视频。' },
+      ]}
+    />
   </section>
+
+  <FinalCta
+    title="准备创作？"
+    lede="打开主站工作室，或进入已上线品牌页。"
+    primary={{ href: pathFor(lang, '/create/'), label: '开始创作' }}
+    secondary={{ href: pathFor(lang, '/pricing/'), label: '价格' }}
+  />
 </Layout>

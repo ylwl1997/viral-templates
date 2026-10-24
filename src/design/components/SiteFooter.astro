@@ -1,0 +1,33 @@
+---
+import type { Lang } from '../../lib/site';
+
+export type FooterCol = { title: string; links: { href: string; label: string }[] };
+
+interface Props {
+  lang: Lang;
+  brandName: string;
+  tagline: string;
+  disclaimer: string;
+  columns: FooterCol[];
+  brandFooter?: boolean;
+}
+
+const { brandName, tagline, disclaimer, columns, brandFooter } = Astro.props;
+---
+<footer class="site-footer">
+  <div class:list={['wrap', 'footer-grid', brandFooter && 'kw-footer']}>
+    <div>
+      <h3>{brandName}</h3>
+      <p>{tagline}</p>
+    </div>
+    {columns.map((col) => (
+      <div>
+        <h3>{col.title}</h3>
+        {col.links.map((l) => (
+          <a href={l.href}>{l.label}</a>
+        ))}
+      </div>
+    ))}
+  </div>
+  <div class="wrap disclaimer">{disclaimer}</div>
+</footer>

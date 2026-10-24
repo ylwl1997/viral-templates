@@ -1,0 +1,20 @@
+---
+interface Props {
+  title: string;
+  lede: string;
+  primary: { href: string; label: string };
+  secondary?: { href: string; label: string };
+}
+
+const { title, lede, primary, secondary } = Astro.props;
+---
+<section class="section wrap">
+  <div class="final-cta">
+    <h2>{title}</h2>
+    <p>{lede}</p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href={primary.href}>{primary.label}</a>
+      {secondary && <a class="btn btn-ghost" href={secondary.href}>{secondary.label}</a>}
+    </div>
+  </div>
+</section>

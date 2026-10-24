@@ -1,0 +1,66 @@
+---
+import type { Lang } from '../../lib/site';
+import HeaderAuth from '../../components/HeaderAuth.astro';
+
+export type NavItem = { href: string; label: string; current?: boolean; muted?: boolean };
+
+interface Props {
+  lang: Lang;
+  homeHref: string;
+  logoSrc: string;
+  brandName: string;
+  nav: NavItem[];
+  /** Locale-neutral path for EN/ZH switch */
+  canonicalPath: string;
+  /** Optional keywordPath helpers for brand lang switch */
+  enHref?: string;
+  zhHref?: string;
+  cta?: { href: string; label: string } | { disabled: true; label: string };
+  nextPath?: string;
+}
+
+const {
+  lang,
+  homeHref,
+  logoSrc,
+  brandName,
+  nav,
+  canonicalPath,
+  enHref,
+  zhHref,
+  cta,
+  nextPath,
+} = Astro.props;
+const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const en = enHref ?? (canonicalPath.startsWith('/') ? canonicalPath : `/${canonicalPath}`);
+const zh = zhHref ?? (en === '/' ? '/zh/' : `/zh${en.endsWith('/') ? en : `${en}/`}`);
+---
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="logo" href={homeHref}>
+      <img src={logoSrc} width="28" height="28" alt="" />
+      {brandName}
+    </a>
+    <nav class="nav" aria-label={label('Primary', '主导航')}>
+      {nav.map((item) =>
+        item.muted ? (
+          <span class="nav-muted">{item.label}</span>
+        ) : (
+          <a href={item.href} aria-current={item.current ? 'page' : undefined}>{item.label}</a>
+        )
+      )}
+    </nav>
+    <div class="header-end">
+      <div class="lang-switch" role="group" aria-label={label('Language', '语言')}>
+        <a href={en} class:list={['lang-opt', lang === 'en' && 'is-on']} hreflang="en">EN</a>
+        <a href={zh} class:list={['lang-opt', lang === 'zh' && 'is-on']} hreflang="zh-CN">中文</a>
+      </div>
+      <HeaderAuth lang={lang} nextPath={nextPath || Astro.url.pathname + (Astro.url.search || '')} />
+      {cta && ('disabled' in cta ? (
+        <span class="btn btn-ghost btn-sm" aria-disabled="true">{cta.label}</span>
+      ) : (
+        <a class="btn btn-primary btn-sm" href={cta.href}>{cta.label}</a>
+      ))}
+    </div>
+  </div>
+</header>

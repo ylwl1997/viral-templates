@@ -1,0 +1,33 @@
+---
+interface Pack {
+  label: string;
+  credits: number;
+  usd: number;
+  popular?: boolean;
+}
+
+interface Props {
+  oneShotLabel: string;
+  oneShotUsd: number;
+  oneShotMeta: string;
+  packs: readonly Pack[];
+  stubNote?: string;
+}
+
+const { oneShotLabel, oneShotUsd, oneShotMeta, packs, stubNote } = Astro.props;
+---
+<div class="pricing-grid">
+  <div class="price-card">
+    <h3>{oneShotLabel}</h3>
+    <p class="amount">${oneShotUsd}</p>
+    <p class="meta">{oneShotMeta}</p>
+  </div>
+  {packs.map((p) => (
+    <div class:list={['price-card', p.popular && 'popular']}>
+      <h3>{p.label}{p.popular ? ' · ★' : ''}</h3>
+      <p class="amount">${p.usd}</p>
+      <p class="meta">{p.credits} credits · stub</p>
+    </div>
+  ))}
+</div>
+{stubNote && <p style="margin-top:1rem;color:var(--muted);font-size:0.9rem;">{stubNote}</p>}

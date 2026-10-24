@@ -1,5 +1,6 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import Accordion from '../../../design/components/Accordion.astro';
 ---
 <Layout
   title="常见问题"
@@ -7,19 +8,17 @@ import Layout from '../../../layouts/Layout.astro';
   canonicalPath="/faq/"
   lang="zh"
 >
-  <div class="page-head wrap"><h1>常见问题</h1><p>关于照片、授权、退款与 CapCut 的说明。</p></div>
-  <section class="section wrap prose">
-    <h2>可以上传什么照片？</h2>
-    <p>清晰、光线良好的成人同意照片效果最好。按模板需要 1 或 2 张。请勿上传未成年人照片。</p>
-    <h2>需要授权吗？</h2>
-    <p>需要。仅限同意出现在 AI remix 中的成年人。Kiss Cam 不含真实演唱会素材。吊扇为纯 AI — 切勿绑真风扇。</p>
-    <h2>生成是真的吗？</h2>
-    <p>还没有。生成与支付是明确占位 — 不会伪造成功，未配置前不调用 fal/Waffo。</p>
-    <h2>可以退款吗？</h2>
-    <p>本预览尚未接入结账。支付上线后，退款规则会写在服务条款中。</p>
-    <h2>是 CapCut / Coldplay / Karol G 官方吗？</h2>
-    <p>不是。独立 AI remix 工具 — 非 CapCut、Coldplay、Karol G 或任何厂牌官方。</p>
-    <h2>照片保留多久？</h2>
-    <p>约 30 天 — 见隐私政策。</p>
+  <div class="page-head wrap"><h1>常见问题</h1><p>关于照片、授权、退款与 CapCut 的常见问题。</p></div>
+  <section class="section wrap">
+    <Accordion
+      items={[
+        { q: '可以上传什么照片？', a: '清晰、光线好的成人同意照片效果最好。按模板需要 1 或 2 张。禁止上传未成年人照片。' },
+        { q: '需要授权吗？', a: '需要。仅限同意出现在 AI remix 中的成人。Kiss Cam 不含真实演唱会素材。吊扇模板为纯 AI — 切勿把手机绑在风扇上。' },
+        { q: '生成功能可用了吗？', a: '尚未。生成与支付为明确占位 — 接入环境变量前不会伪造成功，也不会调用 fal / Waffo。' },
+        { q: '退款？', a: '本预览未接通结账。支付上线后，退款规则将写在服务条款中。' },
+        { q: '你们是 CapCut / Coldplay / Karol G 吗？', a: '不是。独立 AI remix 工具 — 非 CapCut、Coldplay、Karol G 或任何厂牌官方。' },
+        { q: '照片保留多久？', a: '上传/任务后约 30 天 — 见隐私政策。' },
+      ]}
+    />
   </section>
 </Layout>

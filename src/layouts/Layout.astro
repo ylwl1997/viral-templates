@@ -1,7 +1,8 @@
 ---
 import '../styles/global.css';
 import { SITE, type Lang, pathFor } from '../lib/site';
-import HeaderAuth from '../components/HeaderAuth.astro';
+import SiteHeader from '../design/components/SiteHeader.astro';
+import SiteFooter from '../design/components/SiteFooter.astro';
 
 interface Props {
   title: string;
@@ -35,9 +36,28 @@ const isCurrent = (p: string) => {
   if (p === '/') return path === localized || path === '/zh' || path === '/zh/';
   return path === localized || path.startsWith(localized);
 };
+
+const nav = [
+  { href: homeHref, label: label('Templates', '模板'), current: isCurrent('/') },
+  { href: pathFor(lang, '/create/'), label: label('Create', '创作'), current: isCurrent('/create/') },
+  { href: pathFor(lang, '/pricing/'), label: label('Pricing', '价格'), current: isCurrent('/pricing/') },
+  { href: pathFor(lang, '/faq/'), label: 'FAQ', current: isCurrent('/faq/') },
+];
+
+const footerCols = [
+  {
+    title: label('Legal', '法律'),
+    links: [
+      { href: pathFor(lang, '/terms/'), label: label('Terms', '服务条款') },
+      { href: pathFor(lang, '/privacy/'), label: label('Privacy', '隐私政策') },
+      { href: pathFor(lang, '/faq/'), label: 'FAQ' },
+      { href: pathFor(lang, '/pricing/'), label: label('Pricing', '价格') },
+    ],
+  },
+];
 ---
 <!doctype html>
-<html lang={htmlLang}>
+<html lang={htmlLang} data-shell="hub">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -68,49 +88,28 @@ const isCurrent = (p: string) => {
       </>
     )}
   </head>
-  <body>
-    <header class="site-header">
-      <div class="wrap header-inner">
-        <a class="logo" href={homeHref}>
-          <img src="/brand/logo.svg" width="28" height="28" alt="" />
-          {SITE.name}
-        </a>
-        <nav class="nav" aria-label={label('Primary', '主导航')}>
-          <a href={homeHref} aria-current={isCurrent('/') ? 'page' : undefined}>{label('Templates', '模板')}</a>
-          <a href={pathFor(lang, '/create/')} aria-current={isCurrent('/create/') ? 'page' : undefined}>{label('Create', '创作')}</a>
-          <a href={pathFor(lang, '/pricing/')} aria-current={isCurrent('/pricing/') ? 'page' : undefined}>{label('Pricing', '价格')}</a>
-          <a href={pathFor(lang, '/faq/')} aria-current={isCurrent('/faq/') ? 'page' : undefined}>FAQ</a>
-        </nav>
-        <div class="header-end">
-          <div class="lang-switch" role="group" aria-label={label('Language', '语言')}>
-            <a href={pathFor('en', canonicalPath)} class:list={['lang-opt', lang === 'en' && 'is-on']} hreflang="en">EN</a>
-            <a href={pathFor('zh', canonicalPath)} class:list={['lang-opt', lang === 'zh' && 'is-on']} hreflang="zh-CN">中文</a>
-          </div>
-          <HeaderAuth lang={lang} nextPath={Astro.url.pathname + (Astro.url.search || '')} />
-        </div>
-      </div>
-    </header>
+  <body data-shell="hub" data-ambience="none" data-card="soft" data-voice="cool">
+    <SiteHeader
+      lang={lang}
+      homeHref={homeHref}
+      logoSrc="/brand/logo.svg"
+      brandName={SITE.name}
+      nav={nav}
+      canonicalPath={canonicalPath}
+      enHref={pathFor('en', canonicalPath)}
+      zhHref={pathFor('zh', canonicalPath)}
+      nextPath={Astro.url.pathname + (Astro.url.search || '')}
+    />
     <main>
       <slot />
     </main>
-    <footer class="site-footer">
-      <div class="wrap footer-grid">
-        <div>
-          <h3>{SITE.name}</h3>
-          <p>{label(SITE.taglineEn, SITE.taglineZh)}</p>
-        </div>
-        <div>
-          <h3>{label('Legal', '法律')}</h3>
-          <a href={pathFor(lang, '/terms/')}>{label('Terms', '服务条款')}</a>
-          <a href={pathFor(lang, '/privacy/')}>{label('Privacy', '隐私政策')}</a>
-          <a href={pathFor(lang, '/faq/')}>FAQ</a>
-          <a href={pathFor(lang, '/pricing/')}>{label('Pricing', '价格')}</a>
-        </div>
-      </div>
-      <div class="wrap disclaimer">
-        {label(SITE.disclaimerEn, SITE.disclaimerZh)}
-      </div>
-    </footer>
+    <SiteFooter
+      lang={lang}
+      brandName={SITE.name}
+      tagline={label(SITE.taglineEn, SITE.taglineZh)}
+      disclaimer={label(SITE.disclaimerEn, SITE.disclaimerZh)}
+      columns={footerCols}
+    />
     <script is:inline src="/scripts/header-auth.js" defer></script>
   </body>
 </html>

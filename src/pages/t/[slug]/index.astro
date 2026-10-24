@@ -2,6 +2,10 @@
 import KeywordLayout from '../../../layouts/KeywordLayout.astro';
 import { TEMPLATES, type Template } from '../../../lib/templates';
 import { SITE, keywordPath } from '../../../lib/site';
+import BrandHero from '../../../design/components/BrandHero.astro';
+import StepsHow from '../../../design/components/StepsHow.astro';
+import PricingGrid from '../../../design/components/PricingGrid.astro';
+import FinalCta from '../../../design/components/FinalCta.astro';
 
 export function getStaticPaths() {
   return TEMPLATES.map((template) => ({
@@ -17,6 +21,7 @@ const isLive = t.status === 'live';
 const createHref = keywordPath(lang, t.slug, 'create');
 const { packs, oneShotUsd, kissCamOneShotUsd } = SITE.pricing;
 const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
+const theme = t.theme;
 ---
 <KeywordLayout
   template={t}
@@ -27,30 +32,24 @@ const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
 >
   {isLive ? (
     <>
-      <section class="hero wrap">
-        <div class="eyebrow brand-eyebrow">
-          <img src={t.logo} width="18" height="18" alt="" />
-          9:16 · {t.durationEn}
-        </div>
-        <h1>{t.heroEn}</h1>
-        <p class="lede">{t.taglineEn}. Adult consent required. Generate &amp; pay are stubs until fal / Waffo are wired.</p>
-        <div class="hero-cta">
-          <a class="btn btn-primary" href={createHref}>Create now</a>
-          <a class="btn btn-ghost" href="#how">How it works</a>
-        </div>
-      </section>
+      <BrandHero
+        preset={theme.heroPreset}
+        eyebrow={`9:16 · ${t.durationEn}`}
+        eyebrowLogo={t.logo}
+        title={t.heroEn}
+        lede={`${t.taglineEn}. Adult consent required. Generate & pay are stubs until fal / Waffo are wired.`}
+        logo={t.logo}
+        rail={theme.heroPreset === 'editorial' ? [t.displayName, `${t.photoCount} photos`, t.durationEn, 'AI remix'] : undefined}
+        primaryCta={{ href: createHref, label: 'Create now' }}
+        secondaryCta={{ href: '#how', label: 'How it works' }}
+      />
 
       <section class="section wrap" id="how">
         <h2>How it works</h2>
         <p class="sub">Three simple steps.</p>
-        <div class="card-grid">
-          {t.howEn.map((step, i) => (
-            <div class="card">
-              <h3>Step {i + 1}</h3>
-              <p>{step}</p>
-            </div>
-          ))}
-        </div>
+        <StepsHow
+          steps={t.howEn.map((step, i) => ({ title: `Step ${i + 1}`, body: step }))}
+        />
       </section>
 
       <section class="section wrap" id="upload">
@@ -65,19 +64,13 @@ const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
       <section class="section wrap" id="pricing">
         <h2>Pricing (stub)</h2>
         <p class="sub">Checkout is not connected. Figures below are placeholders only.</p>
-        <div class="card-grid">
-          <div class="card">
-            <h3>One-shot</h3>
-            <p>From <strong>${oneShot}</strong> · {SITE.pricing.creditPerGenerate} credit / generate (stub)</p>
-          </div>
-          {packs.map((p) => (
-            <div class="card">
-              <h3>{p.label}{p.popular ? ' · Popular' : ''}</h3>
-              <p>{p.credits} credits · ${p.usd} (stub)</p>
-            </div>
-          ))}
-        </div>
-        <p style="margin-top:1rem;color:var(--muted);font-size:0.9rem;">Pay on Create is a clear stub — no fake success.</p>
+        <PricingGrid
+          oneShotLabel="One-shot"
+          oneShotUsd={oneShot}
+          oneShotMeta={`${SITE.pricing.creditPerGenerate} credit / generate (stub)`}
+          packs={packs}
+          stubNote="Pay on Create is a clear stub — no fake success."
+        />
       </section>
 
       <section class="section wrap">
@@ -85,15 +78,24 @@ const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
           <strong>Compliance.</strong> {t.disclaimerEn} Photos deleted ~{SITE.photoRetentionDays} days — see <a href="/privacy/">Privacy</a> / <a href="/terms/">Terms</a> / <a href="/faq/">FAQ</a>.
         </div>
       </section>
+
+      <FinalCta
+        title={`Create with ${t.displayName}`}
+        lede="Upload, confirm consent, then try the generate stub."
+        primary={{ href: createHref, label: 'Open studio' }}
+        secondary={{ href: '#pricing', label: 'See pricing' }}
+      />
     </>
   ) : (
-    <section class="hero wrap soon-hero">
-      <div class="eyebrow">Coming soon</div>
-      <h1>{t.displayName}</h1>
-      <p class="lede">{t.taglineEn}. We’re polishing this experience — create isn’t open yet.</p>
-      <div class="hero-cta">
-        <span class="btn btn-ghost" aria-disabled="true">Coming soon</span>
-      </div>
-    </section>
+    <BrandHero
+      preset={theme.heroPreset}
+      eyebrow="Coming soon"
+      eyebrowLogo={t.logo}
+      title={t.displayName}
+      lede={`${t.taglineEn}. We’re polishing this experience — create isn’t open yet.`}
+      logo={t.logo}
+      rail={theme.heroPreset === 'editorial' ? [t.displayName, 'Coming soon'] : undefined}
+      soon
+    />
   )}
 </KeywordLayout>

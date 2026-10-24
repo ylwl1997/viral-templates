@@ -1,0 +1,54 @@
+---
+import { keywordPath, type Lang } from '../../lib/site';
+import type { Template } from '../../lib/templates';
+
+interface Props {
+  lang: Lang;
+  templates: readonly Template[];
+  mode?: 'live' | 'soon';
+}
+
+const { lang, templates, mode = 'live' } = Astro.props;
+const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const isSoon = mode === 'soon';
+---
+<div class:list={['template-wall', isSoon && 'soon-wall']}>
+  {templates.map((t) => {
+    const name = lang === 'zh' ? t.displayNameZh : t.displayName;
+    const tagline = lang === 'zh' ? t.taglineZh : t.taglineEn;
+    const dur = lang === 'zh' ? t.durationZh : t.durationEn;
+    const cover = `cover-${t.theme.coverStyle}`;
+    return (
+      <article class:list={['template-card', isSoon && 'soon']} data-brand={t.slug}>
+        <a class="template-preview-link" href={keywordPath(lang, t.slug, '')} aria-label={name}>
+          <div class:list={['template-preview', t.accent, cover, isSoon && 'is-soon']}>
+            <span class="dur">
+              {isSoon
+                ? label('Soon', '即将上线')
+                : `${dur} · ${t.photoCount} ${label(t.photoCount === 2 ? 'photos' : 'photo', t.photoCount === 2 ? '张照片' : '张照片')}`}
+            </span>
+            <img class="template-mark" src={t.logo} width={isSoon ? 48 : 56} height={isSoon ? 48 : 56} alt="" />
+          </div>
+        </a>
+        <div class="template-body">
+          <div class="template-title-row">
+            <img class="template-logo-sm" src={t.logo} width="28" height="28" alt="" />
+            <h3>{name}</h3>
+          </div>
+          <p>{tagline}</p>
+          <div class="template-actions">
+            {!isSoon && (
+              <a class="btn btn-primary btn-sm" href={keywordPath(lang, t.slug, 'create')}>
+                {label('Create', '创作')}
+              </a>
+            )}
+            <a class="btn btn-ghost btn-sm" href={keywordPath(lang, t.slug, '')}>
+              {isSoon ? label('Preview', '预览') : label('View', '查看')}
+            </a>
+            <span class="badge">{isSoon ? label('Soon', '即将上线') : label('Live', '已上线')}</span>
+          </div>
+        </div>
+      </article>
+    );
+  })}
+</div>

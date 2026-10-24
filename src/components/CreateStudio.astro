@@ -72,10 +72,13 @@ const creditsHref = accountHref(lang, 'credits');
       </label>
     </div>
 
-    <div class="card">
+    <div class="card studio-generate-panel">
       <h3>{label('Generate', '生成')}</h3>
+      <p style="margin-bottom:0.35rem;color:var(--muted);font-size:0.85rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:650">
+        {label('Output', '输出')}
+      </p>
       <p style="margin-bottom:1rem">
-        {label('Output:', '输出：')} vertical 9:16 · {lang === 'zh' ? t.durationZh : t.durationEn}
+        vertical 9:16 · {lang === 'zh' ? t.durationZh : t.durationEn}
       </p>
       <button class="btn btn-primary" id={`${uid}-generate`} type="button" style="width:100%">
         {label('Generate video', '生成视频')}

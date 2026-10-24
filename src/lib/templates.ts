@@ -2,6 +2,30 @@
 
 export type TemplateStatus = 'live' | 'soon';
 
+/** Hero composition — must visibly differ across live brands. */
+export type HeroPreset = 'centered' | 'split' | 'editorial';
+/** Type voice — weight / tracking / hero size temperament. */
+export type TypeVoice = 'playful' | 'bold' | 'cool';
+/** Card surface treatment. */
+export type CardStyle = 'glow' | 'ribbon' | 'mesh' | 'soft';
+/** Cover / illustration fill on gallery + hero visual. */
+export type CoverStyle = 'orb' | 'stripes' | 'radial' | 'grid';
+/** Fixed-layer ambience (noise / grid intensity via CSS). */
+export type Ambience = 'none' | 'noise' | 'grid';
+
+/**
+ * Per-brand theme. Required for every new site — logo+accent alone is not enough.
+ * Kit structure stays shared; these fields drive distinct look (同构异貌).
+ */
+export type BrandTheme = {
+  accent: 'magenta' | 'amber' | 'cyan' | 'violet' | 'rose' | 'lime' | 'orange' | 'sky' | 'slate';
+  heroPreset: HeroPreset;
+  typeVoice: TypeVoice;
+  cardStyle: CardStyle;
+  coverStyle: CoverStyle;
+  ambience: Ambience;
+};
+
 export type Template = {
   slug: string;
   displayName: string;
@@ -20,9 +44,12 @@ export type Template = {
   heroZh: string;
   howEn: [string, string, string];
   howZh: [string, string, string];
-  accent: 'magenta' | 'amber' | 'cyan' | 'violet' | 'rose' | 'lime' | 'orange' | 'sky' | 'slate';
+  /** @deprecated use theme.accent — kept for gallery card class names */
+  accent: BrandTheme['accent'];
   /** Public path to brand mark (svg/png). */
   logo: string;
+  /** Full brand theme — required; do not ship logo-only clones. */
+  theme: BrandTheme;
   disclaimerEn: string;
   disclaimerZh: string;
 };
@@ -50,6 +77,7 @@ export const TEMPLATES: readonly Template[] = [
     howZh: ['上传 1 张成人同意照片', '确认授权与积分占位', '生成（待接入 fal）'],
     accent: 'magenta',
     logo: '/brand/templates/bby-wow.svg',
+    theme: { accent: 'magenta', heroPreset: 'split', typeVoice: 'playful', cardStyle: 'glow', coverStyle: 'orb', ambience: 'noise' },
     disclaimerEn: 'Adult consent only · no minors. Not affiliated with Karol G, CapCut, or any label.',
     disclaimerZh: '仅限成人同意照片 · 禁止未成年人。非 Karol G / CapCut 官方。',
   },
@@ -75,6 +103,7 @@ export const TEMPLATES: readonly Template[] = [
     howZh: ['上传 2 张成人同意照片', '确认授权（无演唱会素材）', '生成（待接入 fal）'],
     accent: 'amber',
     logo: '/brand/templates/kiss-cam.svg',
+    theme: { accent: 'amber', heroPreset: 'editorial', typeVoice: 'bold', cardStyle: 'ribbon', coverStyle: 'stripes', ambience: 'grid' },
     disclaimerEn:
       'Adult consent only · no minors. Fan-made AI remix — not official Coldplay / CapCut. No real concert footage.',
     disclaimerZh: '仅限成人同意 · 禁止未成年人。粉丝向 AI remix · 非 Coldplay / CapCut 官方。不含真实演唱会素材。',
@@ -101,6 +130,7 @@ export const TEMPLATES: readonly Template[] = [
     howZh: ['上传 1 张成人同意照片', '确认授权与安全提示', '生成（待接入 fal）'],
     accent: 'cyan',
     logo: '/brand/templates/ceiling-fan.svg',
+    theme: { accent: 'cyan', heroPreset: 'centered', typeVoice: 'cool', cardStyle: 'mesh', coverStyle: 'radial', ambience: 'none' },
     disclaimerEn:
       'Adult consent only · no minors. Pure AI — never strap a phone to a spinning fan. Not affiliated with CapCut.',
     disclaimerZh: '仅限成人同意 · 禁止未成年人。纯 AI · 切勿把手机绑在旋转风扇上。非 CapCut 官方。',
@@ -125,6 +155,7 @@ export const TEMPLATES: readonly Template[] = [
     howZh: ['上传', '确认', '生成'],
     accent: 'orange',
     logo: '/brand/templates/bulin-47.svg',
+    theme: { accent: 'orange', heroPreset: 'centered', typeVoice: 'bold', cardStyle: 'soft', coverStyle: 'orb', ambience: 'none' },
     disclaimerEn: 'Coming soon · adult consent will be required.',
     disclaimerZh: '即将上线 · 上线后需成人同意照片。',
   },
@@ -148,6 +179,7 @@ export const TEMPLATES: readonly Template[] = [
     howZh: ['上传', '确认', '生成'],
     accent: 'sky',
     logo: '/brand/templates/zombie-love.svg',
+    theme: { accent: 'sky', heroPreset: 'split', typeVoice: 'cool', cardStyle: 'soft', coverStyle: 'grid', ambience: 'none' },
     disclaimerEn: 'Coming soon · adult consent will be required.',
     disclaimerZh: '即将上线 · 上线后需成人同意照片。',
   },
@@ -171,6 +203,7 @@ export const TEMPLATES: readonly Template[] = [
     howZh: ['上传', '确认', '生成'],
     accent: 'violet',
     logo: '/brand/templates/smalltown-boy-cats.svg',
+    theme: { accent: 'violet', heroPreset: 'editorial', typeVoice: 'playful', cardStyle: 'soft', coverStyle: 'stripes', ambience: 'none' },
     disclaimerEn: 'Coming soon · pet photos with owner permission.',
     disclaimerZh: '即将上线 · 需宠物主人授权照片。',
   },
@@ -194,6 +227,7 @@ export const TEMPLATES: readonly Template[] = [
     howZh: ['上传', '确认', '生成'],
     accent: 'rose',
     logo: '/brand/templates/clapping-cat.svg',
+    theme: { accent: 'rose', heroPreset: 'centered', typeVoice: 'playful', cardStyle: 'glow', coverStyle: 'orb', ambience: 'none' },
     disclaimerEn: 'Coming soon · pet photos with owner permission.',
     disclaimerZh: '即将上线 · 需宠物主人授权照片。',
   },
@@ -217,6 +251,7 @@ export const TEMPLATES: readonly Template[] = [
     howZh: ['上传', '确认', '生成'],
     accent: 'lime',
     logo: '/brand/templates/knight-cat.svg',
+    theme: { accent: 'lime', heroPreset: 'split', typeVoice: 'bold', cardStyle: 'mesh', coverStyle: 'radial', ambience: 'none' },
     disclaimerEn: 'Coming soon · pet photos with owner permission.',
     disclaimerZh: '即将上线 · 需宠物主人授权照片。',
   },
@@ -240,6 +275,7 @@ export const TEMPLATES: readonly Template[] = [
     howZh: ['上传', '确认', '生成'],
     accent: 'slate',
     logo: '/brand/templates/car-jump.svg',
+    theme: { accent: 'slate', heroPreset: 'editorial', typeVoice: 'cool', cardStyle: 'ribbon', coverStyle: 'stripes', ambience: 'none' },
     disclaimerEn: 'Coming soon · adult consent will be required.',
     disclaimerZh: '即将上线 · 上线后需成人同意照片。',
   },

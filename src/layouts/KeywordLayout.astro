@@ -1,7 +1,8 @@
 ---
 import '../styles/global.css';
 import { SITE, type Lang, keywordPath, pathFor } from '../lib/site';
-import HeaderAuth from '../components/HeaderAuth.astro';
+import SiteHeader from '../design/components/SiteHeader.astro';
+import SiteFooter from '../design/components/SiteFooter.astro';
 import type { Template } from '../lib/templates';
 
 interface Props {
@@ -31,9 +32,38 @@ const htmlLang = lang === 'zh' ? 'zh-CN' : 'en';
 const name = lang === 'zh' ? t.displayNameZh : t.displayName;
 const isLive = t.status === 'live';
 const ga4 = SITE.ga4Id;
+const theme = t.theme;
+
+const nav = [
+  { href: `${home}#how`, label: label('How it works', '如何使用') },
+  isLive
+    ? { href: createHref, label: label('Create', '创作'), current: page === 'create' }
+    : { href: '#', label: label('Coming soon', '即将上线'), muted: true },
+  { href: `${home}#pricing`, label: label('Pricing', '价格') },
+  { href: pathFor(lang, '/faq/'), label: 'FAQ' },
+];
+
+const footerCols = [
+  {
+    title: label('Product', '产品'),
+    links: [
+      { href: `${home}#how`, label: label('How it works', '如何使用') },
+      ...(isLive ? [{ href: createHref, label: label('Create', '创作') }] : []),
+      { href: `${home}#pricing`, label: label('Pricing', '价格') },
+      { href: pathFor(lang, '/faq/'), label: 'FAQ' },
+    ],
+  },
+  {
+    title: label('Legal', '法律'),
+    links: [
+      { href: pathFor(lang, '/terms/'), label: label('Terms', '服务条款') },
+      { href: pathFor(lang, '/privacy/'), label: label('Privacy', '隐私政策') },
+    ],
+  },
+];
 ---
 <!doctype html>
-<html lang={htmlLang} data-accent={t.accent}>
+<html lang={htmlLang} data-accent={theme.accent} data-theme={t.slug}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -64,68 +94,44 @@ const ga4 = SITE.ga4Id;
       </>
     )}
   </head>
-  <body class={`kw-site accent-${t.accent}`}>
-    <header class="site-header">
-      <div class="wrap header-inner">
-        <a class="logo" href={home}>
-          <img src={t.logo} width="28" height="28" alt="" />
-          {name}
-        </a>
-        <nav class="nav" aria-label={label('Primary', '主导航')}>
-          <a href={`${home}#how`}>{label('How it works', '如何使用')}</a>
-          {isLive ? (
-            <a href={createHref} aria-current={page === 'create' ? 'page' : undefined}>
-              {label('Create', '创作')}
-            </a>
-          ) : (
-            <span class="nav-muted">{label('Coming soon', '即将上线')}</span>
-          )}
-          <a href={`${home}#pricing`}>{label('Pricing', '价格')}</a>
-          <a href={pathFor(lang, '/faq/')}>FAQ</a>
-        </nav>
-        <div class="header-end">
-          <div class="lang-switch" role="group" aria-label={label('Language', '语言')}>
-            <a href={keywordPath('en', t.slug, page)} class:list={['lang-opt', lang === 'en' && 'is-on']} hreflang="en">EN</a>
-            <a href={keywordPath('zh', t.slug, page)} class:list={['lang-opt', lang === 'zh' && 'is-on']} hreflang="zh-CN">中文</a>
-          </div>
-          <HeaderAuth
-            lang={lang}
-            nextPath={Astro.url.pathname + (Astro.url.search || '')}
-          />
-          {isLive ? (
-            <a class="btn btn-primary btn-sm" href={createHref}>{label('Create', '开始创作')}</a>
-          ) : (
-            <span class="btn btn-ghost btn-sm" aria-disabled="true">{label('Soon', '即将上线')}</span>
-          )}
-        </div>
-      </div>
-    </header>
+  <body
+    class={`kw-site accent-${theme.accent}`}
+    data-shell="brand"
+    data-theme={t.slug}
+    data-accent={theme.accent}
+    data-hero={theme.heroPreset}
+    data-voice={theme.typeVoice}
+    data-card={theme.cardStyle}
+    data-cover={theme.coverStyle}
+    data-ambience={theme.ambience}
+  >
+    <SiteHeader
+      lang={lang}
+      homeHref={home}
+      logoSrc={t.logo}
+      brandName={name}
+      nav={nav}
+      canonicalPath={canonicalPath}
+      enHref={keywordPath('en', t.slug, page)}
+      zhHref={keywordPath('zh', t.slug, page)}
+      cta={
+        isLive
+          ? { href: createHref, label: label('Create', '开始创作') }
+          : { disabled: true, label: label('Soon', '即将上线') }
+      }
+      nextPath={Astro.url.pathname + (Astro.url.search || '')}
+    />
     <main>
       <slot />
     </main>
-    <footer class="site-footer">
-      <div class="wrap footer-grid kw-footer">
-        <div>
-          <h3>{name}</h3>
-          <p>{label(t.taglineEn, t.taglineZh)}</p>
-        </div>
-        <div>
-          <h3>{label('Product', '产品')}</h3>
-          <a href={`${home}#how`}>{label('How it works', '如何使用')}</a>
-          {isLive && <a href={createHref}>{label('Create', '创作')}</a>}
-          <a href={`${home}#pricing`}>{label('Pricing', '价格')}</a>
-          <a href={pathFor(lang, '/faq/')}>FAQ</a>
-        </div>
-        <div>
-          <h3>{label('Legal', '法律')}</h3>
-          <a href={pathFor(lang, '/terms/')}>{label('Terms', '服务条款')}</a>
-          <a href={pathFor(lang, '/privacy/')}>{label('Privacy', '隐私政策')}</a>
-        </div>
-      </div>
-      <div class="wrap disclaimer">
-        {label(t.disclaimerEn, t.disclaimerZh)}
-      </div>
-    </footer>
+    <SiteFooter
+      lang={lang}
+      brandName={name}
+      tagline={label(t.taglineEn, t.taglineZh)}
+      disclaimer={label(t.disclaimerEn, t.disclaimerZh)}
+      columns={footerCols}
+      brandFooter
+    />
     <script is:inline src="/scripts/header-auth.js" defer></script>
   </body>
 </html>

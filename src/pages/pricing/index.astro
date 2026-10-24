@@ -1,5 +1,9 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { SITE } from '../../lib/site';
+import PricingGrid from '../../design/components/PricingGrid.astro';
+
+const { packs, oneShotUsd, kissCamOneShotUsd } = SITE.pricing;
 ---
 <Layout
   title="Pricing (stub)"
@@ -9,12 +13,12 @@ import Layout from '../../layouts/Layout.astro';
 >
   <div class="page-head wrap"><h1>Pricing (stub)</h1><p>Checkout is not connected. Numbers are placeholders.</p></div>
   <section class="section wrap">
-    <div class="card-grid">
-      <div class="card"><h3>One-shot</h3><p>From <strong>$2.99</strong> (Kiss Cam from $4.99) — stub</p></div>
-      <div class="card"><h3>Starter</h3><p>5 credits · $9.99 — stub</p></div>
-      <div class="card"><h3>Creator</h3><p>15 credits · $24.99 — stub</p></div>
-      <div class="card"><h3>Studio</h3><p>40 credits · $59.99 — stub</p></div>
-    </div>
-    <p style="margin-top:1.25rem;color:var(--muted)">Pay on Create shows a clear stub — no fake success.</p>
+    <PricingGrid
+      oneShotLabel="One-shot"
+      oneShotUsd={oneShotUsd}
+      oneShotMeta={`Kiss Cam from $${kissCamOneShotUsd} · stub`}
+      packs={packs}
+      stubNote="Pay on Create shows a clear stub — no fake success."
+    />
   </section>
 </Layout>

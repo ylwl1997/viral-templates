@@ -1,0 +1,13 @@
+---
+interface Item { q: string; a: string }
+interface Props { items: Item[] }
+const { items } = Astro.props;
+---
+<div class="accordion faq">
+  {items.map((item) => (
+    <details>
+      <summary>{item.q}</summary>
+      <p>{item.a}</p>
+    </details>
+  ))}
+</div>

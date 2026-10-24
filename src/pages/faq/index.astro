@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import Accordion from '../../design/components/Accordion.astro';
 ---
 <Layout
   title="FAQ"
@@ -8,18 +9,16 @@ import Layout from '../../layouts/Layout.astro';
   lang="en"
 >
   <div class="page-head wrap"><h1>FAQ</h1><p>Common questions about photos, consent, refunds, and CapCut.</p></div>
-  <section class="section wrap prose">
-    <h2>What photos can I upload?</h2>
-    <p>Clear, well-lit adult-consent photos work best. One or two photos depending on the template. Do not upload photos of minors.</p>
-    <h2>Do I need consent?</h2>
-    <p>Yes. Only adults who agree to appear in an AI remix. Kiss Cam uses no real concert footage. Ceiling Fan is AI only — never strap a phone to a fan.</p>
-    <h2>Is generate real yet?</h2>
-    <p>Not yet. Generate and Pay are explicit stubs — no fake success, no fal/Waffo calls until env is wired.</p>
-    <h2>Refunds?</h2>
-    <p>Checkout is not connected on this preview. When payments go live, refund rules will be stated on the Terms page.</p>
-    <h2>Are you CapCut / Coldplay / Karol G?</h2>
-    <p>No. Independent AI remix tools — not official CapCut, Coldplay, Karol G, or any label.</p>
-    <h2>Photo retention?</h2>
-    <p>About 30 days after upload/job — see Privacy.</p>
+  <section class="section wrap">
+    <Accordion
+      items={[
+        { q: 'What photos can I upload?', a: 'Clear, well-lit adult-consent photos work best. One or two photos depending on the template. Do not upload photos of minors.' },
+        { q: 'Do I need consent?', a: 'Yes. Only adults who agree to appear in an AI remix. Kiss Cam uses no real concert footage. Ceiling Fan is AI only — never strap a phone to a fan.' },
+        { q: 'Is generate real yet?', a: 'Not yet. Generate and Pay are explicit stubs — no fake success, no fal/Waffo calls until env is wired.' },
+        { q: 'Refunds?', a: 'Checkout is not connected on this preview. When payments go live, refund rules will be stated on the Terms page.' },
+        { q: 'Are you CapCut / Coldplay / Karol G?', a: 'No. Independent AI remix tools — not official CapCut, Coldplay, Karol G, or any label.' },
+        { q: 'Photo retention?', a: 'About 30 days after upload/job — see Privacy.' },
+      ]}
+    />
   </section>
 </Layout>

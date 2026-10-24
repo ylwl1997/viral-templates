@@ -3,6 +3,8 @@
 Customer-facing product: **AI viral video templates**. Apex is a **minimal brand hub** (name + value + legal). Each template is an **independent brand site** — no public keyword matrix, no “directory of slugs” in the UI.
 
 - Live preview: https://viral-templates.pages.dev
+
+**UI kit:** shared design system in `src/design/` — see [`docs/UI-KIT.md`](docs/UI-KIT.md). New brands must fill a full `theme` (hero/type/card/cover/ambience), not logo+accent alone.
 - Repo: https://github.com/ylwl1997/viral-templates
 - Stack: Astro static · Cloudflare Pages (+ Pages Function for Host rewrite) · EN + `/zh/` · Generate/Pay stubs
 

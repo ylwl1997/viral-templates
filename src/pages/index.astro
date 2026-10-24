@@ -1,15 +1,20 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { SITE, keywordPath } from '../lib/site';
+import { SITE, pathFor } from '../lib/site';
 import { LIVE_TEMPLATES, SOON_TEMPLATES } from '../lib/templates';
+import TemplateGallery from '../design/components/TemplateGallery.astro';
+import StepsHow from '../design/components/StepsHow.astro';
+import FinalCta from '../design/components/FinalCta.astro';
+
+const lang = 'en' as const;
 ---
 <Layout
   title={`${SITE.name} — AI viral video templates`}
   description="Choose a trending AI look, upload a photo, and create a short vertical clip. Adult consent required."
   canonicalPath="/"
-  lang="en"
+  lang={lang}
 >
-  <section class="hero wrap">
+  <section class="hero wrap hero-preset-centered">
     <div class="eyebrow">Trending looks</div>
     <h1>AI viral video <span class="grad">templates</span></h1>
     <p class="lede">
@@ -17,39 +22,16 @@ import { LIVE_TEMPLATES, SOON_TEMPLATES } from '../lib/templates';
     </p>
     <div class="hero-cta">
       <a class="btn btn-primary" href="#templates">Browse templates</a>
-      <a class="btn btn-ghost" href="/create/">Create</a>
+      <a class="btn btn-ghost" href={pathFor(lang, '/create/')}>Create</a>
     </div>
   </section>
 
   <section class="section wrap" id="templates">
     <div class="section-head">
       <h2>Templates</h2>
-      <p class="sub">Live looks you can open and create with. Each one has its own studio page.</p>
+      <p class="sub">Live looks you can open and create with. Each brand has its own studio — not a recolored hub.</p>
     </div>
-    <div class="template-wall">
-      {LIVE_TEMPLATES.map((t) => (
-        <article class="template-card">
-          <a class="template-preview-link" href={keywordPath('en', t.slug, '')} aria-label={t.displayName}>
-            <div class:list={['template-preview', t.accent]}>
-              <span class="dur">{t.durationEn} · {t.photoCount} photo{t.photoCount === 2 ? 's' : ''}</span>
-              <img class="template-mark" src={t.logo} width="56" height="56" alt="" />
-            </div>
-          </a>
-          <div class="template-body">
-            <div class="template-title-row">
-              <img class="template-logo-sm" src={t.logo} width="28" height="28" alt="" />
-              <h3>{t.displayName}</h3>
-            </div>
-            <p>{t.taglineEn}</p>
-            <div class="template-actions">
-              <a class="btn btn-primary btn-sm" href={keywordPath('en', t.slug, 'create')}>Create</a>
-              <a class="btn btn-ghost btn-sm" href={keywordPath('en', t.slug, '')}>View</a>
-              <span class="badge">Live</span>
-            </div>
-          </div>
-        </article>
-      ))}
-    </div>
+    <TemplateGallery lang={lang} templates={LIVE_TEMPLATES} mode="live" />
   </section>
 
   <section class="section wrap" id="soon">
@@ -57,29 +39,7 @@ import { LIVE_TEMPLATES, SOON_TEMPLATES } from '../lib/templates';
       <h2>Coming soon</h2>
       <p class="sub">More looks in the pipeline — open a brand page to follow along.</p>
     </div>
-    <div class="template-wall soon-wall">
-      {SOON_TEMPLATES.map((t) => (
-        <article class="template-card soon">
-          <a class="template-preview-link" href={keywordPath('en', t.slug, '')} aria-label={t.displayName}>
-            <div class:list={['template-preview', t.accent, 'is-soon']}>
-              <span class="dur">Soon</span>
-              <img class="template-mark" src={t.logo} width="48" height="48" alt="" />
-            </div>
-          </a>
-          <div class="template-body">
-            <div class="template-title-row">
-              <img class="template-logo-sm" src={t.logo} width="28" height="28" alt="" />
-              <h3>{t.displayName}</h3>
-            </div>
-            <p>{t.taglineEn}</p>
-            <div class="template-actions">
-              <a class="btn btn-ghost btn-sm" href={keywordPath('en', t.slug, '')}>Preview</a>
-              <span class="badge">Soon</span>
-            </div>
-          </div>
-        </article>
-      ))}
-    </div>
+    <TemplateGallery lang={lang} templates={SOON_TEMPLATES} mode="soon" />
   </section>
 
   <section class="section wrap" id="how">
@@ -87,14 +47,19 @@ import { LIVE_TEMPLATES, SOON_TEMPLATES } from '../lib/templates';
       <h2>How it works</h2>
       <p class="sub">Same studio flow on the hub or on any live template page.</p>
     </div>
-    <div class="card-grid">
-      <div class="card"><h3>1. Choose a template</h3><p>Browse trending looks and open Create.</p></div>
-      <div class="card"><h3>2. Upload &amp; consent</h3><p>Adult-consent photos only. No minors.</p></div>
-      <div class="card"><h3>3. Generate (stub)</h3><p>Buttons explain the stub — no fake success video until fal is wired.</p></div>
-    </div>
-    <div class="hero-cta" style="margin-top:1.75rem;justify-content:flex-start">
-      <a class="btn btn-primary" href="/create/">Start create</a>
-      <a class="btn btn-ghost" href="/pricing/">Pricing</a>
-    </div>
+    <StepsHow
+      steps={[
+        { title: 'Choose a template', body: 'Browse trending looks and open Create.' },
+        { title: 'Upload & consent', body: 'Adult-consent photos only. No minors.' },
+        { title: 'Generate (stub)', body: 'Buttons explain the stub — no fake success video until fal is wired.' },
+      ]}
+    />
   </section>
+
+  <FinalCta
+    title="Ready to create?"
+    lede="Open the hub studio or jump into a live brand page."
+    primary={{ href: pathFor(lang, '/create/'), label: 'Start create' }}
+    secondary={{ href: pathFor(lang, '/pricing/'), label: 'Pricing' }}
+  />
 </Layout>

@@ -2,6 +2,10 @@
 import KeywordLayout from '../../../../layouts/KeywordLayout.astro';
 import { TEMPLATES, type Template } from '../../../../lib/templates';
 import { SITE, keywordPath } from '../../../../lib/site';
+import BrandHero from '../../../../design/components/BrandHero.astro';
+import StepsHow from '../../../../design/components/StepsHow.astro';
+import PricingGrid from '../../../../design/components/PricingGrid.astro';
+import FinalCta from '../../../../design/components/FinalCta.astro';
 
 export function getStaticPaths() {
   return TEMPLATES.map((template) => ({
@@ -17,6 +21,7 @@ const isLive = t.status === 'live';
 const createHref = keywordPath(lang, t.slug, 'create');
 const { packs, oneShotUsd, kissCamOneShotUsd } = SITE.pricing;
 const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
+const theme = t.theme;
 ---
 <KeywordLayout
   template={t}
@@ -27,56 +32,45 @@ const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
 >
   {isLive ? (
     <>
-      <section class="hero wrap">
-        <div class="eyebrow brand-eyebrow">
-          <img src={t.logo} width="18" height="18" alt="" />
-          9:16 · {t.durationZh}
-        </div>
-        <h1>{t.heroZh}</h1>
-        <p class="lede">{t.taglineZh}。需成人同意。生成与支付为占位，待接入 fal / Waffo。</p>
-        <div class="hero-cta">
-          <a class="btn btn-primary" href={createHref}>开始创作</a>
-          <a class="btn btn-ghost" href="#how">如何使用</a>
-        </div>
-      </section>
+      <BrandHero
+        preset={theme.heroPreset}
+        eyebrow={`9:16 · ${t.durationZh}`}
+        eyebrowLogo={t.logo}
+        title={t.heroZh}
+        lede={`${t.taglineZh}。需成人同意。生成与支付在接入 fal / Waffo 前为占位。`}
+        logo={t.logo}
+        rail={theme.heroPreset === 'editorial' ? [t.displayNameZh, `${t.photoCount} 张照片`, t.durationZh, 'AI remix'] : undefined}
+        primaryCta={{ href: createHref, label: '开始创作' }}
+        secondaryCta={{ href: '#how', label: '如何使用' }}
+      />
 
       <section class="section wrap" id="how">
         <h2>如何使用</h2>
         <p class="sub">三步完成。</p>
-        <div class="card-grid">
-          {t.howZh.map((step, i) => (
-            <div class="card">
-              <h3>步骤 {i + 1}</h3>
-              <p>{step}</p>
-            </div>
-          ))}
-        </div>
+        <StepsHow
+          steps={t.howZh.map((step, i) => ({ title: `步骤 ${i + 1}`, body: step }))}
+        />
       </section>
 
       <section class="section wrap" id="upload">
         <h2>上传</h2>
         <p class="sub">
-          {t.photoCount === 2 ? '本模板需要 2 张照片。' : '本模板需要 1 张照片。'}
-          打开创作页使用工作室。
+          {t.photoCount === 2 ? '该模板需要 2 张照片。' : '该模板需要 1 张照片。'}
+          {' '}打开创作进入工作室。
         </p>
         <a class="btn btn-primary" href={createHref}>打开创作工作室</a>
       </section>
 
       <section class="section wrap" id="pricing">
         <h2>价格（占位）</h2>
-        <p class="sub">结账未接入。以下仅为占位数字。</p>
-        <div class="card-grid">
-          <div class="card">
-            <h3>单次</h3>
-            <p>起价 <strong>${oneShot}</strong> · 每次生成 {SITE.pricing.creditPerGenerate} 积分（占位）</p>
-          </div>
-          {packs.map((p) => (
-            <div class="card">
-              <h3>{p.label}{p.popular ? ' · 热门' : ''}</h3>
-              <p>{p.credits} 积分 · ${p.usd}（占位）</p>
-            </div>
-          ))}
-        </div>
+        <p class="sub">结账未接通。下列数字仅为占位。</p>
+        <PricingGrid
+          oneShotLabel="单次"
+          oneShotUsd={oneShot}
+          oneShotMeta={`每次生成 ${SITE.pricing.creditPerGenerate} 积分（占位）`}
+          packs={packs}
+          stubNote="创作页支付为明确占位 — 不会伪造成功。"
+        />
       </section>
 
       <section class="section wrap">
@@ -84,15 +78,24 @@ const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
           <strong>合规。</strong> {t.disclaimerZh} 照片约 {SITE.photoRetentionDays} 天删除 — 见 <a href="/zh/privacy/">隐私</a> / <a href="/zh/terms/">条款</a> / <a href="/zh/faq/">FAQ</a>。
         </div>
       </section>
+
+      <FinalCta
+        title={`用 ${t.displayNameZh} 创作`}
+        lede="上传、确认授权，然后试用生成占位。"
+        primary={{ href: createHref, label: '打开工作室' }}
+        secondary={{ href: '#pricing', label: '查看价格' }}
+      />
     </>
   ) : (
-    <section class="hero wrap soon-hero">
-      <div class="eyebrow">即将上线</div>
-      <h1>{t.displayNameZh}</h1>
-      <p class="lede">{t.taglineZh}。我们正在打磨体验 — 创作尚未开放。</p>
-      <div class="hero-cta">
-        <span class="btn btn-ghost" aria-disabled="true">即将上线</span>
-      </div>
-    </section>
+    <BrandHero
+      preset={theme.heroPreset}
+      eyebrow="即将上线"
+      eyebrowLogo={t.logo}
+      title={t.displayNameZh}
+      lede={`${t.taglineZh}。我们正在打磨体验 — 创作暂未开放。`}
+      logo={t.logo}
+      rail={theme.heroPreset === 'editorial' ? [t.displayNameZh, '即将上线'] : undefined}
+      soon
+    />
   )}
 </KeywordLayout>

@@ -1,5 +1,9 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import { SITE } from '../../../lib/site';
+import PricingGrid from '../../../design/components/PricingGrid.astro';
+
+const { packs, oneShotUsd, kissCamOneShotUsd } = SITE.pricing;
 ---
 <Layout
   title="价格（占位）"
@@ -7,13 +11,14 @@ import Layout from '../../../layouts/Layout.astro';
   canonicalPath="/pricing/"
   lang="zh"
 >
-  <div class="page-head wrap"><h1>价格（占位）</h1><p>结账未接入。数字仅为占位。</p></div>
+  <div class="page-head wrap"><h1>价格（占位）</h1><p>结账未接通。数字仅为占位。</p></div>
   <section class="section wrap">
-    <div class="card-grid">
-      <div class="card"><h3>单次</h3><p>起价 <strong>$2.99</strong>（Kiss Cam $4.99）— 占位</p></div>
-      <div class="card"><h3>Starter</h3><p>5 积分 · $9.99 — 占位</p></div>
-      <div class="card"><h3>Creator</h3><p>15 积分 · $24.99 — 占位</p></div>
-      <div class="card"><h3>Studio</h3><p>40 积分 · $59.99 — 占位</p></div>
-    </div>
+    <PricingGrid
+      oneShotLabel="单次"
+      oneShotUsd={oneShotUsd}
+      oneShotMeta={`Kiss Cam 起 $${kissCamOneShotUsd} · 占位`}
+      packs={packs}
+      stubNote="创作页支付为明确占位 — 不会伪造成功。"
+    />
   </section>
 </Layout>

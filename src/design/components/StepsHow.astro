@@ -1,0 +1,15 @@
+---
+interface Props {
+  steps: { title: string; body: string }[];
+}
+
+const { steps } = Astro.props;
+---
+<div class="steps">
+  {steps.map((s) => (
+    <div class="step">
+      <h3>{s.title}</h3>
+      <p>{s.body}</p>
+    </div>
+  ))}
+</div>

@@ -11,6 +11,4 @@
   </g>
   <ellipse cx="180" cy="380" rx="70" ry="90" fill="#99f6e4" opacity=".85"/>
   <path d="M110 470c18-55 50-85 70-85s52 30 70 85v90H110v-90z" fill="#22d3ee" opacity=".75"/>
-  <text x="180" y="55" text-anchor="middle" fill="#cffafe" font-family="system-ui,sans-serif" font-size="18" font-weight="700">9:16 preview</text>
-  <text x="180" y="600" text-anchor="middle" fill="#a5f3fc" font-family="system-ui,sans-serif" font-size="14" opacity=".85">Demo · AI fan wipe</text>
 </svg>

@@ -10,6 +10,4 @@
   <circle cx="140" cy="220" r="42" fill="#fcd34d"/><circle cx="220" cy="220" r="42" fill="#fde68a"/>
   <path d="M120 320c20-30 100-30 120 0" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/>
   <text x="180" y="370" text-anchor="middle" fill="#fef3c7" font-family="system-ui,sans-serif" font-size="20" font-weight="700">KISS CAM</text>
-  <text x="180" y="55" text-anchor="middle" fill="#fde68a" font-family="system-ui,sans-serif" font-size="18" font-weight="700">9:16 preview</text>
-  <text x="180" y="600" text-anchor="middle" fill="#fcd34d" font-family="system-ui,sans-serif" font-size="14" opacity=".85">Demo · stadium remix</text>
 </svg>

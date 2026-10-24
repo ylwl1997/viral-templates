@@ -66,6 +66,11 @@ const first = LIVE_TEMPLATES[0];
       root.querySelectorAll('.brand-link').forEach(function (a) {
         a.hidden = a.getAttribute('data-brand') !== slug;
       });
+      /* Critiquito P0: Create inherits ?t= theme — chip / focus / primary follow brand accent */
+      if (slug) {
+        document.body.setAttribute('data-theme', slug);
+        root.setAttribute('data-theme', slug);
+      }
       var url = new URL(location.href);
       url.searchParams.set('t', slug);
       history.replaceState(null, '', url.pathname + '?' + url.searchParams.toString() + url.hash);

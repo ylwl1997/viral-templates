@@ -37,7 +37,7 @@ const theme = t.theme;
         eyebrow={`9:16 · ${t.durationEn}`}
         eyebrowLogo={t.logo}
         title={t.heroEn}
-        lede={`${t.taglineEn}. Adult consent required.`}
+        lede={`${t.taglineEn}. Needs ${t.photoCount} photo${t.photoCount === 2 ? 's' : ''} — upload in Create. Adult consent required.`}
         logo={t.logo}
         mediaSrc={t.poster}
         mediaAlt={`${t.displayName} 9:16 preview`}
@@ -52,14 +52,6 @@ const theme = t.theme;
         <StepsHow
           steps={t.howEn.map((step, i) => ({ title: `Step ${i + 1}`, body: step }))}
         />
-      </section>
-
-      <section class="section wrap" id="upload">
-        <h2>Upload</h2>
-        <p class="sub">
-          {t.photoCount === 2 ? 'This template needs 2 photos.' : 'This template needs 1 photo.'}
-          {' '}Use Create in the top bar or hero to open the studio.
-        </p>
       </section>
 
       <section class="section wrap" id="pricing">
@@ -83,8 +75,8 @@ const theme = t.theme;
       <FinalCta
         title={`Create with ${t.displayName}`}
         lede="Upload, confirm consent, then generate when ready."
-        primary={{ href: '#pricing', label: 'See pricing' }}
-        secondary={{ href: '#how', label: 'How it works' }}
+        primary={{ href: createHref, label: 'Create now' }}
+        secondary={{ href: '#pricing', label: 'Pricing' }}
       />
     </>
   ) : (

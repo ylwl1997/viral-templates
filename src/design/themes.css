@@ -4,47 +4,47 @@
   Hub (apex) uses default :root tokens — gallery of brands, not a recolored brand page.
 */
 
-/* —— Type voices —— */
+/* —— Type voices (display font + weight/tracking must be eye-distinct) —— */
 [data-voice="playful"] {
   --font-weight-display: 800;
   --font-weight-title: 720;
-  --letter-display: -0.04em;
+  --letter-display: -0.042em;
   --letter-title: -0.03em;
-  --type-hero: clamp(2.15rem, 5.6vw, 3.45rem);
-  --leading-tight: 1.08;
+  --type-hero: clamp(2.25rem, 5.8vw, 3.55rem);
+  --leading-tight: 1.06;
 }
 [data-voice="bold"] {
   --font-weight-display: 860;
   --font-weight-title: 780;
-  --letter-display: -0.045em;
-  --letter-title: -0.035em;
-  --type-hero: clamp(2.35rem, 6.2vw, 3.85rem);
-  --leading-tight: 1.05;
+  --letter-display: -0.048em;
+  --letter-title: -0.038em;
+  --type-hero: clamp(2.45rem, 6.4vw, 4rem);
+  --leading-tight: 1.04;
 }
 [data-voice="cool"] {
   --font-weight-display: 680;
   --font-weight-title: 650;
-  --letter-display: -0.02em;
-  --letter-title: -0.015em;
-  --type-hero: clamp(1.95rem, 4.6vw, 2.95rem);
+  --letter-display: -0.022em;
+  --letter-title: -0.016em;
+  --type-hero: clamp(2rem, 4.8vw, 3.05rem);
   --type-body: 1.05rem;
-  --leading-tight: 1.18;
+  --leading-tight: 1.16;
 }
 
 /* —— Card surface styles —— */
 [data-card="glow"] {
-  --card-edge: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent), 0 10px 36px var(--glow);
-  --card-texture: radial-gradient(420px 180px at 10% 0%, var(--accent-soft), transparent 70%);
+  --card-edge: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), 0 12px 40px var(--glow);
+  --card-texture: radial-gradient(460px 200px at 12% 0%, var(--accent-soft), transparent 72%);
 }
 [data-card="ribbon"] {
   --card-edge: inset 3px 0 0 var(--accent);
-  --card-texture: linear-gradient(90deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 40%);
+  --card-texture: linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, transparent), transparent 42%);
 }
 [data-card="mesh"] {
-  --card-edge: 0 8px 28px rgba(0, 0, 0, 0.22);
+  --card-edge: 0 10px 32px rgba(0, 0, 0, 0.28);
   --card-texture:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 42%),
-    linear-gradient(315deg, color-mix(in srgb, var(--accent-2) 12%, transparent) 0%, transparent 40%);
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 44%),
+    linear-gradient(315deg, color-mix(in srgb, var(--accent-2) 14%, transparent) 0%, transparent 42%);
 }
 [data-card="soft"] {
   --card-edge: none;
@@ -53,82 +53,85 @@
 
 /* —— Accent + brand skins (live 3 must read as different sites) —— */
 
-/* Bby Wow — party / playful / split + orb + noise */
+/* Bby Wow — party / purple-black + pink glow */
 [data-theme="bby-wow"],
 .kw-site.accent-magenta {
   --accent: #f472b6;
   --accent-2: #c084fc;
   --accent-bright: #fda4d5;
-  --accent-soft: rgba(244, 114, 182, 0.16);
+  --accent-soft: rgba(244, 114, 182, 0.18);
   --accent-dim: var(--accent-soft);
-  --glow: rgba(244, 114, 182, 0.28);
-  --shadow-glow: 0 0 48px rgba(244, 114, 182, 0.28);
+  --glow: rgba(244, 114, 182, 0.38);
+  --glow-2: rgba(192, 132, 252, 0.28);
+  --shadow-glow: 0 0 56px rgba(244, 114, 182, 0.34);
   --link: #fda4d5;
   --link-hover: #fbcfe8;
   --accent-ink: #1a0614;
-  --cover-a: rgba(244, 114, 182, 0.45);
-  --cover-b: rgba(192, 132, 252, 0.32);
-  --cover-c: #1a1024;
-  --bg: #0a0712;
-  --bg-elevated: #120a1a;
-  --surface: #1a1228;
-  --surface-2: #241833;
-  --surface-3: #2e1f42;
+  --cover-a: rgba(244, 114, 182, 0.52);
+  --cover-b: rgba(192, 132, 252, 0.38);
+  --cover-c: #1c1028;
+  --bg: #090510;
+  --bg-elevated: #140a1c;
+  --surface: #1e1430;
+  --surface-2: #2a1c3e;
+  --surface-3: #362650;
 }
 [data-theme="bby-wow"] {
-  --ambience-opacity: 0.07;
+  --ambience-opacity: 0.085;
 }
 
-/* Kiss Cam — stadium editorial / bold / stripes + grid */
+/* Kiss Cam — stadium / warm charcoal + amber glow */
 [data-theme="kiss-cam"],
 .kw-site.accent-amber {
   --accent: #fbbf24;
   --accent-2: #f59e0b;
   --accent-bright: #fcd34d;
-  --accent-soft: rgba(251, 191, 36, 0.14);
+  --accent-soft: rgba(251, 191, 36, 0.16);
   --accent-dim: var(--accent-soft);
-  --glow: rgba(251, 191, 36, 0.22);
-  --shadow-glow: 0 0 40px rgba(251, 191, 36, 0.2);
+  --glow: rgba(251, 191, 36, 0.32);
+  --glow-2: rgba(245, 158, 11, 0.22);
+  --shadow-glow: 0 0 48px rgba(251, 191, 36, 0.28);
   --link: #fcd34d;
   --link-hover: #fde68a;
   --accent-ink: #1a1200;
-  --cover-a: rgba(251, 191, 36, 0.4);
-  --cover-b: rgba(245, 158, 11, 0.28);
-  --cover-c: #14100a;
-  --bg: #0a0906;
-  --bg-elevated: #12100a;
-  --surface: #1a1710;
-  --surface-2: #242016;
-  --surface-3: #2e2a1c;
+  --cover-a: rgba(251, 191, 36, 0.48);
+  --cover-b: rgba(245, 158, 11, 0.34);
+  --cover-c: #16120a;
+  --bg: #0c0a06;
+  --bg-elevated: #161208;
+  --surface: #221c10;
+  --surface-2: #2e2616;
+  --surface-3: #3a3220;
 }
 [data-theme="kiss-cam"] {
-  --ambience-opacity: 0.055;
+  --ambience-opacity: 0.07;
 }
 
-/* Ceiling Fan — cool / centered / mesh + radial */
+/* Ceiling Fan — ink-teal / cyan-green (pull away from Hub sky) */
 [data-theme="ceiling-fan"],
 .kw-site.accent-cyan {
-  --accent: #22d3ee;
-  --accent-2: #06b6d4;
-  --accent-bright: #67e8f9;
-  --accent-soft: rgba(34, 211, 238, 0.12);
+  --accent: #2dd4bf;
+  --accent-2: #14b8a6;
+  --accent-bright: #5eead4;
+  --accent-soft: rgba(45, 212, 191, 0.16);
   --accent-dim: var(--accent-soft);
-  --glow: rgba(34, 211, 238, 0.2);
-  --shadow-glow: 0 0 36px rgba(34, 211, 238, 0.18);
-  --link: #67e8f9;
-  --link-hover: #a5f3fc;
-  --accent-ink: #041018;
-  --cover-a: rgba(34, 211, 238, 0.35);
-  --cover-b: rgba(56, 189, 248, 0.22);
-  --cover-c: #0a1218;
-  --bg: #060b10;
-  --bg-elevated: #0a1218;
-  --surface: #0e1822;
-  --surface-2: #142430;
-  --surface-3: #1a2e3c;
+  --glow: rgba(45, 212, 191, 0.32);
+  --glow-2: rgba(20, 184, 166, 0.2);
+  --shadow-glow: 0 0 44px rgba(45, 212, 191, 0.28);
+  --link: #5eead4;
+  --link-hover: #99f6e4;
+  --accent-ink: #041412;
+  --cover-a: rgba(45, 212, 191, 0.45);
+  --cover-b: rgba(20, 184, 166, 0.3);
+  --cover-c: #06181c;
+  --bg: #031014;
+  --bg-elevated: #061a20;
+  --surface: #0c242c;
+  --surface-2: #143038;
+  --surface-3: #1c3c44;
 }
 [data-theme="ceiling-fan"] {
-  --ambience-opacity: 0.03;
+  --ambience-opacity: 0.06;
 }
 
 /* Soon brands — accent only until they ship their own preset */
@@ -136,6 +139,7 @@
 [data-theme="smalltown-boy-cats"] {
   --accent: #a78bfa; --accent-2: #8b5cf6; --accent-bright: #c4b5fd;
   --accent-soft: rgba(167, 139, 250, 0.14); --glow: rgba(167, 139, 250, 0.28);
+  --glow-2: rgba(139, 92, 246, 0.18);
   --link: #c4b5fd; --link-hover: #ddd6fe; --accent-ink: #120a24;
   --cover-a: rgba(167, 139, 250, 0.35); --cover-b: rgba(139, 92, 246, 0.2); --cover-c: #12101c;
 }
@@ -143,6 +147,7 @@
 [data-theme="clapping-cat"] {
   --accent: #fb7185; --accent-2: #f43f5e; --accent-bright: #fda4af;
   --accent-soft: rgba(251, 113, 133, 0.14); --glow: rgba(251, 113, 133, 0.28);
+  --glow-2: rgba(244, 63, 94, 0.16);
   --link: #fda4af; --link-hover: #fecdd3; --accent-ink: #1a060c;
   --cover-a: rgba(251, 113, 133, 0.35); --cover-b: rgba(244, 63, 94, 0.18); --cover-c: #160a10;
 }
@@ -150,6 +155,7 @@
 [data-theme="knight-cat"] {
   --accent: #a3e635; --accent-2: #84cc16; --accent-bright: #bef264;
   --accent-soft: rgba(163, 230, 53, 0.14); --glow: rgba(163, 230, 53, 0.28);
+  --glow-2: rgba(132, 204, 22, 0.16);
   --accent-ink: #14200a; --link: #bef264; --link-hover: #d9f99d;
   --cover-a: rgba(163, 230, 53, 0.32); --cover-b: rgba(132, 204, 22, 0.16); --cover-c: #0e140a;
 }
@@ -157,6 +163,7 @@
 [data-theme="bulin-47"] {
   --accent: #fb923c; --accent-2: #f97316; --accent-bright: #fdba74;
   --accent-soft: rgba(251, 146, 60, 0.14); --glow: rgba(251, 146, 60, 0.28);
+  --glow-2: rgba(249, 115, 22, 0.16);
   --link: #fdba74; --link-hover: #fed7aa; --accent-ink: #1a0c04;
   --cover-a: rgba(251, 146, 60, 0.35); --cover-b: rgba(249, 115, 22, 0.18); --cover-c: #16100a;
 }
@@ -164,12 +171,14 @@
 [data-theme="zombie-love"] {
   --accent: #38bdf8; --accent-2: #0ea5e9; --accent-bright: #7dd3fc;
   --accent-soft: rgba(56, 189, 248, 0.14); --glow: rgba(56, 189, 248, 0.22);
+  --glow-2: rgba(14, 165, 233, 0.14);
   --cover-a: rgba(56, 189, 248, 0.3); --cover-b: rgba(14, 165, 233, 0.16); --cover-c: #0a1218;
 }
 .kw-site.accent-slate,
 [data-theme="car-jump"] {
   --accent: #94a3b8; --accent-2: #64748b; --accent-bright: #cbd5e1;
   --accent-soft: rgba(148, 163, 184, 0.14); --glow: rgba(148, 163, 184, 0.25);
+  --glow-2: rgba(100, 116, 139, 0.14);
   --link: #cbd5e1; --link-hover: #e2e8f0; --accent-ink: #0a0e14;
   --cover-a: rgba(148, 163, 184, 0.28); --cover-b: rgba(100, 116, 139, 0.16); --cover-c: #101418;
 }

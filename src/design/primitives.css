@@ -5,29 +5,36 @@
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.65rem 1.15rem;
+  padding: 0.7rem 1.25rem;
   border-radius: 999px;
   font-weight: 650;
   font-size: 0.95rem;
   border: 1px solid transparent;
   cursor: pointer;
   text-decoration: none;
-  transition: transform var(--ease), background var(--ease), box-shadow var(--ease), border-color var(--ease);
+  transition: transform var(--ease), background var(--ease), box-shadow var(--ease), border-color var(--ease), color var(--ease);
   font-family: inherit;
 }
 .btn:hover { text-decoration: none; transform: translateY(-1px); }
 .btn-primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: var(--accent-ink);
-  box-shadow: 0 6px 20px var(--glow);
+  box-shadow: 0 8px 28px var(--glow), 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
 }
-.btn-primary:hover { color: var(--accent-ink); box-shadow: 0 8px 26px var(--glow); }
+.btn-primary:hover {
+  color: var(--accent-ink);
+  box-shadow: 0 10px 34px var(--glow), 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
 .btn-ghost {
   background: transparent;
-  border-color: var(--border-strong);
+  border-color: color-mix(in srgb, var(--border-strong) 80%, var(--accent) 20%);
   color: var(--text);
 }
-.btn-ghost:hover { background: var(--surface-2); color: var(--text); }
+.btn-ghost:hover {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--text);
+}
 .btn-sm { padding: 0.4rem 0.85rem; font-size: 0.85rem; }
 .btn:disabled, .btn[aria-disabled="true"] {
   opacity: 0.55;
@@ -43,6 +50,7 @@
   background: var(--surface-2);
   color: var(--muted);
   box-shadow: none;
+  border-color: var(--border);
 }
 
 .badge {
@@ -97,11 +105,11 @@
   opacity: 0.55;
 }
 .card > * { position: relative; z-index: 1; }
-.card h3 { margin: 0 0 0.45rem; font-size: 1.05rem; }
+.card h3 { margin: 0 0 0.45rem; font-size: 1.05rem; font-family: var(--font-display); }
 .card p { margin: 0; color: var(--secondary); font-size: 0.95rem; }
 .card-grid {
   display: grid;
-  gap: 1.15rem;
+  gap: 1rem;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
@@ -110,7 +118,7 @@
   padding: 1rem 1.15rem;
   border: 1px solid var(--border);
   background: var(--surface);
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.1rem;
   font-size: 0.95rem;
   color: var(--secondary);
 }
@@ -147,19 +155,26 @@
   outline-offset: 1px;
 }
 
+/* Create stage — inset glow + dashed upload arena */
 .upload-zone {
   display: block;
-  border: 1.5px dashed var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface);
-  padding: 1.5rem;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 28%, var(--border-strong));
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 40%, var(--accent-soft), transparent 70%),
+    var(--surface);
+  box-shadow: inset 0 0 40px color-mix(in srgb, var(--accent) 8%, transparent);
+  padding: 1.75rem 1.5rem;
   text-align: center;
   cursor: pointer;
-  min-height: 200px;
+  min-height: 220px;
   position: relative;
-  transition: border-color var(--ease), background var(--ease);
+  transition: border-color var(--ease), background var(--ease), box-shadow var(--ease);
 }
-.upload-zone:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--border-strong)); }
+.upload-zone:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border-strong));
+  box-shadow: inset 0 0 48px color-mix(in srgb, var(--accent) 14%, transparent);
+}
 .upload-zone input[type="file"] {
   position: absolute;
   inset: 0;
@@ -185,10 +200,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 160px;
-  border: 1.5px dashed var(--border-strong);
+  min-height: 170px;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 22%, var(--border-strong));
   border-radius: var(--radius);
-  background: var(--surface);
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 45%, var(--accent-soft), transparent 70%),
+    var(--surface);
+  box-shadow: inset 0 0 28px color-mix(in srgb, var(--accent) 6%, transparent);
   cursor: pointer;
   overflow: hidden;
   text-align: center;
@@ -215,12 +233,12 @@
 
 .empty-state {
   text-align: center;
-  padding: 2.5rem 1.5rem;
+  padding: 2.25rem 1.5rem;
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-lg);
   background: var(--bg-elevated);
 }
-.empty-state h3 { margin: 0 0 0.45rem; font-size: 1.15rem; }
+.empty-state h3 { margin: 0 0 0.45rem; font-size: 1.15rem; font-family: var(--font-display); }
 .empty-state p { margin: 0 auto 1.1rem; max-width: 36ch; color: var(--muted); font-size: 0.95rem; }
 
 .faq details,

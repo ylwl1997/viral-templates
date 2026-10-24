@@ -37,7 +37,7 @@ const theme = t.theme;
         eyebrow={`9:16 · ${t.durationZh}`}
         eyebrowLogo={t.logo}
         title={t.heroZh}
-        lede={`${t.taglineZh}。需成人同意。`}
+        lede={`${t.taglineZh}。需 ${t.photoCount} 张照片 — 在创作页上传。需成人同意。`}
         logo={t.logo}
         mediaSrc={t.poster}
         mediaAlt={`${t.displayNameZh} 9:16 预览`}
@@ -52,14 +52,6 @@ const theme = t.theme;
         <StepsHow
           steps={t.howZh.map((step, i) => ({ title: `步骤 ${i + 1}`, body: step }))}
         />
-      </section>
-
-      <section class="section wrap" id="upload">
-        <h2>上传</h2>
-        <p class="sub">
-          {t.photoCount === 2 ? '该模板需要 2 张照片。' : '该模板需要 1 张照片。'}
-          {' '}请使用顶栏或 Hero 的「开始创作」进入工作室。
-        </p>
       </section>
 
       <section class="section wrap" id="pricing">
@@ -83,8 +75,8 @@ const theme = t.theme;
       <FinalCta
         title={`用 ${t.displayNameZh} 创作`}
         lede="上传、确认授权，生成开放后即可制作。"
-        primary={{ href: '#pricing', label: '查看价格' }}
-        secondary={{ href: '#how', label: '如何使用' }}
+        primary={{ href: createHref, label: '开始创作' }}
+        secondary={{ href: '#pricing', label: '价格' }}
       />
     </>
   ) : (

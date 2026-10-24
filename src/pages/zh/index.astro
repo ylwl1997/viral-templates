@@ -1,12 +1,14 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { SITE, pathFor } from '../../lib/site';
+import { SITE, pathFor, keywordPath } from '../../lib/site';
 import { LIVE_TEMPLATES, SOON_TEMPLATES } from '../../lib/templates';
 import TemplateGallery from '../../design/components/TemplateGallery.astro';
 import StepsHow from '../../design/components/StepsHow.astro';
 import FinalCta from '../../design/components/FinalCta.astro';
 
 const lang = 'zh' as const;
+const previewA = LIVE_TEMPLATES[0];
+const previewB = LIVE_TEMPLATES[1] ?? LIVE_TEMPLATES[0];
 ---
 <Layout
   title={`${SITE.name} — AI 爆款视频模板`}
@@ -14,15 +16,38 @@ const lang = 'zh' as const;
   canonicalPath="/"
   lang={lang}
 >
-  <section class="hero wrap hero-preset-centered">
-    <div class="eyebrow">热门风格</div>
-    <h1>AI 爆款视频 <span class="grad">模板</span></h1>
-    <p class="lede">
-      选风格、上传照片、生成竖屏短片。需成人同意。
-    </p>
-    <div class="hero-cta">
-      <a class="btn btn-primary" href={pathFor(lang, '/create/')}>开始制作</a>
-      <a class="btn btn-ghost" href="#templates">浏览模板</a>
+  <section class="hero wrap hero-hub">
+    <div class="hero-copy">
+      <div class="eyebrow">热门风格</div>
+      <h1>AI 爆款视频 <span class="grad">模板</span></h1>
+      <p class="lede">
+        选风格、上传照片、生成竖屏短片。需成人同意。
+      </p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href={pathFor(lang, '/create/')}>开始制作</a>
+        <a class="btn btn-ghost" href="#templates">浏览模板</a>
+      </div>
+    </div>
+    <div class="hero-media-stack" aria-hidden="true">
+      <a class="hero-phone-a media-slot" href={keywordPath(lang, previewA.slug, '')} tabindex="-1">
+        {previewA.poster ? (
+          <img class="media-poster" src={previewA.poster} alt="" width="200" height="356" />
+        ) : (
+          <div class="media-fallback">
+            <img src={previewA.logo} width="56" height="56" alt="" />
+          </div>
+        )}
+        <span class="media-badge">9:16</span>
+      </a>
+      <a class="hero-phone-b media-slot" href={keywordPath(lang, previewB.slug, '')} tabindex="-1">
+        {previewB.poster ? (
+          <img class="media-poster" src={previewB.poster} alt="" width="168" height="300" />
+        ) : (
+          <div class="media-fallback">
+            <img src={previewB.logo} width="48" height="48" alt="" />
+          </div>
+        )}
+      </a>
     </div>
   </section>
 

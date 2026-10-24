@@ -10,9 +10,7 @@ interface Props {
   logoSrc: string;
   brandName: string;
   nav: NavItem[];
-  /** Locale-neutral path for EN/ZH switch */
   canonicalPath: string;
-  /** Optional keywordPath helpers for brand lang switch */
   enHref?: string;
   zhHref?: string;
   cta?: { href: string; label: string } | { disabled: true; label: string };
@@ -35,13 +33,23 @@ const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
 const en = enHref ?? (canonicalPath.startsWith('/') ? canonicalPath : `/${canonicalPath}`);
 const zh = zhHref ?? (en === '/' ? '/zh/' : `/zh${en.endsWith('/') ? en : `${en}/`}`);
 ---
-<header class="site-header">
+<header class="site-header" data-site-header>
   <div class="wrap header-inner">
     <a class="logo" href={homeHref}>
       <img src={logoSrc} width="28" height="28" alt="" />
       {brandName}
     </a>
-    <nav class="nav" aria-label={label('Primary', '主导航')}>
+    <button
+      type="button"
+      class="nav-toggle"
+      data-nav-toggle
+      aria-expanded="false"
+      aria-controls="site-nav"
+      aria-label={label('Menu', '菜单')}
+    >
+      <span class="nav-toggle-bars" aria-hidden="true"></span>
+    </button>
+    <nav class="nav" id="site-nav" data-site-nav aria-label={label('Primary', '主导航')}>
       {nav.map((item) =>
         item.muted ? (
           <span class="nav-muted">{item.label}</span>
@@ -59,8 +67,31 @@ const zh = zhHref ?? (en === '/' ? '/zh/' : `/zh${en.endsWith('/') ? en : `${en}
       {cta && ('disabled' in cta ? (
         <span class="btn btn-ghost btn-sm" aria-disabled="true">{cta.label}</span>
       ) : (
-        <a class="btn btn-primary btn-sm" href={cta.href}>{cta.label}</a>
+        <a class="btn btn-primary btn-sm header-cta" href={cta.href}>{cta.label}</a>
       ))}
     </div>
   </div>
 </header>
+<script is:inline>
+  (function () {
+    function boot() {
+      var header = document.querySelector('[data-site-header]');
+      if (!header) return;
+      var btn = header.querySelector('[data-nav-toggle]');
+      var nav = header.querySelector('[data-site-nav]');
+      if (!btn || !nav) return;
+      btn.addEventListener('click', function () {
+        var open = header.classList.toggle('nav-open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      nav.querySelectorAll('a').forEach(function (a) {
+        a.addEventListener('click', function () {
+          header.classList.remove('nav-open');
+          btn.setAttribute('aria-expanded', 'false');
+        });
+      });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+    else boot();
+  })();
+</script>

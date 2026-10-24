@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 640" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="360" y2="640" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#042f2e"/><stop offset="1" stop-color="#083344"/>
+    </linearGradient>
+  </defs>
+  <rect width="360" height="640" fill="url(#bg)"/>
+  <circle cx="180" cy="160" r="18" fill="#67e8f9"/>
+  <g opacity=".9" stroke="#a5f3fc" stroke-width="18" stroke-linecap="round">
+    <path d="M180 160 L180 70"/><path d="M180 160 L255 205"/><path d="M180 160 L105 205"/>
+  </g>
+  <ellipse cx="180" cy="380" rx="70" ry="90" fill="#99f6e4" opacity=".85"/>
+  <path d="M110 470c18-55 50-85 70-85s52 30 70 85v90H110v-90z" fill="#22d3ee" opacity=".75"/>
+  <text x="180" y="55" text-anchor="middle" fill="#cffafe" font-family="system-ui,sans-serif" font-size="18" font-weight="700">9:16 preview</text>
+  <text x="180" y="600" text-anchor="middle" fill="#a5f3fc" font-family="system-ui,sans-serif" font-size="14" opacity=".85">Demo · AI fan wipe</text>
+</svg>

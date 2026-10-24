@@ -22,11 +22,11 @@ const createHref = template
   ? (lang === 'zh' ? `/zh/t/${template.slug}/create/` : `/t/${template.slug}/create/`)
   : pathFor(lang, '/create/');
 ---
-<div class="account-shell wrap" data-account-shell data-lang={lang} data-active={active}>
-  <aside class="account-sidebar" aria-label={label('Account', '账户')}>
+<div class="account-shell wrap is-logged-out" data-account-shell data-lang={lang} data-active={active}>
+  <aside class="account-sidebar" data-account-sidebar aria-label={label('Account', '账户')} hidden>
     <div class="account-sidebar-head">
       <p class="account-kicker">{label('Account', '账户')}</p>
-      <a class="btn btn-primary btn-sm account-new-create" href={createHref}>
+      <a class="btn btn-ghost btn-sm account-new-create" href={createHref}>
         {label('New create', '新建创作')}
       </a>
     </div>
@@ -42,10 +42,7 @@ const createHref = template
       ))}
     </nav>
     <p class="account-sidebar-note">
-      {label(
-        'Demo data only. Generate / pay stay stubs until fal and checkout are wired.',
-        '仅演示数据。生成与支付在接入 fal / 结账前仍为占位。'
-      )}
+      {label('Demo data for acceptance testing.', '演示数据，用于验收。')}
     </p>
   </aside>
   <div class="account-main">
@@ -54,7 +51,7 @@ const createHref = template
         <h1>{label('Sign in to view your account', '登录后查看账户')}</h1>
         <p>
           {label(
-            'Your creations, credits, and settings live here once you are signed in.',
+            'Your creations, credits, and settings appear here after you sign in.',
             '登录后可在此查看作品、积分与设置。'
           )}
         </p>

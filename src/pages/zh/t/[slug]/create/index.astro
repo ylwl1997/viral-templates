@@ -27,7 +27,7 @@ const isLive = t.status === 'live';
     <>
       <div class="page-head wrap">
         <h1>创作 — {t.displayNameZh}</h1>
-        <p>{t.taglineZh}。生成与支付为占位 — 不会伪造成功。</p>
+        <p>{t.taglineZh}。生成在开放前显示即将开放。</p>
       </div>
       <CreateStudio template={t} lang={lang} />
     </>
@@ -35,8 +35,8 @@ const isLive = t.status === 'live';
     <section class="hero wrap">
       <div class="eyebrow">即将上线</div>
       <h1>{t.displayNameZh}</h1>
-      <p class="lede">创作尚未开放，请稍后再来。</p>
-      <a class="btn btn-primary" href={keywordPath(lang, t.slug, '')}>返回站点</a>
+      <p class="lede">创作暂未开放，请稍后再来。</p>
+      <a class="btn btn-primary" href={keywordPath(lang, t.slug, '')}>返回首页</a>
     </section>
   )}
 </KeywordLayout>

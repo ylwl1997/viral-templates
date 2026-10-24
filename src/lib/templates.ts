@@ -48,6 +48,8 @@ export type Template = {
   accent: BrandTheme['accent'];
   /** Public path to brand mark (svg/png). */
   logo: string;
+  /** Optional 9:16 still/loop poster for Live media slots. */
+  poster?: string;
   /** Full brand theme — required; do not ship logo-only clones. */
   theme: BrandTheme;
   disclaimerEn: string;
@@ -68,15 +70,16 @@ export const TEMPLATES: readonly Template[] = [
     seoTitleEn: 'Bby Wow AI — 1 photo party dance video',
     seoTitleZh: 'Bby Wow AI — 1 张照片派对舞短片',
     seoDescEn:
-      'Turn one adult-consent photo into a ~10s vertical party-dance AI video. Generate and pay are stubs until fal / Waffo are wired.',
+      'Turn one adult-consent photo into a ~10s vertical party-dance AI video. Adult consent required.',
     seoDescZh:
-      '用 1 张成人同意照片生成约 10 秒竖屏派对舞 AI 短片。生成与支付为占位，待接入 fal / Waffo。',
+      '用 1 张成人同意照片生成约 10 秒竖屏派对舞 AI 短片。需成人同意。',
     heroEn: 'Upload one photo. Get a vertical party-dance remix.',
     heroZh: '上传一张照片，生成竖屏派对舞 remix。',
-    howEn: ['Upload 1 adult-consent photo', 'Confirm consent & credits stub', 'Generate (stub until fal is wired)'],
-    howZh: ['上传 1 张成人同意照片', '确认授权与积分占位', '生成（待接入 fal）'],
+    howEn: ['Upload 1 adult-consent photo', 'Confirm consent', 'Generate your clip'],
+    howZh: ['上传 1 张成人同意照片', '确认授权', '生成短片'],
     accent: 'magenta',
     logo: '/brand/templates/bby-wow.svg',
+    poster: '/brand/templates/bby-wow-poster.svg',
     theme: { accent: 'magenta', heroPreset: 'split', typeVoice: 'playful', cardStyle: 'glow', coverStyle: 'orb', ambience: 'noise' },
     disclaimerEn: 'Adult consent only · no minors. Not affiliated with Karol G, CapCut, or any label.',
     disclaimerZh: '仅限成人同意照片 · 禁止未成年人。非 Karol G / CapCut 官方。',
@@ -94,15 +97,16 @@ export const TEMPLATES: readonly Template[] = [
     seoTitleEn: 'Coldplay Kiss Cam AI — 2 photos stadium remix',
     seoTitleZh: 'Coldplay Kiss Cam AI — 2 张照片球场大屏',
     seoDescEn:
-      'Two adult-consent photos → stadium kiss-cam style AI clip. No real concert footage. Generate/pay stubbed.',
+      'Two adult-consent photos → stadium kiss-cam style AI clip. No real concert footage. Adult consent required.',
     seoDescZh:
-      '两张成人同意照片 → 球场大屏风 AI 短片。无真实演唱会素材。生成/支付为占位。',
+      '两张成人同意照片 → 球场大屏风 AI 短片。无真实演唱会素材。需成人同意。',
     heroEn: 'Two photos. One stadium jumbotron moment — AI only.',
     heroZh: '两张照片，一秒球场大屏 —— 纯 AI。',
-    howEn: ['Upload 2 adult-consent photos', 'Confirm consent (no concert footage)', 'Generate (stub until fal is wired)'],
-    howZh: ['上传 2 张成人同意照片', '确认授权（无演唱会素材）', '生成（待接入 fal）'],
+    howEn: ['Upload 2 adult-consent photos', 'Confirm consent (no concert footage)', 'Generate your clip'],
+    howZh: ['上传 2 张成人同意照片', '确认授权（无演唱会素材）', '生成短片'],
     accent: 'amber',
     logo: '/brand/templates/kiss-cam.svg',
+    poster: '/brand/templates/kiss-cam-poster.svg',
     theme: { accent: 'amber', heroPreset: 'editorial', typeVoice: 'bold', cardStyle: 'ribbon', coverStyle: 'stripes', ambience: 'grid' },
     disclaimerEn:
       'Adult consent only · no minors. Fan-made AI remix — not official Coldplay / CapCut. No real concert footage.',
@@ -121,15 +125,16 @@ export const TEMPLATES: readonly Template[] = [
     seoTitleEn: 'Ceiling Fan Transition AI — 1 photo outfit change',
     seoTitleZh: 'Ceiling Fan Transition AI — 1 张照片换装转场',
     seoDescEn:
-      'One adult-consent photo → ~12–15s AI ceiling-fan outfit change. Never strap a phone to a fan. Generate/pay stubbed.',
+      'One adult-consent photo → ~12–15s AI ceiling-fan outfit change. Never strap a phone to a fan. Adult consent required.',
     seoDescZh:
-      '1 张成人同意照片 → 约 12–15 秒吊扇换装转场。切勿把手机绑在风扇上。生成/支付为占位。',
+      '1 张成人同意照片 → 约 12–15 秒吊扇换装转场。切勿把手机绑在风扇上。需成人同意。',
     heroEn: 'One photo. An AI fan-wipe outfit change — never a real fan.',
     heroZh: '一张照片，AI 吊扇换装 —— 切勿使用真风扇。',
-    howEn: ['Upload 1 adult-consent photo', 'Confirm consent & safety note', 'Generate (stub until fal is wired)'],
-    howZh: ['上传 1 张成人同意照片', '确认授权与安全提示', '生成（待接入 fal）'],
+    howEn: ['Upload 1 adult-consent photo', 'Confirm consent & safety note', 'Generate your clip'],
+    howZh: ['上传 1 张成人同意照片', '确认授权与安全提示', '生成短片'],
     accent: 'cyan',
     logo: '/brand/templates/ceiling-fan.svg',
+    poster: '/brand/templates/ceiling-fan-poster.svg',
     theme: { accent: 'cyan', heroPreset: 'centered', typeVoice: 'cool', cardStyle: 'mesh', coverStyle: 'radial', ambience: 'none' },
     disclaimerEn:
       'Adult consent only · no minors. Pure AI — never strap a phone to a spinning fan. Not affiliated with CapCut.',

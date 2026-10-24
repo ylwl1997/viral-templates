@@ -26,25 +26,16 @@
     var next = safeNext(params.get('next') || '', fallback);
     var err = document.getElementById('sign-in-error');
     var status = document.getElementById('sign-in-status');
-    var googleBtn = document.getElementById('sign-in-google');
+    var lede = document.getElementById('sign-in-lede');
     var previewForm = document.getElementById('preview-form');
     var previewWrap = document.getElementById('preview-wrap');
+    var googleWrap = document.getElementById('google-wrap');
+    var soon = document.getElementById('sign-in-soon');
 
     function showError(msg) {
       if (!err) return;
       err.hidden = !msg;
       err.textContent = msg || '';
-    }
-
-    if (googleBtn) {
-      googleBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        showError(
-          lang === 'zh'
-            ? 'Google 登录尚未配置。请使用下方预览登录完成验收。'
-            : 'Google sign-in is not configured yet. Use preview sign-in below for acceptance.'
-        );
-      });
     }
 
     fetch('/api/auth/session', { credentials: 'same-origin' })
@@ -56,21 +47,55 @@
           location.replace(next);
           return;
         }
-        if (previewWrap) {
-          previewWrap.hidden = !(data && data.preview);
+        var googleWired = !!(data && data.google);
+        var previewOk = !!(data && data.preview);
+
+        if (googleWired && googleWrap) {
+          googleWrap.hidden = false;
+          googleWrap.innerHTML =
+            '<button type="button" class="btn btn-ghost" id="sign-in-google" style="width:100%">' +
+            (lang === 'zh' ? '使用 Google 继续' : 'Continue with Google') +
+            '</button>';
+          var googleBtn = document.getElementById('sign-in-google');
+          if (googleBtn) {
+            googleBtn.addEventListener('click', function (e) {
+              e.preventDefault();
+              showError(
+                lang === 'zh'
+                  ? 'Google 登录暂不可用，请稍后再试。'
+                  : 'Google sign-in is unavailable right now. Try again later.'
+              );
+            });
+          }
+          if (lede) {
+            lede.textContent =
+              lang === 'zh' ? '使用 Google 登录继续。' : 'Continue with Google to sign in.';
+          }
         }
-        if (status) {
-          status.textContent =
-            data && data.preview
-              ? lang === 'zh'
-                ? '预览环境可用一键假登录（写入会话 Cookie）。'
-                : 'Preview hosts can use one-click fake login (writes a session cookie).'
-              : lang === 'zh'
-                ? '预览登录未开启。'
-                : 'Preview sign-in is not available on this host.';
+
+        if (previewWrap) previewWrap.hidden = !previewOk;
+        if (previewOk && !googleWired && lede) {
+          lede.textContent =
+            lang === 'zh'
+              ? '使用预览登录继续（演示）。'
+              : 'Continue with Preview sign-in (demo).';
+        }
+
+        if (!googleWired && !previewOk) {
+          if (soon) soon.hidden = false;
+          if (lede) {
+            lede.textContent =
+              lang === 'zh' ? '登录即将开放。' : 'Sign-in coming soon.';
+          }
+          if (status) status.textContent = '';
+        } else if (status) {
+          status.textContent = previewOk && !googleWired
+            ? (lang === 'zh' ? '演示环境可用预览登录。' : 'Preview sign-in is available on this host.')
+            : '';
         }
       })
       .catch(function () {
+        if (soon) soon.hidden = false;
         if (status) {
           status.textContent =
             lang === 'zh' ? '无法读取登录状态。' : 'Could not load sign-in status.';

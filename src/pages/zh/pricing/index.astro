@@ -6,19 +6,19 @@ import PricingGrid from '../../../design/components/PricingGrid.astro';
 const { packs, oneShotUsd, kissCamOneShotUsd } = SITE.pricing;
 ---
 <Layout
-  title="价格（占位）"
-  description="Viral Templates AI 视频产品占位价格。"
+  title="价格"
+  description="Viral Templates AI 视频产品演示价格。"
   canonicalPath="/pricing/"
   lang="zh"
 >
-  <div class="page-head wrap"><h1>价格（占位）</h1><p>结账未接通。数字仅为占位。</p></div>
+  <div class="page-head wrap"><h1>价格</h1><p>演示价格 — 支付开放后可结账。</p></div>
   <section class="section wrap">
     <PricingGrid
       oneShotLabel="单次"
       oneShotUsd={oneShotUsd}
-      oneShotMeta={`Kiss Cam 起 $${kissCamOneShotUsd} · 占位`}
+      oneShotMeta={`Kiss Cam 起 $${kissCamOneShotUsd} · 演示`}
       packs={packs}
-      stubNote="创作页支付为明确占位 — 不会伪造成功。"
+      note="创作页支付在开放前显示即将开放。"
     />
   </section>
 </Layout>

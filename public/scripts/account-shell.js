@@ -16,11 +16,15 @@
     if (!shell) return;
     var gate = shell.querySelector('[data-account-gate]');
     var body = shell.querySelector('[data-account-body]');
+    var sidebar = shell.querySelector('[data-account-sidebar]');
     var link = shell.querySelector('[data-account-gate-signin]');
     if (link) link.href = pathWithNext(link.getAttribute('href') || '/account/sign-in/');
     if (user) {
+      shell.classList.remove('is-logged-out');
+      shell.classList.add('is-logged-in');
       if (gate) gate.hidden = true;
       if (body) body.hidden = false;
+      if (sidebar) sidebar.hidden = false;
       shell.querySelectorAll('[data-session-name]').forEach(function (el) {
         el.textContent = user.name || user.email || '—';
       });
@@ -31,8 +35,11 @@
         el.textContent = user.user_id || '—';
       });
     } else {
+      shell.classList.add('is-logged-out');
+      shell.classList.remove('is-logged-in');
       if (gate) gate.hidden = false;
       if (body) body.hidden = true;
+      if (sidebar) sidebar.hidden = true;
     }
   }
 

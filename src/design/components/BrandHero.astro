@@ -6,12 +6,14 @@ interface Props {
   eyebrow?: string;
   eyebrowLogo?: string;
   title: string;
-  /** Optional HTML-safe gradient span mark — pass plain title otherwise */
   lede: string;
   primaryCta?: { href: string; label: string };
   secondaryCta?: { href: string; label: string };
   rail?: string[];
   logo?: string;
+  /** 9:16 still or loop poster for Live brands */
+  mediaSrc?: string;
+  mediaAlt?: string;
   soon?: boolean;
 }
 
@@ -25,67 +27,48 @@ const {
   secondaryCta,
   rail,
   logo,
+  mediaSrc,
+  mediaAlt = '',
   soon,
 } = Astro.props;
+
+const showMedia = !soon && !!(mediaSrc || logo);
 ---
-<section class:list={['hero', 'wrap', `hero-preset-${preset}`, soon && 'soon-hero']}>
-  {preset === 'split' ? (
-    <>
-      <div class="hero-visual" aria-hidden="true">
-        {logo && <img src={logo} width="88" height="88" alt="" />}
-      </div>
-      <div class="hero-copy">
-        {eyebrow && (
-          <div class="eyebrow brand-eyebrow">
-            {eyebrowLogo && <img src={eyebrowLogo} width="18" height="18" alt="" />}
-            {eyebrow}
+<section class:list={['hero', 'wrap', `hero-preset-${preset}`, soon && 'soon-hero', showMedia && 'hero-has-media']}>
+  {showMedia && (
+    <div class="hero-media" aria-hidden={mediaAlt ? undefined : 'true'}>
+      <div class="media-slot media-slot-hero">
+        {mediaSrc ? (
+          <img class="media-poster" src={mediaSrc} alt={mediaAlt} width="360" height="640" />
+        ) : (
+          <div class="media-fallback">
+            {logo && <img src={logo} width="72" height="72" alt="" />}
+            <span class="media-loop" aria-hidden="true"></span>
           </div>
         )}
-        <h1>{title}</h1>
-        <p class="lede">{lede}</p>
-        <div class="hero-cta">
-          {primaryCta && <a class="btn btn-primary" href={primaryCta.href}>{primaryCta.label}</a>}
-          {secondaryCta && <a class="btn btn-ghost" href={secondaryCta.href}>{secondaryCta.label}</a>}
-          {soon && !primaryCta && <span class="btn btn-ghost" aria-disabled="true">Coming soon</span>}
-        </div>
+        <span class="media-badge">9:16</span>
       </div>
-    </>
-  ) : preset === 'editorial' ? (
-    <>
-      {rail && rail.length > 0 && (
-        <div class="hero-rail">
-          {rail.map((r) => <span>{r}</span>)}
-        </div>
-      )}
-      {eyebrow && !rail && (
-        <div class="eyebrow brand-eyebrow">
-          {eyebrowLogo && <img src={eyebrowLogo} width="18" height="18" alt="" />}
-          {eyebrow}
-        </div>
-      )}
-      <h1>{title}</h1>
-      <p class="lede">{lede}</p>
-      <div class="hero-cta">
-        {primaryCta && <a class="btn btn-primary" href={primaryCta.href}>{primaryCta.label}</a>}
-        {secondaryCta && <a class="btn btn-ghost" href={secondaryCta.href}>{secondaryCta.label}</a>}
-        {soon && !primaryCta && <span class="btn btn-ghost" aria-disabled="true">Coming soon</span>}
-      </div>
-    </>
-  ) : (
-    <>
-      {eyebrow && (
-        <div class="eyebrow brand-eyebrow">
-          {eyebrowLogo && <img src={eyebrowLogo} width="18" height="18" alt="" />}
-          {eyebrow}
-        </div>
-      )}
-      <h1>{title}</h1>
-      <p class="lede">{lede}</p>
-      <div class="hero-cta">
-        {primaryCta && <a class="btn btn-primary" href={primaryCta.href}>{primaryCta.label}</a>}
-        {secondaryCta && <a class="btn btn-ghost" href={secondaryCta.href}>{secondaryCta.label}</a>}
-        {soon && !primaryCta && <span class="btn btn-ghost" aria-disabled="true">Coming soon</span>}
-      </div>
-    </>
+    </div>
   )}
+
+  <div class="hero-copy">
+    {preset === 'editorial' && rail && rail.length > 0 && (
+      <div class="hero-rail">
+        {rail.map((r) => <span>{r}</span>)}
+      </div>
+    )}
+    {eyebrow && !(preset === 'editorial' && rail && rail.length > 0) && (
+      <div class="eyebrow brand-eyebrow">
+        {eyebrowLogo && <img src={eyebrowLogo} width="18" height="18" alt="" />}
+        {eyebrow}
+      </div>
+    )}
+    <h1>{title}</h1>
+    <p class="lede">{lede}</p>
+    <div class="hero-cta">
+      {primaryCta && <a class="btn btn-primary" href={primaryCta.href}>{primaryCta.label}</a>}
+      {secondaryCta && <a class="btn btn-ghost" href={secondaryCta.href}>{secondaryCta.label}</a>}
+      {soon && !primaryCta && <span class="btn btn-ghost" aria-disabled="true">Coming soon</span>}
+    </div>
+  </div>
 </section>

@@ -22,22 +22,14 @@ const backLabel = template
 <section class="section wrap sign-in-section" id="sign-in-panel" data-lang={lang} data-next-default={nextDefault}>
   <p class="account-kicker">{label('Account', '账户')}</p>
   <h1>{label('Sign in', '登录')}</h1>
-  <p class="lede">
-    {label(
-      'Continue with Google when it is configured. On preview hosts you can use a one-click fake login for acceptance testing.',
-      '配置完成后可使用 Google 登录。预览环境可用一键假登录完成验收。'
-    )}
+  <p class="lede" id="sign-in-lede">
+    {label('Choose how you want to continue.', '选择登录方式。')}
   </p>
   <div class="card sign-in-card">
     <p class="sign-in-error" id="sign-in-error" hidden></p>
-    <button type="button" class="btn btn-ghost" id="sign-in-google" style="width:100%">
-      {label('Continue with Google', '使用 Google 继续')}
-    </button>
-    <p class="sign-in-google-note">
-      {label('Google OAuth placeholder — not connected in P0.', 'Google OAuth 占位 — P0 未接线。')}
-    </p>
+    <!-- Google button only rendered by JS when OAuth is wired -->
+    <div id="google-wrap" hidden></div>
     <div id="preview-wrap" hidden>
-      <div class="sign-in-divider"><span>{label('or preview', '或预览登录')}</span></div>
       <form id="preview-form" class="preview-form">
         <label>
           <span>{label('Email', '邮箱')}</span>
@@ -59,6 +51,9 @@ const backLabel = template
       </form>
     </div>
     <p class="sign-in-status" id="sign-in-status"></p>
+    <p class="sign-in-soon" id="sign-in-soon" hidden>
+      {label('Sign-in coming soon.', '登录即将开放。')}
+    </p>
     <p class="sign-in-back"><a href={backHref}>{backLabel}</a></p>
   </div>
 </section>

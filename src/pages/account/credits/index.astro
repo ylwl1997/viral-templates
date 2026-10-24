@@ -19,7 +19,7 @@ const lang = 'en' as const;
   <div class="card account-stat" style="margin-bottom:1.25rem">
     <p class="account-stat-label">Current balance</p>
     <p class="account-stat-value">{MOCK_CREDIT_BALANCE}</p>
-    <p class="account-stat-meta"><span class="badge">demo balance</span> · {SITE.pricing.creditPerGenerate} credit / generate (planned)</p>
+    <p class="account-stat-meta"><span class="badge">Demo</span> · {SITE.pricing.creditPerGenerate} credit / generate · Demo</p>
   </div>
 
   <section class="account-block">
@@ -46,9 +46,9 @@ const lang = 'en' as const;
       <h2>Top up</h2>
     </div>
     <div class="card callout info">
-      <strong>Stub — checkout not connected.</strong>
+      <strong>Coming soon — checkout not open yet.</strong>
       {' '}Packs ({SITE.pricing.packs.map((p) => `${p.label} ${p.credits} credits / $${p.usd}`).join(' · ')})
-      will use a payment provider later. No charge is made from this page.
+      will open when payments are ready. No charge is made from this page.
     </div>
     <div class="pack-row">
       {SITE.pricing.packs.map((p) => (

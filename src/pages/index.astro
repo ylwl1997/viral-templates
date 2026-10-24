@@ -18,18 +18,18 @@ const lang = 'en' as const;
     <div class="eyebrow">Trending looks</div>
     <h1>AI viral video <span class="grad">templates</span></h1>
     <p class="lede">
-      Pick a look, upload a photo, get a vertical clip. Create is ready on live templates — generate &amp; pay stay honest stubs until backends are wired.
+      Pick a look, upload a photo, get a vertical clip. Adult consent required.
     </p>
     <div class="hero-cta">
-      <a class="btn btn-primary" href="#templates">Browse templates</a>
-      <a class="btn btn-ghost" href={pathFor(lang, '/create/')}>Create</a>
+      <a class="btn btn-primary" href={pathFor(lang, '/create/')}>Start creating</a>
+      <a class="btn btn-ghost" href="#templates">Browse templates</a>
     </div>
   </section>
 
   <section class="section wrap" id="templates">
     <div class="section-head">
       <h2>Templates</h2>
-      <p class="sub">Live looks you can open and create with. Each brand has its own studio — not a recolored hub.</p>
+      <p class="sub">Live looks you can open and create with.</p>
     </div>
     <TemplateGallery lang={lang} templates={LIVE_TEMPLATES} mode="live" />
   </section>
@@ -51,7 +51,7 @@ const lang = 'en' as const;
       steps={[
         { title: 'Choose a template', body: 'Browse trending looks and open Create.' },
         { title: 'Upload & consent', body: 'Adult-consent photos only. No minors.' },
-        { title: 'Generate (stub)', body: 'Buttons explain the stub — no fake success video until fal is wired.' },
+        { title: 'Generate', body: 'Create opens when generation is ready. Until then the button shows Coming soon.' },
       ]}
     />
   </section>
@@ -59,7 +59,7 @@ const lang = 'en' as const;
   <FinalCta
     title="Ready to create?"
     lede="Open the hub studio or jump into a live brand page."
-    primary={{ href: pathFor(lang, '/create/'), label: 'Start create' }}
+    primary={{ href: pathFor(lang, '/create/'), label: 'Start creating' }}
     secondary={{ href: pathFor(lang, '/pricing/'), label: 'Pricing' }}
   />
 </Layout>

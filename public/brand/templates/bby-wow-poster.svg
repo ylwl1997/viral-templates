@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 640" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="360" y2="640" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1a0b1f"/><stop offset="1" stop-color="#3b0764"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="45%">
+      <stop stop-color="#f472b6" stop-opacity=".55"/><stop offset="1" stop-color="#f472b6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="360" height="640" fill="url(#bg)"/>
+  <rect width="360" height="640" fill="url(#glow)"/>
+  <ellipse cx="180" cy="250" rx="78" ry="95" fill="#f9a8d4" opacity=".9"/>
+  <path d="M90 420c20-70 60-110 90-110s70 40 90 110v140H90V420z" fill="#e879f9" opacity=".85"/>
+  <circle cx="155" cy="235" r="6" fill="#1f1130"/><circle cx="205" cy="235" r="6" fill="#1f1130"/>
+  <path d="M150 270c12 14 36 14 48 0" stroke="#1f1130" stroke-width="4" stroke-linecap="round"/>
+  <rect x="24" y="24" width="312" height="48" rx="12" fill="rgba(0,0,0,.35)"/>
+  <text x="180" y="55" text-anchor="middle" fill="#fce7f3" font-family="system-ui,sans-serif" font-size="18" font-weight="700">9:16 preview</text>
+  <text x="180" y="600" text-anchor="middle" fill="#fbcfe8" font-family="system-ui,sans-serif" font-size="14" opacity=".8">Demo loop · Bby Wow</text>
+</svg>

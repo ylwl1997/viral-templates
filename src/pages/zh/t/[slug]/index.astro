@@ -37,8 +37,10 @@ const theme = t.theme;
         eyebrow={`9:16 · ${t.durationZh}`}
         eyebrowLogo={t.logo}
         title={t.heroZh}
-        lede={`${t.taglineZh}。需成人同意。生成与支付在接入 fal / Waffo 前为占位。`}
+        lede={`${t.taglineZh}。需成人同意。`}
         logo={t.logo}
+        mediaSrc={t.poster}
+        mediaAlt={`${t.displayNameZh} 9:16 预览`}
         rail={theme.heroPreset === 'editorial' ? [t.displayNameZh, `${t.photoCount} 张照片`, t.durationZh, 'AI remix'] : undefined}
         primaryCta={{ href: createHref, label: '开始创作' }}
         secondaryCta={{ href: '#how', label: '如何使用' }}
@@ -56,20 +58,19 @@ const theme = t.theme;
         <h2>上传</h2>
         <p class="sub">
           {t.photoCount === 2 ? '该模板需要 2 张照片。' : '该模板需要 1 张照片。'}
-          {' '}打开创作进入工作室。
+          {' '}请使用顶栏或 Hero 的「开始创作」进入工作室。
         </p>
-        <a class="btn btn-primary" href={createHref}>打开创作工作室</a>
       </section>
 
       <section class="section wrap" id="pricing">
-        <h2>价格（占位）</h2>
-        <p class="sub">结账未接通。下列数字仅为占位。</p>
+        <h2>价格</h2>
+        <p class="sub">演示价格 — 支付开放后可结账。</p>
         <PricingGrid
           oneShotLabel="单次"
           oneShotUsd={oneShot}
-          oneShotMeta={`每次生成 ${SITE.pricing.creditPerGenerate} 积分（占位）`}
+          oneShotMeta={`每次生成 ${SITE.pricing.creditPerGenerate} 积分 · 演示`}
           packs={packs}
-          stubNote="创作页支付为明确占位 — 不会伪造成功。"
+          note="创作页支付在开放前显示即将开放。"
         />
       </section>
 
@@ -81,9 +82,9 @@ const theme = t.theme;
 
       <FinalCta
         title={`用 ${t.displayNameZh} 创作`}
-        lede="上传、确认授权，然后试用生成占位。"
-        primary={{ href: createHref, label: '打开工作室' }}
-        secondary={{ href: '#pricing', label: '查看价格' }}
+        lede="上传、确认授权，生成开放后即可制作。"
+        primary={{ href: '#pricing', label: '查看价格' }}
+        secondary={{ href: '#how', label: '如何使用' }}
       />
     </>
   ) : (

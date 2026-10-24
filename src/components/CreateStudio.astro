@@ -16,22 +16,24 @@ const slots = t.photoCount === 2 ? [0, 1] : [0];
 const uid = `cs-${t.slug}`;
 const signInBase = signInHref(lang);
 const creditsHref = accountHref(lang, 'credits');
+const generateReady = SITE.falConfigured;
+const payReady = SITE.waffoConfigured;
 ---
-<section class="section wrap create-studio" id={uid}>
+<section class="section wrap create-studio" id={uid} data-generate-ready={generateReady ? '1' : '0'} data-pay-ready={payReady ? '1' : '0'}>
   <div class="callout warn">
     <strong>{label('Adult consent only.', '仅限成人同意。')}</strong>
     {' '}{label(t.disclaimerEn, t.disclaimerZh)}
   </div>
 
-  <div class="credits-bar" data-credits-bar>
+  <div class="credits-bar" data-credits-bar hidden>
     <div>
       <strong>{label('Credits:', '积分：')}</strong>
-      <span data-credits-balance>0</span>
-      <span class="badge" style="margin-left:0.5rem">{label('demo balance', '演示余额')}</span>
+      <span data-credits-balance>—</span>
+      <span class="badge" style="margin-left:0.5rem">{label('Demo', '演示')}</span>
       <a href={creditsHref} style="margin-left:0.65rem;font-size:0.88rem">{label('Account', '账户')}</a>
     </div>
     <div>
-      {label('Stub price from', '占位价起')} <strong>${price}</strong>
+      {label('From', '起')} <strong>${price}</strong>
       · <a href={`${home}#pricing`}>{label('Pricing', '价格')}</a>
     </div>
   </div>
@@ -80,22 +82,38 @@ const creditsHref = accountHref(lang, 'credits');
       <p style="margin-bottom:1rem">
         vertical 9:16 · {lang === 'zh' ? t.durationZh : t.durationEn}
       </p>
-      <button class="btn btn-primary" id={`${uid}-generate`} type="button" style="width:100%">
-        {label('Generate video', '生成视频')}
+      <button
+        class="btn btn-primary"
+        id={`${uid}-generate`}
+        type="button"
+        style="width:100%"
+        disabled
+        aria-disabled="true"
+      >
+        {generateReady
+          ? label('Generate video', '生成视频')
+          : label('Coming soon', '即将开放')}
       </button>
-      <button class="btn btn-ghost" id={`${uid}-pay`} type="button" style="width:100%;margin-top:0.65rem">
-        {label('Pay (stub)', '支付（占位）')}
+      <button
+        class="btn btn-ghost"
+        id={`${uid}-pay`}
+        type="button"
+        style="width:100%;margin-top:0.65rem"
+        disabled={!payReady}
+        aria-disabled={!payReady ? 'true' : undefined}
+      >
+        {payReady ? label('Pay', '支付') : label('Coming soon', '即将开放')}
       </button>
-      <div class="status-box cfg" id={`${uid}-status`}>
+      <div class="status-box" id={`${uid}-status`}>
         {label(
-          'Waiting for photo(s) + consent…\nGenerate and Pay are stubs — not connected to fal or Waffo. No fake success.',
-          '等待照片与授权…\n生成与支付为占位，未连接 fal / Waffo。不会伪造成功。'
+          'Upload photo(s) and confirm consent to continue.',
+          '请上传照片并确认授权以继续。'
         )}
       </div>
-      <p style="margin-top:1rem;font-size:0.88rem;color:var(--muted)">
+      <p class="debug-only" data-debug-only hidden style="margin-top:1rem;font-size:0.88rem;color:var(--muted)">
         {label(
-          'Wire FAL_* / WAFFO_* on Cloudflare Pages when ready. Until then buttons only explain the stub.',
-          '准备好后在 Cloudflare Pages 配置 FAL_* / WAFFO_*。此前按钮仅说明占位状态。'
+          'Debug: generate/pay backends not configured on this host.',
+          '调试：本主机未配置生成/支付后端。'
         )}
       </p>
       <p style="margin-top:0.75rem;font-size:0.88rem;">
@@ -106,7 +124,7 @@ const creditsHref = accountHref(lang, 'credits');
   </div>
 </section>
 
-<script is:inline define:vars={{ photoCount: t.photoCount, uid, signInBase, lang }}>
+<script is:inline define:vars={{ photoCount: t.photoCount, uid, signInBase, lang, generateReady, payReady }}>
   (function () {
     const root = document.getElementById(uid);
     if (!root) return;
@@ -115,9 +133,32 @@ const creditsHref = accountHref(lang, 'credits');
     const btn = document.getElementById(uid + '-generate');
     const pay = document.getElementById(uid + '-pay');
     const status = document.getElementById(uid + '-status');
+    const creditsBar = root.querySelector('[data-credits-bar]');
+    const debugEls = root.querySelectorAll('[data-debug-only]');
+    function isDebug() {
+      try { return new URLSearchParams(location.search).get('debug') === '1'; } catch (e) { return false; }
+    }
+    debugEls.forEach(function (el) { el.hidden = !isDebug(); });
     function setStatus(text, kind) {
       status.textContent = text;
       status.className = 'status-box' + (kind ? ' ' + kind : '');
+    }
+    function readyCount() {
+      return Object.keys(files).length;
+    }
+    function syncGenerate() {
+      if (!btn) return;
+      if (!generateReady) {
+        btn.disabled = true;
+        btn.setAttribute('aria-disabled', 'true');
+        btn.textContent = lang === 'zh' ? '即将开放' : 'Coming soon';
+        return;
+      }
+      var ok = consent && consent.checked && readyCount() >= photoCount;
+      btn.disabled = !ok;
+      if (ok) btn.removeAttribute('aria-disabled');
+      else btn.setAttribute('aria-disabled', 'true');
+      btn.textContent = lang === 'zh' ? '生成视频' : 'Generate video';
     }
     root.querySelectorAll('.slot-file').forEach(function (input) {
       input.addEventListener('change', function () {
@@ -134,12 +175,14 @@ const creditsHref = accountHref(lang, 'credits');
         if (placeholder) placeholder.hidden = true;
         const slotEl = input.closest('.slot');
         if (slotEl) slotEl.classList.add('has-file');
-        setStatus('Photo slot ' + slot + ' ready. Confirm consent, then try Generate (stub).', 'cfg');
+        setStatus(
+          lang === 'zh' ? '照片已就绪。请确认授权。' : 'Photo ready. Confirm consent to continue.',
+          'cfg'
+        );
+        syncGenerate();
       });
     });
-    function readyCount() {
-      return Object.keys(files).length;
-    }
+    if (consent) consent.addEventListener('change', syncGenerate);
     function goSignIn() {
       var next = location.pathname + location.search + location.hash;
       var url = '/account/sign-in/?next=' + encodeURIComponent(next);
@@ -154,7 +197,8 @@ const creditsHref = accountHref(lang, 'credits');
     }
     function applySession(user) {
       var bal = root.querySelector('[data-credits-balance]');
-      if (bal) bal.textContent = user ? '12' : '0';
+      if (creditsBar) creditsBar.hidden = !user;
+      if (bal) bal.textContent = user ? '12' : '—';
     }
     if (window.__VT_SESSION__ !== undefined) applySession(window.__VT_SESSION__);
     document.addEventListener('vt:session', function (ev) {
@@ -174,37 +218,40 @@ const creditsHref = accountHref(lang, 'credits');
         })
         .catch(function () { cb(null); });
     }
+    syncGenerate();
     btn.addEventListener('click', function () {
+      if (!generateReady || btn.disabled) return;
       requireUser(function (user) {
-      if (!user) {
+        if (!user) {
+          setStatus(
+            lang === 'zh' ? '请先登录后再生成。正在跳转…' : 'Sign in required. Redirecting…',
+            'err'
+          );
+          goSignIn();
+          return;
+        }
+        if (readyCount() < photoCount) {
+          setStatus(lang === 'zh' ? '请先上传照片。' : 'Upload photo(s) first.', 'err');
+          return;
+        }
+        if (!consent.checked) {
+          setStatus(lang === 'zh' ? '请先确认成人授权。' : 'Confirm adult consent first.', 'err');
+          return;
+        }
         setStatus(
-          lang === 'zh'
-            ? '请先登录后再生成。正在跳转到登录…'
-            : 'Sign in required before Generate. Redirecting…',
-          'err'
+          lang === 'zh' ? '生成即将开放。当前为演示。' : 'Generate is coming soon. This is a demo.',
+          'cfg'
         );
-        goSignIn();
-        return;
-      }
-      if (readyCount() < photoCount) {
-        setStatus('Upload ' + photoCount + ' photo(s) first. Generate is a stub — nothing was sent.', 'err');
-        return;
-      }
-      if (!consent.checked) {
-        setStatus('Confirm adult consent first. Generate is a stub — nothing was sent.', 'err');
-        return;
-      }
-      setStatus(
-        'STUB — Generate is not connected.\nNo fal job was created. No credit was debited. No fake success video.\nSet FAL_KEY / FAL_MODEL on Pages to enable real renders later.',
-        'cfg'
-      );
       });
     });
-    pay.addEventListener('click', function () {
-      setStatus(
-        'STUB — Pay / Waffo checkout is not connected.\nNo charge was made. No fake payment success.\nSet WAFFO_* env vars on Pages when ready.',
-        'cfg'
-      );
-    });
+    if (pay) {
+      pay.addEventListener('click', function () {
+        if (!payReady) return;
+        setStatus(
+          lang === 'zh' ? '支付即将开放。' : 'Pay is coming soon.',
+          'cfg'
+        );
+      });
+    }
   })();
 </script>

@@ -1,4 +1,4 @@
-/** Demo-only account data for P0 shells. Not wired to fal / Waffo. */
+/** Demo-only account data for P0 shells. */
 
 export type CreationStatus = 'queued' | 'running' | 'ready' | 'failed';
 
@@ -31,8 +31,8 @@ export const MOCK_CREATIONS: MockCreation[] = [
     template_name_zh: 'Bby Wow',
     status: 'ready',
     created_at: '2026-10-24T08:12:00+08:00',
-    note_en: 'Demo row — no video file attached. Real renders need fal later.',
-    note_zh: '演示条目 — 未附带视频文件。真生成需稍后接 fal。',
+    note_en: 'Demo row — no video file attached yet.',
+    note_zh: '演示条目 — 尚未附带视频文件。',
   },
   {
     id: 'job_demo_002',
@@ -61,8 +61,8 @@ export const MOCK_CREATIONS: MockCreation[] = [
     template_name_zh: 'Bby Wow',
     status: 'failed',
     created_at: '2026-10-23T19:22:00+08:00',
-    note_en: 'Demo failed state — stub error, not a real fal failure.',
-    note_zh: '演示「失败」状态 — 占位错误，非真实 fal 失败。',
+    note_en: 'Demo failed state — sample error for UI.',
+    note_zh: '演示「失败」状态 — 界面示例错误。',
   },
 ];
 

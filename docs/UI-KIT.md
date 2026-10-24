@@ -96,10 +96,14 @@ Acceptance: three brand homes side-by-side are obviously different sites, not lo
 
 1. Brand account UI stays in brand chrome with **relative** paths (no apex absolute jump).
 2. No ops jargon in customer UI (no keyword matrix / subdomain registry copy).
-3. Generate / Pay may stay stub — UI must look finished, never like an unfinished gray box.
-4. EN + ZH for all chrome strings.
-5. Do not fork ShrimpReel / switch frameworks; visual bar only (RicoFast / PowerAI density).
-6. **Forbidden:** new site with only `logo` + `accent` changed. Fill every `BrandTheme` field and pick a distinct preset combo.
+3. **Zero customer-facing engineering jargon:** ban stub / fal / Waffo / Wire / env / Cloudflare (only `?debug=1` may show eng hints). Use **Coming soon** / **Demo** (ZH: **即将开放** / **演示**).
+4. **Live templates require a 9:16 media slot** (still or loop poster). Gradient+icon alone is not enough for Live.
+5. **One primary gradient CTA per viewport.** Disabled controls must not glow like primary.
+6. Generate when not wired = **disabled + Coming soon**. Consent checkbox gates the primary button when wired.
+7. Unsigned account: centered Sign-in card only — do not expose Creations/Credits/Settings shell. Sign-in: no fake Google button if OAuth unwired; Preview only when available.
+8. EN + ZH for all chrome strings.
+9. Do not fork ShrimpReel / switch frameworks; visual bar only (RicoFast / PowerAI density).
+10. **Forbidden:** new site with only `logo` + `accent` changed. Fill every `BrandTheme` field and pick a distinct preset combo.
 
 ---
 

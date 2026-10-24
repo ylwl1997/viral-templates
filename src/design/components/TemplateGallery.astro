@@ -18,16 +18,30 @@ const isSoon = mode === 'soon';
     const tagline = lang === 'zh' ? t.taglineZh : t.taglineEn;
     const dur = lang === 'zh' ? t.durationZh : t.durationEn;
     const cover = `cover-${t.theme.coverStyle}`;
+    const poster = t.poster;
     return (
       <article class:list={['template-card', isSoon && 'soon']} data-brand={t.slug}>
         <a class="template-preview-link" href={keywordPath(lang, t.slug, '')} aria-label={name}>
-          <div class:list={['template-preview', t.accent, cover, isSoon && 'is-soon']}>
+          <div class:list={['template-preview', t.accent, cover, isSoon && 'is-soon', !isSoon && 'has-media']}>
             <span class="dur">
               {isSoon
                 ? label('Soon', '即将上线')
                 : `${dur} · ${t.photoCount} ${label(t.photoCount === 2 ? 'photos' : 'photo', t.photoCount === 2 ? '张照片' : '张照片')}`}
             </span>
-            <img class="template-mark" src={t.logo} width={isSoon ? 48 : 56} height={isSoon ? 48 : 56} alt="" />
+            {!isSoon ? (
+              <div class="media-slot media-slot-card">
+                {poster ? (
+                  <img class="media-poster" src={poster} alt="" width="180" height="320" />
+                ) : (
+                  <div class="media-fallback">
+                    <img class="template-mark" src={t.logo} width="48" height="48" alt="" />
+                    <span class="media-loop" aria-hidden="true"></span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <img class="template-mark" src={t.logo} width="48" height="48" alt="" />
+            )}
           </div>
         </a>
         <div class="template-body">

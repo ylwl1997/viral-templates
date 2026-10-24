@@ -18,18 +18,18 @@ const lang = 'zh' as const;
     <div class="eyebrow">热门风格</div>
     <h1>AI 爆款视频 <span class="grad">模板</span></h1>
     <p class="lede">
-      选风格、上传照片、生成竖屏短片。已上线模板可创作 — 生成与支付在接入后端前保持诚实占位。
+      选风格、上传照片、生成竖屏短片。需成人同意。
     </p>
     <div class="hero-cta">
-      <a class="btn btn-primary" href="#templates">浏览模板</a>
-      <a class="btn btn-ghost" href={pathFor(lang, '/create/')}>创作</a>
+      <a class="btn btn-primary" href={pathFor(lang, '/create/')}>开始制作</a>
+      <a class="btn btn-ghost" href="#templates">浏览模板</a>
     </div>
   </section>
 
   <section class="section wrap" id="templates">
     <div class="section-head">
       <h2>模板</h2>
-      <p class="sub">可打开并创作的已上线风格。每个品牌都有独立工作室 — 不是换色主站。</p>
+      <p class="sub">可打开并创作的已上线风格。</p>
     </div>
     <TemplateGallery lang={lang} templates={LIVE_TEMPLATES} mode="live" />
   </section>
@@ -45,21 +45,21 @@ const lang = 'zh' as const;
   <section class="section wrap" id="how">
     <div class="section-head">
       <h2>如何使用</h2>
-      <p class="sub">主站与任意已上线品牌页共用同一套工作室流程。</p>
+      <p class="sub">主站与任意已上线品牌页共用同一套创作流程。</p>
     </div>
     <StepsHow
       steps={[
         { title: '选择模板', body: '浏览热门风格并打开创作。' },
         { title: '上传与授权', body: '仅限成人同意照片。禁止未成年人。' },
-        { title: '生成（占位）', body: '按钮会说明占位状态 — 接入 fal 前不会伪造成功视频。' },
+        { title: '生成', body: '生成开放后即可创作；此前按钮显示即将开放。' },
       ]}
     />
   </section>
 
   <FinalCta
     title="准备创作？"
-    lede="打开主站工作室，或进入已上线品牌页。"
-    primary={{ href: pathFor(lang, '/create/'), label: '开始创作' }}
+    lede="打开主站创作，或进入已上线品牌页。"
+    primary={{ href: pathFor(lang, '/create/'), label: '开始制作' }}
     secondary={{ href: pathFor(lang, '/pricing/'), label: '价格' }}
   />
 </Layout>

@@ -30,7 +30,7 @@ const lang = 'zh' as const;
   <div class="card account-stat" style="margin-bottom:1.25rem">
     <p class="account-stat-label">当前余额</p>
     <p class="account-stat-value">{MOCK_CREDIT_BALANCE}</p>
-    <p class="account-stat-meta"><span class="badge">演示余额</span> · 计划每次生成 {SITE.pricing.creditPerGenerate} 积分</p>
+    <p class="account-stat-meta"><span class="badge">演示</span> · 计划每次生成 {SITE.pricing.creditPerGenerate} 积分</p>
   </div>
 
   <section class="account-block">
@@ -57,7 +57,7 @@ const lang = 'zh' as const;
       <h2>充值</h2>
     </div>
     <div class="card callout info">
-      <strong>占位 — 结账未连接。</strong>
+      <strong>即将开放 — 结账尚未开通。</strong>
       {' '}套餐（{SITE.pricing.packs.map((p) => `${p.label} ${p.credits} 积分 / $${p.usd}`).join(' · ')}）
       稍后接入支付。本页不会产生任何扣款。
     </div>

@@ -1,5 +1,5 @@
 ---
-import { keywordPath, type Lang } from '../../lib/site';
+import { keywordPath, pathFor, type Lang } from '../../lib/site';
 import type { Template } from '../../lib/templates';
 
 interface Props {
@@ -52,7 +52,7 @@ const isSoon = mode === 'soon';
           <p>{tagline}</p>
           <div class="template-actions">
             {!isSoon && (
-              <a class="btn btn-primary btn-sm" href={keywordPath(lang, t.slug, 'create')}>
+              <a class="btn btn-primary btn-sm" href={`${pathFor(lang, '/create/')}?t=${t.slug}`}>
                 {label('Create', '创作')}
               </a>
             )}

@@ -1,5 +1,6 @@
 ---
 import { SITE, type Lang, keywordPath, pathFor } from '../lib/site';
+import { apexSignInHref } from '../lib/auth';
 import type { Template } from '../lib/templates';
 
 interface Props {
@@ -13,6 +14,8 @@ const price =
   t.photoCount === 2 ? SITE.pricing.kissCamOneShotUsd : SITE.pricing.oneShotUsd;
 const slots = t.photoCount === 2 ? [0, 1] : [0];
 const uid = `cs-${t.slug}`;
+const signInBase = apexSignInHref(lang);
+const creditsHref = `${SITE.url}${pathFor(lang, '/account/credits/')}`;
 ---
 <section class="section wrap create-studio" id={uid}>
   <div class="callout warn">
@@ -20,11 +23,12 @@ const uid = `cs-${t.slug}`;
     {' '}{label(t.disclaimerEn, t.disclaimerZh)}
   </div>
 
-  <div class="credits-bar">
+  <div class="credits-bar" data-credits-bar>
     <div>
       <strong>{label('Credits:', '积分：')}</strong>
-      <span>0</span>
+      <span data-credits-balance>0</span>
       <span class="badge" style="margin-left:0.5rem">{label('demo balance', '演示余额')}</span>
+      <a href={creditsHref} style="margin-left:0.65rem;font-size:0.88rem">{label('Account', '账户')}</a>
     </div>
     <div>
       {label('Stub price from', '占位价起')} <strong>${price}</strong>
@@ -99,7 +103,7 @@ const uid = `cs-${t.slug}`;
   </div>
 </section>
 
-<script is:inline define:vars={{ photoCount: t.photoCount, uid }}>
+<script is:inline define:vars={{ photoCount: t.photoCount, uid, signInBase, lang }}>
   (function () {
     const root = document.getElementById(uid);
     if (!root) return;
@@ -133,7 +137,53 @@ const uid = `cs-${t.slug}`;
     function readyCount() {
       return Object.keys(files).length;
     }
+    function goSignIn() {
+      var next = location.pathname + location.search + location.hash;
+      var url = signInBase;
+      try {
+        var u = new URL(signInBase, location.origin);
+        u.searchParams.set('next', next);
+        // Prefer absolute apex URL when signInBase is absolute; else same-origin path.
+        url = u.href.indexOf('http') === 0 ? u.href : (u.pathname + u.search);
+      } catch (e) {
+        url = signInBase + (signInBase.indexOf('?') >= 0 ? '&' : '?') + 'next=' + encodeURIComponent(next);
+      }
+      location.href = url;
+    }
+    function applySession(user) {
+      var bal = root.querySelector('[data-credits-balance]');
+      if (bal) bal.textContent = user ? '12' : '0';
+    }
+    if (window.__VT_SESSION__ !== undefined) applySession(window.__VT_SESSION__);
+    document.addEventListener('vt:session', function (ev) {
+      applySession(ev.detail && ev.detail.user);
+    });
+    function requireUser(cb) {
+      if (window.__VT_SESSION__ !== undefined) {
+        cb(window.__VT_SESSION__);
+        return;
+      }
+      fetch('/api/auth/session', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          window.__VT_SESSION__ = data && data.user ? data.user : null;
+          applySession(window.__VT_SESSION__);
+          cb(window.__VT_SESSION__);
+        })
+        .catch(function () { cb(null); });
+    }
     btn.addEventListener('click', function () {
+      requireUser(function (user) {
+      if (!user) {
+        setStatus(
+          lang === 'zh'
+            ? '请先登录后再生成。正在跳转到登录…'
+            : 'Sign in required before Generate. Redirecting…',
+          'err'
+        );
+        goSignIn();
+        return;
+      }
       if (readyCount() < photoCount) {
         setStatus('Upload ' + photoCount + ' photo(s) first. Generate is a stub — nothing was sent.', 'err');
         return;
@@ -146,6 +196,7 @@ const uid = `cs-${t.slug}`;
         'STUB — Generate is not connected.\nNo fal job was created. No credit was debited. No fake success video.\nSet FAL_KEY / FAL_MODEL on Pages to enable real renders later.',
         'cfg'
       );
+      });
     });
     pay.addEventListener('click', function () {
       setStatus(

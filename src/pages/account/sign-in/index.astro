@@ -1,0 +1,45 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { pathFor } from '../../../lib/site';
+
+const lang = 'en' as const;
+const nextDefault = pathFor(lang, '/account/');
+---
+<Layout
+  title="Sign in · Viral Templates"
+  description="Sign in to Viral Templates to manage creations and credits."
+  canonicalPath="/account/sign-in/"
+  lang={lang}
+>
+  <section class="section wrap sign-in-section" id="sign-in-panel" data-lang={lang} data-next-default={nextDefault}>
+    <p class="account-kicker">Account</p>
+    <h1>Sign in</h1>
+    <p class="lede">
+      Continue with Google when it is configured. On preview hosts you can use a one-click fake login for acceptance testing.
+    </p>
+    <div class="card sign-in-card">
+      <p class="sign-in-error" id="sign-in-error" hidden></p>
+      <button type="button" class="btn btn-ghost" id="sign-in-google" style="width:100%">
+        Continue with Google
+      </button>
+      <p class="sign-in-google-note">Google OAuth placeholder — not connected in P0.</p>
+      <div id="preview-wrap" hidden>
+        <div class="sign-in-divider"><span>or preview</span></div>
+        <form id="preview-form" class="preview-form">
+          <label>
+            <span>Email</span>
+            <input name="email" type="email" value="preview@viral-templates.local" autocomplete="username" />
+          </label>
+          <label>
+            <span>Display name</span>
+            <input name="name" type="text" maxlength="80" value="Preview User" autocomplete="nickname" />
+          </label>
+          <button class="btn btn-primary" type="submit" style="width:100%">Preview sign-in</button>
+        </form>
+      </div>
+      <p class="sign-in-status" id="sign-in-status"></p>
+      <p class="sign-in-back"><a href={pathFor(lang, '/')}>← Back to templates</a></p>
+    </div>
+  </section>
+  <script is:inline src="/scripts/sign-in.js" defer></script>
+</Layout>

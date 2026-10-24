@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { SITE, type Lang, pathFor } from '../lib/site';
+import HeaderAuth from '../components/HeaderAuth.astro';
 
 interface Props {
   title: string;
@@ -85,6 +86,7 @@ const isCurrent = (p: string) => {
             <a href={pathFor('en', canonicalPath)} class:list={['lang-opt', lang === 'en' && 'is-on']} hreflang="en">EN</a>
             <a href={pathFor('zh', canonicalPath)} class:list={['lang-opt', lang === 'zh' && 'is-on']} hreflang="zh-CN">中文</a>
           </div>
+          <HeaderAuth lang={lang} nextPath={Astro.url.pathname + (Astro.url.search || '')} />
         </div>
       </div>
     </header>
@@ -109,5 +111,6 @@ const isCurrent = (p: string) => {
         {label(SITE.disclaimerEn, SITE.disclaimerZh)}
       </div>
     </footer>
+    <script is:inline src="/scripts/header-auth.js" defer></script>
   </body>
 </html>

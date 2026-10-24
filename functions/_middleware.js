@@ -45,6 +45,9 @@ function mapSubdomainPath(pathname, slug) {
     rest.startsWith('/privacy') ||
     rest.startsWith('/terms') ||
     rest.startsWith('/unknown-site') ||
+    rest.startsWith('/account') ||
+    rest.startsWith('/api') ||
+    rest.startsWith('/scripts') ||
     rest.startsWith('/t/') ||
     rest.startsWith('/_astro') ||
     rest.startsWith('/brand') ||
@@ -73,6 +76,10 @@ export async function onRequest(context) {
   if (
     url.pathname.startsWith('/t/') ||
     url.pathname.startsWith('/zh/t/') ||
+    url.pathname.startsWith('/account') ||
+    url.pathname.startsWith('/zh/account') ||
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/scripts/') ||
     url.pathname.startsWith('/_astro/') ||
     url.pathname.startsWith('/brand/') ||
     url.pathname === '/favicon.svg' ||

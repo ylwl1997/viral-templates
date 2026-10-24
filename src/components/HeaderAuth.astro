@@ -1,0 +1,53 @@
+---
+import type { Lang } from '../lib/site';
+import { pathFor } from '../lib/site';
+import { apexAccountHref, apexSignInHref } from '../lib/auth';
+
+interface Props {
+  lang?: Lang;
+  /** When true (brand shells), Sign in / Account always point at apex absolute URLs. */
+  apexLinks?: boolean;
+  /** Relative path used as next= after sign-in (pathname preferred). */
+  nextPath?: string;
+}
+
+const { lang = 'en', apexLinks = false, nextPath } = Astro.props;
+const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const currentNext = nextPath || Astro.url.pathname + (Astro.url.search || '');
+const signInHref = apexLinks
+  ? apexSignInHref(lang, currentNext)
+  : `${pathFor(lang, '/account/sign-in/')}?next=${encodeURIComponent(currentNext)}`;
+const accountHref = apexLinks ? apexAccountHref(lang, '') : pathFor(lang, '/account/');
+---
+<div
+  class="header-auth"
+  data-header-auth
+  data-lang={lang}
+  data-sign-in={signInHref}
+  data-account={accountHref}
+  data-apex-links={apexLinks ? '1' : '0'}
+>
+  <a class="btn btn-ghost btn-sm header-auth-signin" data-auth-signin href={signInHref}>
+    {label('Sign in', '登录')}
+  </a>
+  <div class="header-auth-user" data-auth-user hidden>
+    <button
+      type="button"
+      class="avatar-btn"
+      data-auth-avatar
+      aria-haspopup="menu"
+      aria-expanded="false"
+      aria-label={label('Account menu', '账户菜单')}
+    >
+      <span class="avatar-circle" data-auth-initials>U</span>
+    </button>
+    <div class="avatar-menu" data-auth-menu hidden role="menu">
+      <div class="avatar-menu-meta">
+        <strong data-auth-name>—</strong>
+        <span data-auth-email></span>
+      </div>
+      <a role="menuitem" href={accountHref}>{label('Account', '账户')}</a>
+      <button type="button" role="menuitem" data-auth-signout>{label('Sign out', '退出登录')}</button>
+    </div>
+  </div>
+</div>

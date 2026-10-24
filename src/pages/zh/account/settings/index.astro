@@ -1,0 +1,36 @@
+---
+import AccountShell from '../../../../components/account/AccountShell.astro';
+
+const lang = 'zh' as const;
+---
+<AccountShell
+  lang={lang}
+  active="settings"
+  title="设置 · Viral Templates"
+  description="Viral Templates 账户资料设置。"
+>
+  <header class="account-page-head">
+    <h1>设置</h1>
+    <p>P0 资料只读来自会话。删号 / 导出未开放。</p>
+  </header>
+  <div class="card settings-card">
+    <dl class="settings-dl">
+      <div>
+        <dt>显示名</dt>
+        <dd data-session-name>—</dd>
+      </div>
+      <div>
+        <dt>邮箱</dt>
+        <dd data-session-email>—</dd>
+      </div>
+      <div>
+        <dt>用户 Id</dt>
+        <dd><code data-session-id>—</code></dd>
+      </div>
+      <div>
+        <dt>登录方式</dt>
+        <dd>预览登录（Google OAuth 未接线）</dd>
+      </div>
+    </dl>
+  </div>
+</AccountShell>

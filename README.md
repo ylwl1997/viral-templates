@@ -83,6 +83,34 @@ curl -sI -H "Host: bby-wow.example.com" https://viral-templates.pages.dev/
 
 Note: Sending a custom `Host` to `*.pages.dev` from the public internet may not behave like local `wrangler pages dev`. Prefer `wrangler pages dev` or a real wildcard custom domain for Host tests.
 
+
+## Account center (P0)
+
+Routes (EN + ZH):
+
+- `/account/` Overview (demo balance + recent creations)
+- `/account/creations/` Demo jobs: queued / running / ready / failed (no fake downloadable video)
+- `/account/credits/` Demo balance + ledger + top-up stub
+- `/account/settings/` Profile read-only from session
+- `/account/sign-in/` Google button placeholder + **preview fake login**
+
+Auth APIs (Pages Functions):
+
+- `GET /api/auth/session`
+- `POST /api/auth/preview` — preview/fake login (HttpOnly `vt_session` cookie)
+- `POST /api/auth/logout`
+
+**How to fake-login (acceptance):** open `/account/sign-in/` → **Preview sign-in** (shown on `*.pages.dev` / localhost when Google OAuth is not configured) → lands on `/account/` with avatar in the header.
+
+Brand shells (`/t/{slug}/`) link **Sign in / Account** to absolute `PUBLIC_SITE_APEX` URLs with `?next=` so login happens on apex; after login, `next` returns to the child path (relative, same host on path-fallback).
+
+### Known limits (P0)
+
+- No real Google OAuth / Waffo / fal
+- Session cookie is **host-only** (not shared across `*.apex` subdomains). Future custom parent-domain cookie is P2.
+- Ready creations are demo rows only — no generated video files
+- No delete-account / export
+
 ## Env checklist
 
 | Key | Purpose |
@@ -93,6 +121,9 @@ Note: Sending a custom `Host` to `*.pages.dev` from the public internet may not 
 | `WAFFO_*` | Payments (stub only) |
 | `PUBLIC_GA4_MEASUREMENT_ID` | GA4 |
 | `PUBLIC_ADSTERRA_SOCIAL_BAR_ZONE` | Adsterra Social Bar |
+| `AUTH_SECRET` | HMAC for `vt_session` (16+ chars). On `*.pages.dev` / localhost a public preview fallback is used if unset |
+| `AUTH_PREVIEW_LOGIN` | `1` force preview login on; `0` off; unset = on for preview hosts when Google OAuth missing |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Reserved for real Google OAuth (not wired in P0) |
 
 No R2 / no real domain purchase required for this skeleton.
 

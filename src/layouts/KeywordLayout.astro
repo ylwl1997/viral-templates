@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { SITE, type Lang, keywordPath, pathFor } from '../lib/site';
+import HeaderAuth from '../components/HeaderAuth.astro';
 import type { Template } from '../lib/templates';
 
 interface Props {
@@ -82,6 +83,11 @@ const ga4 = SITE.ga4Id;
             <a href={keywordPath('en', t.slug, page)} class:list={['lang-opt', lang === 'en' && 'is-on']} hreflang="en">EN</a>
             <a href={keywordPath('zh', t.slug, page)} class:list={['lang-opt', lang === 'zh' && 'is-on']} hreflang="zh-CN">中文</a>
           </div>
+          <HeaderAuth
+            lang={lang}
+            apexLinks={true}
+            nextPath={Astro.url.pathname + (Astro.url.search || '')}
+          />
           {isLive ? (
             <a class="btn btn-primary btn-sm" href={createHref}>{label('Create', '开始创作')}</a>
           ) : (
@@ -116,5 +122,6 @@ const ga4 = SITE.ga4Id;
         {label(t.disclaimerEn, t.disclaimerZh)}
       </div>
     </footer>
+    <script is:inline src="/scripts/header-auth.js" defer></script>
   </body>
 </html>

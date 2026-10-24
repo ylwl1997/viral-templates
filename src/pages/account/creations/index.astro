@@ -1,0 +1,30 @@
+---
+import AccountShell from '../../../components/account/AccountShell.astro';
+import { MOCK_CREATIONS, statusLabel } from '../../../lib/account-mock';
+
+const lang = 'en' as const;
+---
+<AccountShell
+  lang={lang}
+  active="creations"
+  title="Creations · Viral Templates"
+  description="Your Viral Templates creation history (demo data in P0)."
+>
+  <header class="account-page-head">
+    <h1>Creations</h1>
+    <p>Demo jobs only — ready rows do not include a downloadable video file.</p>
+  </header>
+  <ul class="creation-list">
+    {MOCK_CREATIONS.map((job) => (
+      <li class="creation-row card">
+        <div>
+          <strong>{job.template_name}</strong>
+          <span class={`status-pill status-${job.status}`}>{statusLabel(job.status, lang)}</span>
+        </div>
+        <p class="creation-meta">Template: {job.template_name} · Id: {job.id}</p>
+        <p>{job.note_en}</p>
+        <time datetime={job.created_at}>{job.created_at}</time>
+      </li>
+    ))}
+  </ul>
+</AccountShell>

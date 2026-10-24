@@ -1,0 +1,77 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import type { Lang } from '../../lib/site';
+import { pathFor } from '../../lib/site';
+
+interface Props {
+  lang?: Lang;
+  title: string;
+  description: string;
+  /** overview | creations | credits | settings */
+  active: 'overview' | 'creations' | 'credits' | 'settings';
+}
+
+const { lang = 'en', title, description, active } = Astro.props;
+const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const canonicalPath =
+  active === 'overview'
+    ? '/account/'
+    : `/account/${active}/`;
+
+const nav = [
+  { id: 'overview' as const, href: pathFor(lang, '/account/'), en: 'Overview', zh: '概览' },
+  { id: 'creations' as const, href: pathFor(lang, '/account/creations/'), en: 'Creations', zh: '作品' },
+  { id: 'credits' as const, href: pathFor(lang, '/account/credits/'), en: 'Credits', zh: '积分' },
+  { id: 'settings' as const, href: pathFor(lang, '/account/settings/'), en: 'Settings', zh: '设置' },
+];
+const createHref = pathFor(lang, '/create/');
+---
+<Layout title={title} description={description} canonicalPath={canonicalPath} lang={lang}>
+  <div class="account-shell wrap" data-account-shell data-lang={lang} data-active={active}>
+    <aside class="account-sidebar" aria-label={label('Account', '账户')}>
+      <div class="account-sidebar-head">
+        <p class="account-kicker">{label('Account', '账户')}</p>
+        <a class="btn btn-primary btn-sm account-new-create" href={createHref}>
+          {label('New create', '新建创作')}
+        </a>
+      </div>
+      <nav class="account-nav">
+        {nav.map((item) => (
+          <a
+            href={item.href}
+            class:list={['account-nav-link', active === item.id && 'is-on']}
+            aria-current={active === item.id ? 'page' : undefined}
+          >
+            {label(item.en, item.zh)}
+          </a>
+        ))}
+      </nav>
+      <p class="account-sidebar-note">
+        {label(
+          'Demo data only. Generate / pay stay stubs until fal and checkout are wired.',
+          '仅演示数据。生成与支付在接入 fal / 结账前仍为占位。'
+        )}
+      </p>
+    </aside>
+    <div class="account-main">
+      <div class="account-gate" data-account-gate>
+        <div class="card account-gate-card">
+          <h1>{label('Sign in to view your account', '登录后查看账户')}</h1>
+          <p>
+            {label(
+              'Your creations, credits, and settings live here once you are signed in.',
+              '登录后可在此查看作品、积分与设置。'
+            )}
+          </p>
+          <a class="btn btn-primary" data-account-gate-signin href={pathFor(lang, '/account/sign-in/')}>
+            {label('Sign in', '登录')}
+          </a>
+        </div>
+      </div>
+      <div class="account-body" data-account-body hidden>
+        <slot />
+      </div>
+    </div>
+  </div>
+  <script is:inline src="/scripts/account-shell.js" defer></script>
+</Layout>

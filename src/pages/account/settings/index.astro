@@ -1,0 +1,36 @@
+---
+import AccountShell from '../../../components/account/AccountShell.astro';
+
+const lang = 'en' as const;
+---
+<AccountShell
+  lang={lang}
+  active="settings"
+  title="Settings · Viral Templates"
+  description="Account profile settings for Viral Templates."
+>
+  <header class="account-page-head">
+    <h1>Settings</h1>
+    <p>Profile is read-only from your session in P0. Delete account / export are not available.</p>
+  </header>
+  <div class="card settings-card">
+    <dl class="settings-dl">
+      <div>
+        <dt>Display name</dt>
+        <dd data-session-name>—</dd>
+      </div>
+      <div>
+        <dt>Email</dt>
+        <dd data-session-email>—</dd>
+      </div>
+      <div>
+        <dt>User id</dt>
+        <dd><code data-session-id>—</code></dd>
+      </div>
+      <div>
+        <dt>Providers</dt>
+        <dd>Preview (Google OAuth not wired)</dd>
+      </div>
+    </dl>
+  </div>
+</AccountShell>

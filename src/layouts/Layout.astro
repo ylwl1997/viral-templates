@@ -75,7 +75,8 @@ const isCurrent = (p: string) => {
           {SITE.name}
         </a>
         <nav class="nav" aria-label={label('Primary', '主导航')}>
-          <a href={homeHref} aria-current={isCurrent('/') ? 'page' : undefined}>{label('Directory', '目录')}</a>
+          <a href={homeHref} aria-current={isCurrent('/') ? 'page' : undefined}>{label('Templates', '模板')}</a>
+          <a href={pathFor(lang, '/create/')} aria-current={isCurrent('/create/') ? 'page' : undefined}>{label('Create', '创作')}</a>
           <a href={pathFor(lang, '/pricing/')} aria-current={isCurrent('/pricing/') ? 'page' : undefined}>{label('Pricing', '价格')}</a>
           <a href={pathFor(lang, '/faq/')} aria-current={isCurrent('/faq/') ? 'page' : undefined}>FAQ</a>
         </nav>

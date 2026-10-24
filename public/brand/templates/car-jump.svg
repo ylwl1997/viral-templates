@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" role="img" aria-label="Car Jump">
+  <rect width="32" height="32" rx="9" fill="#0f1218"/>
+  <rect x="0.75" y="0.75" width="30.5" height="30.5" rx="8.25" stroke="#94a3b8" stroke-opacity="0.55" stroke-width="1"/>
+  <path d="M7 18h18l-2-5H9l-2 5z" stroke="#cbd5e1" stroke-width="1.6" stroke-linejoin="round"/>
+    <circle cx="11" cy="20" r="1.6" fill="#94a3b8"/><circle cx="21" cy="20" r="1.6" fill="#94a3b8"/>
+    <path d="M8 12c3-4 8-5 13-2" stroke="#64748b" stroke-width="1.4" stroke-linecap="round" opacity="0.8"/>
+  
+</svg>

@@ -1,4 +1,4 @@
-/** One-keyword-per-subdomain template registry (一词一子域). */
+/** Template catalog. logo = public path to brand mark. Ops routing uses slug — never in customer copy. */
 
 export type TemplateStatus = 'live' | 'soon';
 
@@ -21,6 +21,8 @@ export type Template = {
   howEn: [string, string, string];
   howZh: [string, string, string];
   accent: 'magenta' | 'amber' | 'cyan' | 'violet' | 'rose' | 'lime' | 'orange' | 'sky' | 'slate';
+  /** Public path to brand mark (svg/png). */
+  logo: string;
   disclaimerEn: string;
   disclaimerZh: string;
 };
@@ -47,6 +49,7 @@ export const TEMPLATES: readonly Template[] = [
     howEn: ['Upload 1 adult-consent photo', 'Confirm consent & credits stub', 'Generate (stub until fal is wired)'],
     howZh: ['上传 1 张成人同意照片', '确认授权与积分占位', '生成（待接入 fal）'],
     accent: 'magenta',
+    logo: '/brand/templates/bby-wow.svg',
     disclaimerEn: 'Adult consent only · no minors. Not affiliated with Karol G, CapCut, or any label.',
     disclaimerZh: '仅限成人同意照片 · 禁止未成年人。非 Karol G / CapCut 官方。',
   },
@@ -71,6 +74,7 @@ export const TEMPLATES: readonly Template[] = [
     howEn: ['Upload 2 adult-consent photos', 'Confirm consent (no concert footage)', 'Generate (stub until fal is wired)'],
     howZh: ['上传 2 张成人同意照片', '确认授权（无演唱会素材）', '生成（待接入 fal）'],
     accent: 'amber',
+    logo: '/brand/templates/kiss-cam.svg',
     disclaimerEn:
       'Adult consent only · no minors. Fan-made AI remix — not official Coldplay / CapCut. No real concert footage.',
     disclaimerZh: '仅限成人同意 · 禁止未成年人。粉丝向 AI remix · 非 Coldplay / CapCut 官方。不含真实演唱会素材。',
@@ -96,6 +100,7 @@ export const TEMPLATES: readonly Template[] = [
     howEn: ['Upload 1 adult-consent photo', 'Confirm consent & safety note', 'Generate (stub until fal is wired)'],
     howZh: ['上传 1 张成人同意照片', '确认授权与安全提示', '生成（待接入 fal）'],
     accent: 'cyan',
+    logo: '/brand/templates/ceiling-fan.svg',
     disclaimerEn:
       'Adult consent only · no minors. Pure AI — never strap a phone to a spinning fan. Not affiliated with CapCut.',
     disclaimerZh: '仅限成人同意 · 禁止未成年人。纯 AI · 切勿把手机绑在旋转风扇上。非 CapCut 官方。',
@@ -119,6 +124,7 @@ export const TEMPLATES: readonly Template[] = [
     howEn: ['Upload', 'Confirm', 'Generate'],
     howZh: ['上传', '确认', '生成'],
     accent: 'orange',
+    logo: '/brand/templates/bulin-47.svg',
     disclaimerEn: 'Coming soon · adult consent will be required.',
     disclaimerZh: '即将上线 · 上线后需成人同意照片。',
   },
@@ -141,6 +147,7 @@ export const TEMPLATES: readonly Template[] = [
     howEn: ['Upload', 'Confirm', 'Generate'],
     howZh: ['上传', '确认', '生成'],
     accent: 'sky',
+    logo: '/brand/templates/zombie-love.svg',
     disclaimerEn: 'Coming soon · adult consent will be required.',
     disclaimerZh: '即将上线 · 上线后需成人同意照片。',
   },
@@ -163,6 +170,7 @@ export const TEMPLATES: readonly Template[] = [
     howEn: ['Upload', 'Confirm', 'Generate'],
     howZh: ['上传', '确认', '生成'],
     accent: 'violet',
+    logo: '/brand/templates/smalltown-boy-cats.svg',
     disclaimerEn: 'Coming soon · pet photos with owner permission.',
     disclaimerZh: '即将上线 · 需宠物主人授权照片。',
   },
@@ -185,6 +193,7 @@ export const TEMPLATES: readonly Template[] = [
     howEn: ['Upload', 'Confirm', 'Generate'],
     howZh: ['上传', '确认', '生成'],
     accent: 'rose',
+    logo: '/brand/templates/clapping-cat.svg',
     disclaimerEn: 'Coming soon · pet photos with owner permission.',
     disclaimerZh: '即将上线 · 需宠物主人授权照片。',
   },
@@ -207,6 +216,7 @@ export const TEMPLATES: readonly Template[] = [
     howEn: ['Upload', 'Confirm', 'Generate'],
     howZh: ['上传', '确认', '生成'],
     accent: 'lime',
+    logo: '/brand/templates/knight-cat.svg',
     disclaimerEn: 'Coming soon · pet photos with owner permission.',
     disclaimerZh: '即将上线 · 需宠物主人授权照片。',
   },
@@ -229,6 +239,7 @@ export const TEMPLATES: readonly Template[] = [
     howEn: ['Upload', 'Confirm', 'Generate'],
     howZh: ['上传', '确认', '生成'],
     accent: 'slate',
+    logo: '/brand/templates/car-jump.svg',
     disclaimerEn: 'Coming soon · adult consent will be required.',
     disclaimerZh: '即将上线 · 上线后需成人同意照片。',
   },

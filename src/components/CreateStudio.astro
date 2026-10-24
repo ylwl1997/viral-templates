@@ -12,8 +12,9 @@ const home = keywordPath(lang, t.slug, '');
 const price =
   t.photoCount === 2 ? SITE.pricing.kissCamOneShotUsd : SITE.pricing.oneShotUsd;
 const slots = t.photoCount === 2 ? [0, 1] : [0];
+const uid = `cs-${t.slug}`;
 ---
-<section class="section wrap" id="create">
+<section class="section wrap create-studio" id={uid}>
   <div class="callout warn">
     <strong>{label('Adult consent only.', '仅限成人同意。')}</strong>
     {' '}{label(t.disclaimerEn, t.disclaimerZh)}
@@ -47,17 +48,17 @@ const slots = t.photoCount === 2 ? [0, 1] : [0];
           ))}
         </div>
       ) : (
-        <label class="upload-zone" for="photo-input">
-          <input id="photo-input" class="slot-file" data-slot="0" type="file" accept="image/jpeg,image/png,image/webp" />
-          <div id="upload-placeholder">
+        <label class="upload-zone" for={`${uid}-photo`}>
+          <input id={`${uid}-photo`} class="slot-file" data-slot="0" type="file" accept="image/jpeg,image/png,image/webp" />
+          <div id={`${uid}-ph`}>
             <strong>{label('Drop photo or click to upload', '拖放或点击上传照片')}</strong>
             <div class="hint">JPG / PNG / WebP · {label('you must own rights', '需拥有使用权')}</div>
           </div>
-          <img id="preview" class="preview-img slot-preview" data-slot="0" alt="Preview" hidden />
+          <img id={`${uid}-preview`} class="preview-img slot-preview" data-slot="0" alt="Preview" hidden />
         </label>
       )}
       <label style="display:flex;gap:0.5rem;align-items:flex-start;margin-top:1rem;font-size:0.92rem;color:var(--secondary)">
-        <input id="consent" type="checkbox" style="margin-top:0.25rem" />
+        <input id={`${uid}-consent`} type="checkbox" style="margin-top:0.25rem" />
         <span>
           {label(
             `I confirm ${t.photoCount === 2 ? 'these photos show' : 'this photo shows'} adult(s) (18+) or pets with permission, and I have rights to use ${t.photoCount === 2 ? 'them' : 'it'}.`,
@@ -72,13 +73,13 @@ const slots = t.photoCount === 2 ? [0, 1] : [0];
       <p style="margin-bottom:1rem">
         {label('Output:', '输出：')} vertical 9:16 · {lang === 'zh' ? t.durationZh : t.durationEn}
       </p>
-      <button class="btn btn-primary" id="generate-btn" type="button" style="width:100%">
+      <button class="btn btn-primary" id={`${uid}-generate`} type="button" style="width:100%">
         {label('Generate video', '生成视频')}
       </button>
-      <button class="btn btn-ghost" id="pay-btn" type="button" style="width:100%;margin-top:0.65rem">
+      <button class="btn btn-ghost" id={`${uid}-pay`} type="button" style="width:100%;margin-top:0.65rem">
         {label('Pay (stub)', '支付（占位）')}
       </button>
-      <div class="status-box cfg" id="status">
+      <div class="status-box cfg" id={`${uid}-status`}>
         {label(
           'Waiting for photo(s) + consent…\nGenerate and Pay are stubs — not connected to fal or Waffo. No fake success.',
           '等待照片与授权…\n生成与支付为占位，未连接 fal / Waffo。不会伪造成功。'
@@ -98,25 +99,27 @@ const slots = t.photoCount === 2 ? [0, 1] : [0];
   </div>
 </section>
 
-<script is:inline define:vars={{ photoCount: t.photoCount, stubEn: true }}>
+<script is:inline define:vars={{ photoCount: t.photoCount, uid }}>
   (function () {
+    const root = document.getElementById(uid);
+    if (!root) return;
     const files = {};
-    const consent = document.getElementById('consent');
-    const btn = document.getElementById('generate-btn');
-    const pay = document.getElementById('pay-btn');
-    const status = document.getElementById('status');
+    const consent = document.getElementById(uid + '-consent');
+    const btn = document.getElementById(uid + '-generate');
+    const pay = document.getElementById(uid + '-pay');
+    const status = document.getElementById(uid + '-status');
     function setStatus(text, kind) {
       status.textContent = text;
       status.className = 'status-box' + (kind ? ' ' + kind : '');
     }
-    document.querySelectorAll('.slot-file').forEach(function (input) {
+    root.querySelectorAll('.slot-file').forEach(function (input) {
       input.addEventListener('change', function () {
         const slot = input.getAttribute('data-slot') || '0';
         const file = input.files && input.files[0];
         if (!file) return;
         files[slot] = file;
-        const preview = document.querySelector('.slot-preview[data-slot="' + slot + '"]');
-        const placeholder = document.getElementById('upload-placeholder');
+        const preview = root.querySelector('.slot-preview[data-slot="' + slot + '"]');
+        const placeholder = document.getElementById(uid + '-ph');
         if (preview) {
           preview.src = URL.createObjectURL(file);
           preview.hidden = false;

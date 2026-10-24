@@ -1,0 +1,80 @@
+---
+import type { Lang } from '../lib/site';
+import { keywordPath } from '../lib/site';
+import { LIVE_TEMPLATES } from '../lib/templates';
+import CreateStudio from './CreateStudio.astro';
+
+interface Props { lang?: Lang }
+const { lang = 'en' } = Astro.props;
+const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const first = LIVE_TEMPLATES[0];
+---
+<section class="section wrap hub-create" id="hub-create" data-default={first?.slug}>
+  <div class="picker-bar">
+    <span class="picker-label">{label('Template', '模板')}</span>
+    <div class="picker-row" role="tablist" aria-label={label('Choose template', '选择模板')}>
+      {LIVE_TEMPLATES.map((t, i) => (
+        <button
+          type="button"
+          role="tab"
+          class:list={['picker-chip', i === 0 && 'is-on']}
+          data-pick={t.slug}
+          aria-selected={i === 0 ? 'true' : 'false'}
+        >
+          <img src={t.logo} width="22" height="22" alt="" />
+          <span>{lang === 'zh' ? t.displayNameZh : t.displayName}</span>
+        </button>
+      ))}
+    </div>
+    <p class="picker-hint">
+      {label('Prefer a dedicated brand page?', '想打开独立品牌工作室？')}
+      {LIVE_TEMPLATES.map((t, i) => (
+        <a
+          class="brand-link"
+          data-brand={t.slug}
+          href={keywordPath(lang, t.slug, 'create')}
+          hidden={i !== 0}
+        >
+          {lang === 'zh' ? t.displayNameZh : t.displayName} →
+        </a>
+      ))}
+    </p>
+  </div>
+
+  {LIVE_TEMPLATES.map((t, i) => (
+    <div class="hub-panel" data-panel={t.slug} hidden={i !== 0}>
+      <CreateStudio template={t} lang={lang} />
+    </div>
+  ))}
+</section>
+
+<script is:inline>
+  (function () {
+    var root = document.getElementById('hub-create');
+    if (!root) return;
+    var params = new URLSearchParams(location.search);
+    var want = params.get('t') || root.getAttribute('data-default');
+    function show(slug) {
+      root.querySelectorAll('.picker-chip').forEach(function (btn) {
+        var on = btn.getAttribute('data-pick') === slug;
+        btn.classList.toggle('is-on', on);
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      root.querySelectorAll('.hub-panel').forEach(function (panel) {
+        panel.hidden = panel.getAttribute('data-panel') !== slug;
+      });
+      root.querySelectorAll('.brand-link').forEach(function (a) {
+        a.hidden = a.getAttribute('data-brand') !== slug;
+      });
+      var url = new URL(location.href);
+      url.searchParams.set('t', slug);
+      history.replaceState(null, '', url.pathname + '?' + url.searchParams.toString() + url.hash);
+    }
+    root.querySelectorAll('.picker-chip').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        show(btn.getAttribute('data-pick'));
+      });
+    });
+    if (want) show(want);
+  })();
+</script>

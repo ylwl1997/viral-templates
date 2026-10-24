@@ -1,6 +1,6 @@
 import type { Template } from './templates';
 
-/** Apex host for directory + subdomain mapping (no trailing slash). */
+/** Apex host for Host-header / subdomain mapping (no trailing slash). Ops only — not customer copy. */
 export const SITE_APEX =
   (import.meta.env.PUBLIC_SITE_APEX as string | undefined)?.replace(/^https?:\/\//, '').replace(/\/$/, '') ||
   'viral-templates.pages.dev';
@@ -8,11 +8,11 @@ export const SITE_APEX =
 export const SITE = {
   name: 'Viral Templates',
   shortName: 'ViralTemplates',
-  /** Canonical origin for directory / sitemap (https). */
+  /** Canonical origin for sitemap / shared legal pages (https). */
   url: `https://${SITE_APEX}`,
   apex: SITE_APEX,
-  taglineEn: 'One keyword · one subdomain',
-  taglineZh: '一词一子域',
+  taglineEn: 'AI viral video templates — upload a photo, get a short clip',
+  taglineZh: 'AI 爆款视频模板 — 上传照片，生成竖屏短片',
   ga4Id: (import.meta.env.PUBLIC_GA4_MEASUREMENT_ID as string) || '',
   adsterraSocialBarZone:
     (import.meta.env.PUBLIC_ADSTERRA_SOCIAL_BAR_ZONE as string) ||
@@ -38,7 +38,7 @@ export const SITE = {
 
 export type Lang = 'en' | 'zh';
 
-/** Path under path-fallback `/t/{slug}/…` (or `/zh/t/{slug}/…`). */
+/** Internal path helper for template shells (`/t/…` or `/zh/t/…`). Not shown in customer copy. */
 export function keywordPath(lang: Lang, slug: string, sub: '' | 'create' = ''): string {
   const base = lang === 'zh' ? `/zh/t/${slug}` : `/t/${slug}`;
   if (sub === 'create') return `${base}/create/`;
@@ -56,7 +56,7 @@ export function pathFor(lang: Lang, path: string): string {
   return clean.endsWith('/') ? clean : `${clean}/`;
 }
 
-/** Production subdomain URL (documentational; Pages path fallback used until DNS). */
+/** Production subdomain URL (ops / README only). */
 export function subdomainUrl(slug: string, path = '/'): string {
   const p = path.startsWith('/') ? path : `/${path}`;
   return `https://${slug}.${SITE.apex}${p.endsWith('/') || p.includes('.') ? p : `${p}/`}`;

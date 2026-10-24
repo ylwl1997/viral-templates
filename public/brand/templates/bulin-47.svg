@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" role="img" aria-label="Bulin 47">
+  <rect width="32" height="32" rx="9" fill="#1a1008"/>
+  <rect x="0.75" y="0.75" width="30.5" height="30.5" rx="8.25" stroke="#fb923c" stroke-opacity="0.55" stroke-width="1"/>
+  <text x="16" y="20" text-anchor="middle" fill="#fdba74" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" font-weight="700">47</text>
+  
+</svg>

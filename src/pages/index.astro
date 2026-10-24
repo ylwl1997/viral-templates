@@ -4,51 +4,97 @@ import { SITE, keywordPath } from '../lib/site';
 import { LIVE_TEMPLATES, SOON_TEMPLATES } from '../lib/templates';
 ---
 <Layout
-  title={`${SITE.name} — keyword directory`}
-  description="Light directory of one-keyword AI video sites. Each live keyword has its own subdomain shell (path fallback /t/{slug}/)."
+  title={`${SITE.name} — AI viral video templates`}
+  description="Choose a trending AI look, upload a photo, and create a short vertical clip. Adult consent required."
   canonicalPath="/"
   lang="en"
 >
   <section class="hero wrap">
-    <div class="eyebrow">一词一子域 · directory</div>
-    <h1>Keyword sites. <span class="grad">One slug each.</span></h1>
+    <div class="eyebrow">Trending looks</div>
+    <h1>AI viral video <span class="grad">templates</span></h1>
     <p class="lede">
-      {SITE.taglineEn}. Apex is a light index only — each live keyword is its own site under
-      <code>{`{slug}.${SITE.apex}`}</code> (preview via <code>/t/{`{slug}`}/</code>).
+      Pick a look, upload a photo, get a vertical clip. Create is ready on live templates — generate &amp; pay stay honest stubs until backends are wired.
     </p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="#templates">Browse templates</a>
+      <a class="btn btn-ghost" href="/create/">Create</a>
+    </div>
   </section>
 
-  <section class="section wrap" id="live">
-    <h2>Live</h2>
-    <p class="sub">Independent single-site shells. Open a keyword to create.</p>
-    <div class="dir-list">
+  <section class="section wrap" id="templates">
+    <div class="section-head">
+      <h2>Templates</h2>
+      <p class="sub">Live looks you can open and create with. Each one has its own studio page.</p>
+    </div>
+    <div class="template-wall">
       {LIVE_TEMPLATES.map((t) => (
-        <a class="dir-row" href={keywordPath('en', t.slug, '')}>
-          <span class:list={['dir-swatch', t.accent]} aria-hidden="true" />
-          <span class="dir-main">
-            <strong>{t.displayName}</strong>
-            <span class="dir-meta">{t.taglineEn}</span>
-          </span>
-          <span class="badge">{t.photoCount} photo{t.photoCount === 2 ? 's' : ''} · live</span>
-        </a>
+        <article class="template-card">
+          <a class="template-preview-link" href={keywordPath('en', t.slug, '')} aria-label={t.displayName}>
+            <div class:list={['template-preview', t.accent]}>
+              <span class="dur">{t.durationEn} · {t.photoCount} photo{t.photoCount === 2 ? 's' : ''}</span>
+              <img class="template-mark" src={t.logo} width="56" height="56" alt="" />
+            </div>
+          </a>
+          <div class="template-body">
+            <div class="template-title-row">
+              <img class="template-logo-sm" src={t.logo} width="28" height="28" alt="" />
+              <h3>{t.displayName}</h3>
+            </div>
+            <p>{t.taglineEn}</p>
+            <div class="template-actions">
+              <a class="btn btn-primary btn-sm" href={keywordPath('en', t.slug, 'create')}>Create</a>
+              <a class="btn btn-ghost btn-sm" href={keywordPath('en', t.slug, '')}>View</a>
+              <span class="badge">Live</span>
+            </div>
+          </div>
+        </article>
       ))}
     </div>
   </section>
 
   <section class="section wrap" id="soon">
-    <h2>Coming soon</h2>
-    <p class="sub">Reserved shells — not generatable yet.</p>
-    <div class="dir-list">
+    <div class="section-head">
+      <h2>Coming soon</h2>
+      <p class="sub">More looks in the pipeline — open a brand page to follow along.</p>
+    </div>
+    <div class="template-wall soon-wall">
       {SOON_TEMPLATES.map((t) => (
-        <a class="dir-row soon" href={keywordPath('en', t.slug, '')}>
-          <span class:list={['dir-swatch', t.accent]} aria-hidden="true" />
-          <span class="dir-main">
-            <strong>{t.displayName}</strong>
-            <span class="dir-meta">{t.taglineEn}</span>
-          </span>
-          <span class="badge">soon</span>
-        </a>
+        <article class="template-card soon">
+          <a class="template-preview-link" href={keywordPath('en', t.slug, '')} aria-label={t.displayName}>
+            <div class:list={['template-preview', t.accent, 'is-soon']}>
+              <span class="dur">Soon</span>
+              <img class="template-mark" src={t.logo} width="48" height="48" alt="" />
+            </div>
+          </a>
+          <div class="template-body">
+            <div class="template-title-row">
+              <img class="template-logo-sm" src={t.logo} width="28" height="28" alt="" />
+              <h3>{t.displayName}</h3>
+            </div>
+            <p>{t.taglineEn}</p>
+            <div class="template-actions">
+              <a class="btn btn-ghost btn-sm" href={keywordPath('en', t.slug, '')}>Preview</a>
+              <span class="badge">Soon</span>
+            </div>
+          </div>
+        </article>
       ))}
+    </div>
+  </section>
+
+  <section class="section wrap" id="how">
+    <div class="section-head">
+      <h2>How it works</h2>
+      <p class="sub">Same studio flow on the hub or on any live template page.</p>
+    </div>
+    <div class="card-grid">
+      <div class="card"><h3>1. Choose a template</h3><p>Browse trending looks and open Create.</p></div>
+      <div class="card"><h3>2. Upload &amp; consent</h3><p>Adult-consent photos only. No minors.</p></div>
+      <div class="card"><h3>3. Generate (stub)</h3><p>Buttons explain the stub — no fake success video until fal is wired.</p></div>
+    </div>
+    <div class="hero-cta" style="margin-top:1.75rem;justify-content:flex-start">
+      <a class="btn btn-primary" href="/create/">Start create</a>
+      <a class="btn btn-ghost" href="/pricing/">Pricing</a>
     </div>
   </section>
 </Layout>

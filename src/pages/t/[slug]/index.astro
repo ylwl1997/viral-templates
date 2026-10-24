@@ -28,7 +28,10 @@ const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
   {isLive ? (
     <>
       <section class="hero wrap">
-        <div class="eyebrow">{t.slug} · 9:16 · {t.durationEn}</div>
+        <div class="eyebrow brand-eyebrow">
+          <img src={t.logo} width="18" height="18" alt="" />
+          9:16 · {t.durationEn}
+        </div>
         <h1>{t.heroEn}</h1>
         <p class="lede">{t.taglineEn}. Adult consent required. Generate &amp; pay are stubs until fal / Waffo are wired.</p>
         <div class="hero-cta">
@@ -39,7 +42,7 @@ const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
 
       <section class="section wrap" id="how">
         <h2>How it works</h2>
-        <p class="sub">Three steps. Same single-site shell via subdomain or <code>/t/{t.slug}/</code>.</p>
+        <p class="sub">Three simple steps.</p>
         <div class="card-grid">
           {t.howEn.map((step, i) => (
             <div class="card">
@@ -87,14 +90,9 @@ const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
     <section class="hero wrap soon-hero">
       <div class="eyebrow">Coming soon</div>
       <h1>{t.displayName}</h1>
-      <p class="lede">{t.taglineEn}. This keyword site is reserved — not generatable yet.</p>
+      <p class="lede">{t.taglineEn}. We’re polishing this experience — create isn’t open yet.</p>
       <div class="hero-cta">
-        <span class="btn btn-ghost" aria-disabled="true">Generate unavailable</span>
-        <a class="btn btn-primary" href="/">Browse directory</a>
-      </div>
-      <div class="callout" style="margin-top:2rem;text-align:left;max-width:36rem;margin-inline:auto;">
-        <strong>Reserved subdomain:</strong> <code>{t.slug}.{SITE.apex}</code>
-        <br />Path fallback: <code>/t/{t.slug}/</code>
+        <span class="btn btn-ghost" aria-disabled="true">Coming soon</span>
       </div>
     </section>
   )}

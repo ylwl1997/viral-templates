@@ -1,26 +1,37 @@
-# Viral Templates（一词一子域）
+# Viral Templates
 
-One Astro repo → **one keyword per subdomain** skeleton. Apex is a **light directory** only (not a template-wall product).
+Customer-facing product: **AI viral video templates**. Apex is a **minimal brand hub** (name + value + legal). Each template is an **independent brand site** — no public keyword matrix, no “directory of slugs” in the UI.
 
 - Live preview: https://viral-templates.pages.dev
 - Repo: https://github.com/ylwl1997/viral-templates
-- Stack: Astro static · Cloudflare Pages (+ optional Pages Function for Host rewrite) · EN + `/zh/` · Generate/Pay stubs
+- Stack: Astro static · Cloudflare Pages (+ Pages Function for Host rewrite) · EN + `/zh/` · Generate/Pay stubs
 
-## Model
+## Customer vs ops
+
+| Surface | What customers see |
+|---------|-------------------|
+| Apex `/` · `/zh/` | Product gallery (Templates / Create / Trending looks) |
+| `/t/{slug}/` · `/zh/t/{slug}/` | That brand’s product page (or Coming soon) |
+| Nav / footer on brand pages | Product links + Privacy / Terms / FAQ — **never** other templates |
+| README (this file) | Host / wildcard / path fallback / registry — **ops only** |
+
+## Internal routing model (ops)
 
 | Host / path | Renders |
 |-------------|---------|
-| `apex` / `www` | Light directory (live + soon) |
-| `{slug}.apex` | That keyword’s single-site home |
+| `apex` / `www` | Product gallery + hub Create |
+| `{slug}.apex` | That template’s single-site home |
 | `{slug}.apex/create/` | Create studio (live only) |
 | `/t/{slug}/` | **Path fallback** — same shell without DNS |
 | `/zh/t/{slug}/` | Chinese shell |
 | Unknown subdomain | Friendly `/unknown-site/` (404 via Function) |
 
-**Live:** `bby-wow`, `kiss-cam`, `ceiling-fan`  
-**Soon:** `bulin-47`, `zombie-love`, `smalltown-boy-cats`, `clapping-cat`, `knight-cat`, `car-jump`
+**Live slugs:** `bby-wow`, `kiss-cam`, `ceiling-fan`  
+**Soon slugs:** `bulin-47`, `zombie-love`, `smalltown-boy-cats`, `clapping-cat`, `knight-cat`, `car-jump`
 
-Registry: `src/lib/templates.ts`  
+Registry: `src/lib/templates.ts` (includes `logo` + `accent` per template)
+Brand marks: `public/brand/templates/{slug}.svg`
+**Customer UI never says** 关键词站点 / 一词一域 / subdomain / slug / Host / registry.  
 Apex / env helpers: `src/lib/site.ts` (`PUBLIC_SITE_APEX`, default `viral-templates.pages.dev`)
 
 ## Path fallback (P0 — no DNS)
@@ -31,7 +42,8 @@ https://viral-templates.pages.dev/t/kiss-cam/
 https://viral-templates.pages.dev/t/ceiling-fan/
 https://viral-templates.pages.dev/t/clapping-cat/    # coming soon shell
 https://viral-templates.pages.dev/zh/t/bby-wow/
-https://viral-templates.pages.dev/                       # directory
+https://viral-templates.pages.dev/                       # product gallery
+https://viral-templates.pages.dev/create/                # hub create (pick live template)
 ```
 
 ## Production wildcard custom domain
@@ -40,7 +52,7 @@ https://viral-templates.pages.dev/                       # directory
    - `CNAME` / proxied record for apex → Pages project `viral-templates`
    - Wildcard: `*.example.com` → same Pages project (proxied)
 2. Pages → Custom domains: add `example.com` and `*.example.com` (or add one subdomain and enable wildcard per CF UI).
-3. Set Pages env **`PUBLIC_SITE_APEX=example.com`** (no protocol) so middleware + site copy agree.
+3. Set Pages env **`PUBLIC_SITE_APEX=example.com`** (no protocol) so middleware + site config agree.
 4. Host mapping is implemented in `functions/_middleware.js`:
    - `bby-wow.example.com/` → rewrite → `/t/bby-wow/`
    - `bby-wow.example.com/create/` → `/t/bby-wow/create/`
@@ -60,7 +72,7 @@ npx wrangler pages dev dist
 
 # In another shell — Host-based rewrite
 curl -sI -H "Host: bby-wow.viral-templates.pages.dev" http://127.0.0.1:8788/
-# Expect rewrite to keyword shell (200). Path in browser bar stays on subdomain when using real DNS.
+# Expect rewrite to template shell (200).
 
 curl -sI -H "Host: not-a-template.viral-templates.pages.dev" http://127.0.0.1:8788/
 # Expect 404 unknown-site
@@ -75,7 +87,7 @@ Note: Sending a custom `Host` to `*.pages.dev` from the public internet may not 
 
 | Key | Purpose |
 |-----|---------|
-| `PUBLIC_SITE_APEX` | Apex hostname for directory + subdomain mapping (default `viral-templates.pages.dev`) |
+| `PUBLIC_SITE_APEX` | Apex hostname for Host / subdomain mapping (default `viral-templates.pages.dev`) |
 | `FAL_KEY` / `FAL_API_KEY` | Real image→video (not wired in P0 UI) |
 | `FAL_MODEL` | fal model id |
 | `WAFFO_*` | Payments (stub only) |

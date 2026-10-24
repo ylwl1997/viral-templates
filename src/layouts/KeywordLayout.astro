@@ -7,7 +7,7 @@ interface Props {
   template: Template;
   title: string;
   description: string;
-  /** Path under keyword site: '' | 'create' */
+  /** Page key: '' | 'create' */
   page?: '' | 'create';
   lang?: Lang;
 }
@@ -62,7 +62,7 @@ const ga4 = SITE.ga4Id;
     <header class="site-header">
       <div class="wrap header-inner">
         <a class="logo" href={home}>
-          <img src="/brand/logo.svg" width="28" height="28" alt="" />
+          <img src={t.logo} width="28" height="28" alt="" />
           {name}
         </a>
         <nav class="nav" aria-label={label('Primary', '主导航')}>
@@ -110,11 +110,6 @@ const ga4 = SITE.ga4Id;
           <h3>{label('Legal', '法律')}</h3>
           <a href={pathFor(lang, '/terms/')}>{label('Terms', '服务条款')}</a>
           <a href={pathFor(lang, '/privacy/')}>{label('Privacy', '隐私政策')}</a>
-        </div>
-        <div>
-          <h3>{label('Directory', '目录')}</h3>
-          <a href={pathFor(lang, '/')}>{label('All keywords', '全部关键词')}</a>
-          <p class="footer-note">{label(`Host: ${t.slug}.${SITE.apex}`, `子域: ${t.slug}.${SITE.apex}`)}</p>
         </div>
       </div>
       <div class="wrap disclaimer">

@@ -1,0 +1,125 @@
+---
+import '../styles/global.css';
+import { SITE, type Lang, keywordPath, pathFor } from '../lib/site';
+import type { Template } from '../lib/templates';
+
+interface Props {
+  template: Template;
+  title: string;
+  description: string;
+  /** Path under keyword site: '' | 'create' */
+  page?: '' | 'create';
+  lang?: Lang;
+}
+
+const { template: t, title, description, page = '', lang = 'en' } = Astro.props;
+const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const home = keywordPath(lang, t.slug, '');
+const createHref = keywordPath(lang, t.slug, 'create');
+const canonicalPath = page === 'create' ? `/t/${t.slug}/create/` : `/t/${t.slug}/`;
+const pagePath = lang === 'zh' ? `/zh${canonicalPath}` : canonicalPath;
+const canonical = `${SITE.url}${pagePath}`;
+const enUrl = `${SITE.url}${canonicalPath}`;
+const zhUrl = `${SITE.url}/zh${canonicalPath}`;
+const htmlLang = lang === 'zh' ? 'zh-CN' : 'en';
+const name = lang === 'zh' ? t.displayNameZh : t.displayName;
+const isLive = t.status === 'live';
+const ga4 = SITE.ga4Id;
+---
+<!doctype html>
+<html lang={htmlLang} data-accent={t.accent}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="en" href={enUrl} />
+    <link rel="alternate" hreflang="zh-CN" href={zhUrl} />
+    <link rel="alternate" hreflang="x-default" href={enUrl} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={name} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#070b14" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {ga4 && (
+      <>
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${ga4}`}></script>
+        <script is:inline define:vars={{ ga4 }}>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', ga4);
+        </script>
+      </>
+    )}
+  </head>
+  <body class={`kw-site accent-${t.accent}`}>
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="logo" href={home}>
+          <img src="/brand/logo.svg" width="28" height="28" alt="" />
+          {name}
+        </a>
+        <nav class="nav" aria-label={label('Primary', '主导航')}>
+          <a href={`${home}#how`}>{label('How it works', '如何使用')}</a>
+          {isLive ? (
+            <a href={createHref} aria-current={page === 'create' ? 'page' : undefined}>
+              {label('Create', '创作')}
+            </a>
+          ) : (
+            <span class="nav-muted">{label('Coming soon', '即将上线')}</span>
+          )}
+          <a href={`${home}#pricing`}>{label('Pricing', '价格')}</a>
+          <a href={pathFor(lang, '/faq/')}>FAQ</a>
+        </nav>
+        <div class="header-end">
+          <div class="lang-switch" role="group" aria-label={label('Language', '语言')}>
+            <a href={keywordPath('en', t.slug, page)} class:list={['lang-opt', lang === 'en' && 'is-on']} hreflang="en">EN</a>
+            <a href={keywordPath('zh', t.slug, page)} class:list={['lang-opt', lang === 'zh' && 'is-on']} hreflang="zh-CN">中文</a>
+          </div>
+          {isLive ? (
+            <a class="btn btn-primary btn-sm" href={createHref}>{label('Create', '开始创作')}</a>
+          ) : (
+            <span class="btn btn-ghost btn-sm" aria-disabled="true">{label('Soon', '即将上线')}</span>
+          )}
+        </div>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="wrap footer-grid kw-footer">
+        <div>
+          <h3>{name}</h3>
+          <p>{label(t.taglineEn, t.taglineZh)}</p>
+        </div>
+        <div>
+          <h3>{label('Product', '产品')}</h3>
+          <a href={`${home}#how`}>{label('How it works', '如何使用')}</a>
+          {isLive && <a href={createHref}>{label('Create', '创作')}</a>}
+          <a href={`${home}#pricing`}>{label('Pricing', '价格')}</a>
+          <a href={pathFor(lang, '/faq/')}>FAQ</a>
+        </div>
+        <div>
+          <h3>{label('Legal', '法律')}</h3>
+          <a href={pathFor(lang, '/terms/')}>{label('Terms', '服务条款')}</a>
+          <a href={pathFor(lang, '/privacy/')}>{label('Privacy', '隐私政策')}</a>
+        </div>
+        <div>
+          <h3>{label('Directory', '目录')}</h3>
+          <a href={pathFor(lang, '/')}>{label('All keywords', '全部关键词')}</a>
+          <p class="footer-note">{label(`Host: ${t.slug}.${SITE.apex}`, `子域: ${t.slug}.${SITE.apex}`)}</p>
+        </div>
+      </div>
+      <div class="wrap disclaimer">
+        {label(t.disclaimerEn, t.disclaimerZh)}
+      </div>
+    </footer>
+  </body>
+</html>

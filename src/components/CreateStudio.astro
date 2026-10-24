@@ -1,0 +1,154 @@
+---
+import { SITE, type Lang, keywordPath, pathFor } from '../lib/site';
+import type { Template } from '../lib/templates';
+
+interface Props {
+  template: Template;
+  lang?: Lang;
+}
+const { template: t, lang = 'en' } = Astro.props;
+const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const home = keywordPath(lang, t.slug, '');
+const price =
+  t.photoCount === 2 ? SITE.pricing.kissCamOneShotUsd : SITE.pricing.oneShotUsd;
+const slots = t.photoCount === 2 ? [0, 1] : [0];
+---
+<section class="section wrap" id="create">
+  <div class="callout warn">
+    <strong>{label('Adult consent only.', '仅限成人同意。')}</strong>
+    {' '}{label(t.disclaimerEn, t.disclaimerZh)}
+  </div>
+
+  <div class="credits-bar">
+    <div>
+      <strong>{label('Credits:', '积分：')}</strong>
+      <span>0</span>
+      <span class="badge" style="margin-left:0.5rem">{label('demo balance', '演示余额')}</span>
+    </div>
+    <div>
+      {label('Stub price from', '占位价起')} <strong>${price}</strong>
+      · <a href={`${home}#pricing`}>{label('Pricing', '价格')}</a>
+    </div>
+  </div>
+
+  <div class="studio" style="margin-top:1.25rem">
+    <div>
+      {t.photoCount === 2 ? (
+        <div class="upload-slots" data-slots="2">
+          {slots.map((i) => (
+            <label class="slot" data-slot={i}>
+              <input type="file" accept="image/jpeg,image/png,image/webp" class="slot-file" data-slot={i} />
+              <span class="slot-label">
+                {label(`Photo ${i === 0 ? 'A' : 'B'}`, `照片 ${i === 0 ? 'A' : 'B'}`)}
+                <br /><small>{label('Person / pet', '人物 / 宠物')}</small>
+              </span>
+              <img class="slot-preview" data-slot={i} alt="" hidden />
+            </label>
+          ))}
+        </div>
+      ) : (
+        <label class="upload-zone" for="photo-input">
+          <input id="photo-input" class="slot-file" data-slot="0" type="file" accept="image/jpeg,image/png,image/webp" />
+          <div id="upload-placeholder">
+            <strong>{label('Drop photo or click to upload', '拖放或点击上传照片')}</strong>
+            <div class="hint">JPG / PNG / WebP · {label('you must own rights', '需拥有使用权')}</div>
+          </div>
+          <img id="preview" class="preview-img slot-preview" data-slot="0" alt="Preview" hidden />
+        </label>
+      )}
+      <label style="display:flex;gap:0.5rem;align-items:flex-start;margin-top:1rem;font-size:0.92rem;color:var(--secondary)">
+        <input id="consent" type="checkbox" style="margin-top:0.25rem" />
+        <span>
+          {label(
+            `I confirm ${t.photoCount === 2 ? 'these photos show' : 'this photo shows'} adult(s) (18+) or pets with permission, and I have rights to use ${t.photoCount === 2 ? 'them' : 'it'}.`,
+            `我确认${t.photoCount === 2 ? '这些照片为' : '该照片为'}成人（18+）或经授权宠物，且我拥有使用权。`
+          )}
+        </span>
+      </label>
+    </div>
+
+    <div class="card">
+      <h3>{label('Generate', '生成')}</h3>
+      <p style="margin-bottom:1rem">
+        {label('Output:', '输出：')} vertical 9:16 · {lang === 'zh' ? t.durationZh : t.durationEn}
+      </p>
+      <button class="btn btn-primary" id="generate-btn" type="button" style="width:100%">
+        {label('Generate video', '生成视频')}
+      </button>
+      <button class="btn btn-ghost" id="pay-btn" type="button" style="width:100%;margin-top:0.65rem">
+        {label('Pay (stub)', '支付（占位）')}
+      </button>
+      <div class="status-box cfg" id="status">
+        {label(
+          'Waiting for photo(s) + consent…\nGenerate and Pay are stubs — not connected to fal or Waffo. No fake success.',
+          '等待照片与授权…\n生成与支付为占位，未连接 fal / Waffo。不会伪造成功。'
+        )}
+      </div>
+      <p style="margin-top:1rem;font-size:0.88rem;color:var(--muted)">
+        {label(
+          'Wire FAL_* / WAFFO_* on Cloudflare Pages when ready. Until then buttons only explain the stub.',
+          '准备好后在 Cloudflare Pages 配置 FAL_* / WAFFO_*。此前按钮仅说明占位状态。'
+        )}
+      </p>
+      <p style="margin-top:0.75rem;font-size:0.88rem;">
+        <a href={home}>← {label('Back to home', '返回首页')}</a>
+        · <a href={pathFor(lang, '/faq/')}>FAQ</a>
+      </p>
+    </div>
+  </div>
+</section>
+
+<script is:inline define:vars={{ photoCount: t.photoCount, stubEn: true }}>
+  (function () {
+    const files = {};
+    const consent = document.getElementById('consent');
+    const btn = document.getElementById('generate-btn');
+    const pay = document.getElementById('pay-btn');
+    const status = document.getElementById('status');
+    function setStatus(text, kind) {
+      status.textContent = text;
+      status.className = 'status-box' + (kind ? ' ' + kind : '');
+    }
+    document.querySelectorAll('.slot-file').forEach(function (input) {
+      input.addEventListener('change', function () {
+        const slot = input.getAttribute('data-slot') || '0';
+        const file = input.files && input.files[0];
+        if (!file) return;
+        files[slot] = file;
+        const preview = document.querySelector('.slot-preview[data-slot="' + slot + '"]');
+        const placeholder = document.getElementById('upload-placeholder');
+        if (preview) {
+          preview.src = URL.createObjectURL(file);
+          preview.hidden = false;
+        }
+        if (placeholder) placeholder.hidden = true;
+        const slotEl = input.closest('.slot');
+        if (slotEl) slotEl.classList.add('has-file');
+        setStatus('Photo slot ' + slot + ' ready. Confirm consent, then try Generate (stub).', 'cfg');
+      });
+    });
+    function readyCount() {
+      return Object.keys(files).length;
+    }
+    btn.addEventListener('click', function () {
+      if (readyCount() < photoCount) {
+        setStatus('Upload ' + photoCount + ' photo(s) first. Generate is a stub — nothing was sent.', 'err');
+        return;
+      }
+      if (!consent.checked) {
+        setStatus('Confirm adult consent first. Generate is a stub — nothing was sent.', 'err');
+        return;
+      }
+      setStatus(
+        'STUB — Generate is not connected.\nNo fal job was created. No credit was debited. No fake success video.\nSet FAL_KEY / FAL_MODEL on Pages to enable real renders later.',
+        'cfg'
+      );
+    });
+    pay.addEventListener('click', function () {
+      setStatus(
+        'STUB — Pay / Waffo checkout is not connected.\nNo charge was made. No fake payment success.\nSet WAFFO_* env vars on Pages when ready.',
+        'cfg'
+      );
+    });
+  })();
+</script>

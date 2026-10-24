@@ -1,25 +1,21 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
-import { SITE } from '../../../lib/site';
-const lang = 'zh' as const;
 ---
 <Layout
-  title={`价格 — ${SITE.name}`}
-  description="积分与一次性购买。Waffo 为 stub。"
+  title="价格（占位）"
+  description="Viral Templates 关键词站点占位价格。"
   canonicalPath="/pricing/"
-  lang={lang}
+  lang="zh"
 >
-  <div class="page-head wrap">
-    <h1>价格</h1>
-    <p>积分与一次性购买。Waffo 为 stub。</p>
-  </div>
 
+  <div class="page-head wrap"><h1>价格（占位）</h1><p>结账未接入。数字仅为占位。</p></div>
   <section class="section wrap">
-    <div class="pricing-grid">
-      <div class="price-card"><h3>一次性（1 图模板）</h3><div class="amount">$2.99</div></div>
-      <div class="price-card"><h3>Kiss Cam</h3><div class="amount">$4.99</div></div>
-      <div class="price-card popular"><h3>Creator 包</h3><div class="amount">$24.99</div><div class="meta">15 积分</div></div>
+    <div class="card-grid">
+      <div class="card"><h3>单次</h3><p>起价 <strong>$2.99</strong>（Kiss Cam $4.99）— 占位</p></div>
+      <div class="card"><h3>Starter</h3><p>5 积分 · $9.99 — 占位</p></div>
+      <div class="card"><h3>Creator</h3><p>15 积分 · $24.99 — 占位</p></div>
+      <div class="card"><h3>Studio</h3><p>40 积分 · $59.99 — 占位</p></div>
     </div>
-    <p style="margin-top:1.5rem"><a href="/pricing/">完整英文定价页</a></p>
   </section>
+
 </Layout>

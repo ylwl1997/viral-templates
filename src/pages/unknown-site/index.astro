@@ -1,0 +1,21 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { SITE } from '../../lib/site';
+---
+<Layout
+  title={`Unknown keyword — ${SITE.name}`}
+  description="This subdomain is not a known keyword site."
+  canonicalPath="/unknown-site/"
+  lang="en"
+>
+  <section class="hero wrap">
+    <div class="eyebrow">404</div>
+    <h1>Unknown keyword site</h1>
+    <p class="lede">
+      That subdomain is not in the template registry. Check the slug or open the directory.
+    </p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="/">Keyword directory</a>
+    </div>
+  </section>
+</Layout>

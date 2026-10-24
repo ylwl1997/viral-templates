@@ -1,20 +1,16 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
-import { SITE } from '../../../lib/site';
-const lang = 'zh' as const;
 ---
 <Layout
-  title={`服务条款 — ${SITE.name}`}
-  description="摘要页；完整以英文为准。"
+  title="服务条款"
+  description="Viral Templates 服务条款占位。"
   canonicalPath="/terms/"
-  lang={lang}
+  lang="zh"
 >
-  <div class="page-head wrap">
-    <h1>服务条款</h1>
-    <p>摘要页；完整以英文为准。</p>
-  </div>
 
-  <article class="section wrap prose">
-    <p>完整条款以 <a href="/terms/">英文 Terms</a> 为准。摘要：仅限成人同意；非官方；Kiss Cam 无演唱会素材；禁止绑风扇；失败退积分；照片约 30 天删除。</p>
-  </article>
+  <div class="page-head wrap"><h1>服务条款</h1><p>关键词站点预览的占位条款。</p></div>
+  <section class="section wrap prose">
+    <p>需成人同意。非 Coldplay / Karol G / CapCut 官方。Kiss Cam 不含真实演唱会素材。吊扇为纯 AI — 切勿绑真风扇。生成/支付占位在后端上线前不构成付费服务。</p>
+  </section>
+
 </Layout>

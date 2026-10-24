@@ -1,20 +1,16 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
-import { SITE } from '../../../lib/site';
-const lang = 'zh' as const;
 ---
 <Layout
-  title={`隐私政策 — ${SITE.name}`}
-  description="摘要页；完整以英文为准。"
+  title="隐私政策"
+  description="Viral Templates 隐私政策占位。"
   canonicalPath="/privacy/"
-  lang={lang}
+  lang="zh"
 >
-  <div class="page-head wrap">
-    <h1>隐私政策</h1>
-    <p>摘要页；完整以英文为准。</p>
-  </div>
 
-  <article class="section wrap prose">
-    <p>完整政策以 <a href="/privacy/">英文 Privacy</a> 为准。摘要：上传图约 30 天删除；可选 GA4 / Adsterra；支付经 Waffo；生成经 fal；P0 不需要 R2。</p>
-  </article>
+  <div class="page-head wrap"><h1>隐私政策</h1><p>占位政策 — 正式收集照片前请完善。</p></div>
+  <section class="section wrap prose">
+    <p>上传照片计划短期处理（约 30 天保留）。本预览未接入 fal / Waffo。请勿上传未成年人照片。</p>
+  </section>
+
 </Layout>

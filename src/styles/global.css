@@ -646,3 +646,104 @@ code {
   padding: 0.1em 0.35em;
   border-radius: 5px;
 }
+
+/* —— 一词一子域 directory + keyword shell —— */
+.nav-muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.footer-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--faint);
+  word-break: break-all;
+}
+.kw-footer { grid-template-columns: 1.3fr 1fr 1fr 1.1fr; }
+
+.dir-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.dir-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--ease), transform var(--ease), background var(--ease);
+}
+.dir-row:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+  text-decoration: none;
+  color: inherit;
+  transform: translateY(-1px);
+}
+.dir-row.soon { opacity: 0.88; }
+.dir-swatch {
+  width: 0.65rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: var(--accent);
+}
+.dir-swatch.magenta { background: #f472b6; }
+.dir-swatch.amber { background: #fbbf24; }
+.dir-swatch.cyan { background: #22d3ee; }
+.dir-swatch.violet { background: #a78bfa; }
+.dir-swatch.rose { background: #fb7185; }
+.dir-swatch.lime { background: #a3e635; }
+.dir-swatch.orange { background: #fb923c; }
+.dir-swatch.sky { background: #38bdf8; }
+.dir-swatch.slate { background: #94a3b8; }
+.dir-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+.dir-main strong {
+  font-size: 1.02rem;
+  letter-spacing: -0.02em;
+}
+.dir-meta {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.dir-row .badge { flex-shrink: 0; }
+
+.slot-preview {
+  max-width: 100%;
+  max-height: 150px;
+  border-radius: var(--radius-sm);
+  display: block;
+  margin: 0 auto;
+  pointer-events: none;
+}
+.soon-hero .lede { max-width: 36rem; }
+
+.kw-site.accent-magenta { --glow: rgba(244, 114, 182, 0.28); }
+.kw-site.accent-amber { --glow: rgba(251, 191, 36, 0.28); --accent: #fbbf24; --accent-2: #f59e0b; --accent-bright: #fcd34d; --link: #fcd34d; }
+.kw-site.accent-cyan { --glow: rgba(34, 211, 238, 0.28); --accent: #22d3ee; --accent-2: #06b6d4; --accent-bright: #67e8f9; }
+.kw-site.accent-violet { --accent: #a78bfa; --accent-2: #8b5cf6; --accent-bright: #c4b5fd; --glow: rgba(167, 139, 250, 0.28); }
+.kw-site.accent-rose { --accent: #fb7185; --accent-2: #f43f5e; --accent-bright: #fda4af; --glow: rgba(251, 113, 133, 0.28); }
+.kw-site.accent-lime { --accent: #a3e635; --accent-2: #84cc16; --accent-bright: #bef264; --glow: rgba(163, 230, 53, 0.28); --accent-ink: #14200a; }
+.kw-site.accent-orange { --accent: #fb923c; --accent-2: #f97316; --accent-bright: #fdba74; --glow: rgba(251, 146, 60, 0.28); }
+.kw-site.accent-sky { --accent: #38bdf8; --accent-2: #0ea5e9; --accent-bright: #7dd3fc; }
+.kw-site.accent-slate { --accent: #94a3b8; --accent-2: #64748b; --accent-bright: #cbd5e1; --glow: rgba(148, 163, 184, 0.25); }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  padding: 0.12em 0.35em;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}

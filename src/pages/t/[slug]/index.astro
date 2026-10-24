@@ -1,0 +1,101 @@
+---
+import KeywordLayout from '../../../layouts/KeywordLayout.astro';
+import { TEMPLATES, type Template } from '../../../lib/templates';
+import { SITE, keywordPath } from '../../../lib/site';
+
+export function getStaticPaths() {
+  return TEMPLATES.map((template) => ({
+    params: { slug: template.slug },
+    props: { template },
+  }));
+}
+
+interface Props { template: Template }
+const { template: t } = Astro.props;
+const lang = 'en' as const;
+const isLive = t.status === 'live';
+const createHref = keywordPath(lang, t.slug, 'create');
+const { packs, oneShotUsd, kissCamOneShotUsd } = SITE.pricing;
+const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
+---
+<KeywordLayout
+  template={t}
+  title={t.seoTitleEn}
+  description={t.seoDescEn}
+  page=""
+  lang={lang}
+>
+  {isLive ? (
+    <>
+      <section class="hero wrap">
+        <div class="eyebrow">{t.slug} · 9:16 · {t.durationEn}</div>
+        <h1>{t.heroEn}</h1>
+        <p class="lede">{t.taglineEn}. Adult consent required. Generate &amp; pay are stubs until fal / Waffo are wired.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href={createHref}>Create now</a>
+          <a class="btn btn-ghost" href="#how">How it works</a>
+        </div>
+      </section>
+
+      <section class="section wrap" id="how">
+        <h2>How it works</h2>
+        <p class="sub">Three steps. Same single-site shell via subdomain or <code>/t/{t.slug}/</code>.</p>
+        <div class="card-grid">
+          {t.howEn.map((step, i) => (
+            <div class="card">
+              <h3>Step {i + 1}</h3>
+              <p>{step}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section class="section wrap" id="upload">
+        <h2>Upload</h2>
+        <p class="sub">
+          {t.photoCount === 2 ? 'This template needs 2 photos.' : 'This template needs 1 photo.'}
+          {' '}Open Create to use the studio.
+        </p>
+        <a class="btn btn-primary" href={createHref}>Open create studio</a>
+      </section>
+
+      <section class="section wrap" id="pricing">
+        <h2>Pricing (stub)</h2>
+        <p class="sub">Checkout is not connected. Figures below are placeholders only.</p>
+        <div class="card-grid">
+          <div class="card">
+            <h3>One-shot</h3>
+            <p>From <strong>${oneShot}</strong> · {SITE.pricing.creditPerGenerate} credit / generate (stub)</p>
+          </div>
+          {packs.map((p) => (
+            <div class="card">
+              <h3>{p.label}{p.popular ? ' · Popular' : ''}</h3>
+              <p>{p.credits} credits · ${p.usd} (stub)</p>
+            </div>
+          ))}
+        </div>
+        <p style="margin-top:1rem;color:var(--muted);font-size:0.9rem;">Pay on Create is a clear stub — no fake success.</p>
+      </section>
+
+      <section class="section wrap">
+        <div class="callout warn">
+          <strong>Compliance.</strong> {t.disclaimerEn} Photos deleted ~{SITE.photoRetentionDays} days — see <a href="/privacy/">Privacy</a> / <a href="/terms/">Terms</a> / <a href="/faq/">FAQ</a>.
+        </div>
+      </section>
+    </>
+  ) : (
+    <section class="hero wrap soon-hero">
+      <div class="eyebrow">Coming soon</div>
+      <h1>{t.displayName}</h1>
+      <p class="lede">{t.taglineEn}. This keyword site is reserved — not generatable yet.</p>
+      <div class="hero-cta">
+        <span class="btn btn-ghost" aria-disabled="true">Generate unavailable</span>
+        <a class="btn btn-primary" href="/">Browse directory</a>
+      </div>
+      <div class="callout" style="margin-top:2rem;text-align:left;max-width:36rem;margin-inline:auto;">
+        <strong>Reserved subdomain:</strong> <code>{t.slug}.{SITE.apex}</code>
+        <br />Path fallback: <code>/t/{t.slug}/</code>
+      </div>
+    </section>
+  )}
+</KeywordLayout>

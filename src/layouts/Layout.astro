@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css';
-import { SITE, TEMPLATES, type Lang, pathFor, NAV } from '../lib/site';
+import { SITE, type Lang, pathFor } from '../lib/site';
 
 interface Props {
   title: string;
@@ -27,14 +27,13 @@ const htmlLang = lang === 'zh' ? 'zh-CN' : 'en';
 const path = Astro.url.pathname;
 const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
 const homeHref = pathFor(lang, '/');
+const ga4 = SITE.ga4Id;
 
 const isCurrent = (p: string) => {
   const localized = pathFor(lang, p);
   if (p === '/') return path === localized || path === '/zh' || path === '/zh/';
   return path === localized || path.startsWith(localized);
 };
-
-const ga4 = SITE.ga4Id;
 ---
 <!doctype html>
 <html lang={htmlLang}>
@@ -52,10 +51,7 @@ const ga4 = SITE.ga4Id;
     <meta property="og:url" content={canonical} />
     <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content={SITE.name} />
-    <meta property="og:locale" content={lang === 'zh' ? 'zh_CN' : 'en_US'} />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
     <meta name="theme-color" content="#070b14" />
     <meta name="color-scheme" content="dark" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -70,11 +66,6 @@ const ga4 = SITE.ga4Id;
         </script>
       </>
     )}
-    {/*
-      Adsterra Social Bar — paste zone snippet when ready.
-      Placeholder: PUBLIC_ADSTERRA_SOCIAL_BAR_ZONE / SITE.adsterraSocialBarZone
-      Do NOT invent a live zone id.
-    */}
   </head>
   <body>
     <header class="site-header">
@@ -84,31 +75,21 @@ const ga4 = SITE.ga4Id;
           {SITE.name}
         </a>
         <nav class="nav" aria-label={label('Primary', '主导航')}>
-          {NAV.map((item) => (
-            <a
-              href={pathFor(lang, item.href)}
-              aria-current={isCurrent(item.href) ? 'page' : undefined}
-            >
-              {label(item.labelEn, item.labelZh)}
-            </a>
-          ))}
+          <a href={homeHref} aria-current={isCurrent('/') ? 'page' : undefined}>{label('Directory', '目录')}</a>
+          <a href={pathFor(lang, '/pricing/')} aria-current={isCurrent('/pricing/') ? 'page' : undefined}>{label('Pricing', '价格')}</a>
+          <a href={pathFor(lang, '/faq/')} aria-current={isCurrent('/faq/') ? 'page' : undefined}>FAQ</a>
         </nav>
         <div class="header-end">
           <div class="lang-switch" role="group" aria-label={label('Language', '语言')}>
-            <a href={pathFor('en', canonicalPath)} class:list={['lang-opt', lang === 'en' && 'is-on']} hreflang="en" lang="en">EN</a>
-            <a href={pathFor('zh', canonicalPath)} class:list={['lang-opt', lang === 'zh' && 'is-on']} hreflang="zh-CN" lang="zh-CN">中文</a>
+            <a href={pathFor('en', canonicalPath)} class:list={['lang-opt', lang === 'en' && 'is-on']} hreflang="en">EN</a>
+            <a href={pathFor('zh', canonicalPath)} class:list={['lang-opt', lang === 'zh' && 'is-on']} hreflang="zh-CN">中文</a>
           </div>
-          <a class="btn btn-primary btn-sm" href={pathFor(lang, '/#templates')}>
-            {label('Browse templates', '浏览模板')}
-          </a>
         </div>
       </div>
     </header>
-
     <main>
       <slot />
     </main>
-
     <footer class="site-footer">
       <div class="wrap footer-grid">
         <div>
@@ -116,22 +97,11 @@ const ga4 = SITE.ga4Id;
           <p>{label(SITE.taglineEn, SITE.taglineZh)}</p>
         </div>
         <div>
-          <h3>{label('Templates', '模板')}</h3>
-          {TEMPLATES.map((t) => (
-            <a href={pathFor(lang, t.createPath)}>{label(t.nameEn, t.nameZh)}</a>
-          ))}
-        </div>
-        <div>
-          <h3>{label('Product', '产品')}</h3>
-          <a href={pathFor(lang, '/pricing/')}>{label('Pricing', '价格')}</a>
-          <a href={pathFor(lang, '/how-it-works/')}>{label('How it works', '如何使用')}</a>
-          <a href={pathFor(lang, '/faq/')}>FAQ</a>
-          <a href={pathFor(lang, '/blog/')}>{label('Blog', '博客')}</a>
-        </div>
-        <div>
           <h3>{label('Legal', '法律')}</h3>
           <a href={pathFor(lang, '/terms/')}>{label('Terms', '服务条款')}</a>
           <a href={pathFor(lang, '/privacy/')}>{label('Privacy', '隐私政策')}</a>
+          <a href={pathFor(lang, '/faq/')}>FAQ</a>
+          <a href={pathFor(lang, '/pricing/')}>{label('Pricing', '价格')}</a>
         </div>
       </div>
       <div class="wrap disclaimer">

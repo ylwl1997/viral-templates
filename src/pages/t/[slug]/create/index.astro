@@ -1,0 +1,42 @@
+---
+import KeywordLayout from '../../../../layouts/KeywordLayout.astro';
+import CreateStudio from '../../../../components/CreateStudio.astro';
+import { TEMPLATES, type Template } from '../../../../lib/templates';
+import { keywordPath } from '../../../../lib/site';
+
+export function getStaticPaths() {
+  return TEMPLATES.map((template) => ({
+    params: { slug: template.slug },
+    props: { template },
+  }));
+}
+
+interface Props { template: Template }
+const { template: t } = Astro.props;
+const lang = 'en' as const;
+const isLive = t.status === 'live';
+---
+<KeywordLayout
+  template={t}
+  title={isLive ? `Create — ${t.seoTitleEn}` : `${t.displayName} — Coming soon`}
+  description={t.seoDescEn}
+  page="create"
+  lang={lang}
+>
+  {isLive ? (
+    <>
+      <div class="page-head wrap">
+        <h1>Create — {t.displayName}</h1>
+        <p>{t.taglineEn}. Generate &amp; Pay are stubs — no fake success.</p>
+      </div>
+      <CreateStudio template={t} lang={lang} />
+    </>
+  ) : (
+    <section class="hero wrap">
+      <div class="eyebrow">Coming soon</div>
+      <h1>{t.displayName}</h1>
+      <p class="lede">Create is not available yet for this keyword.</p>
+      <a class="btn btn-primary" href={keywordPath(lang, t.slug, '')}>Back to site</a>
+    </section>
+  )}
+</KeywordLayout>

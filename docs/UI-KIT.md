@@ -99,7 +99,7 @@ Acceptance: three brand homes side-by-side are obviously different sites, not lo
 3. **Zero customer-facing engineering jargon:** ban stub / fal / Waffo / Wire / env / Cloudflare (only `?debug=1` may show eng hints). Use **Coming soon** / **Demo** (ZH: **即将开放** / **演示**).
 4. **Live templates require a 9:16 media slot** (still or loop poster). Gradient+icon alone is not enough for Live.
 5. **One primary gradient CTA per viewport.** Disabled controls must not glow like primary.
-6. Generate when not wired = **disabled + Coming soon**. Consent checkbox gates the primary button when wired.
+6. Generate without a video provider still requires consent and a photo. Signed-in Generate queues a saved job (queued, no file). Unsigned Generate goes to sign-in with `next=`. Do not mark that job ready or attach a download. Pay stays **Coming soon** until checkout exists.
 7. Unsigned account: centered Sign-in card only — do not expose Creations/Credits/Settings shell. Sign-in: no fake Google button if OAuth unwired; Preview only when available.
 8. EN + ZH for all chrome strings.
 9. Do not fork ShrimpReel / switch frameworks; visual bar only (RicoFast / PowerAI density).

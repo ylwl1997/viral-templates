@@ -1,10 +1,10 @@
 ---
 import AccountShell from '../../../components/account/AccountShell.astro';
+import AccountOverview from '../../../components/account/AccountOverview.astro';
+import { accountHref } from '../../../lib/auth';
 import { pathFor } from '../../../lib/site';
-import { MOCK_CREDIT_BALANCE, MOCK_CREATIONS, statusLabel } from '../../../lib/account-mock';
 
 const lang = 'zh' as const;
-const recent = MOCK_CREATIONS.slice(0, 3);
 ---
 <AccountShell
   lang={lang}
@@ -12,42 +12,10 @@ const recent = MOCK_CREATIONS.slice(0, 3);
   title="账户 · Viral Templates"
   description="Viral Templates 账户概览 — 余额与最近作品。"
 >
-  <header class="account-page-head">
-    <h1>概览</h1>
-    <p>已登录：<strong data-session-name>—</strong></p>
-  </header>
-
-  <div class="account-stat-grid">
-    <div class="card account-stat">
-      <p class="account-stat-label">积分</p>
-      <p class="account-stat-value">{MOCK_CREDIT_BALANCE}</p>
-      <p class="account-stat-meta"><span class="badge">演示</span></p>
-      <a href={pathFor(lang, '/account/credits/')}>查看积分 →</a>
-    </div>
-    <div class="card account-stat">
-      <p class="account-stat-label">作品</p>
-      <p class="account-stat-value">{MOCK_CREATIONS.length}</p>
-      <p class="account-stat-meta">跨模板的演示任务</p>
-      <a href={pathFor(lang, '/account/creations/')}>查看作品 →</a>
-    </div>
-  </div>
-
-  <section class="account-block">
-    <div class="account-block-head">
-      <h2>最近作品</h2>
-      <a href={pathFor(lang, '/account/creations/')}>查看全部</a>
-    </div>
-    <ul class="creation-list">
-      {recent.map((job) => (
-        <li class="creation-row card">
-          <div>
-            <strong>{job.template_name_zh}</strong>
-            <span class={`status-pill status-${job.status}`}>{statusLabel(job.status, lang)}</span>
-          </div>
-          <p>{job.note_zh}</p>
-          <time datetime={job.created_at}>{job.created_at}</time>
-        </li>
-      ))}
-    </ul>
-  </section>
+  <AccountOverview
+    lang={lang}
+    createHref={pathFor(lang, '/create/')}
+    creationsHref={accountHref(lang, 'creations')}
+    creditsHref={accountHref(lang, 'credits')}
+  />
 </AccountShell>

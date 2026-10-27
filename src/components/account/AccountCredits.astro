@@ -1,0 +1,80 @@
+---
+import { SITE, type Lang } from '../../lib/site';
+
+interface Props {
+  lang?: Lang;
+}
+
+const { lang = 'en' } = Astro.props;
+const zh = lang === 'zh';
+const packs = SITE.pricing.packs.map((p) => `${p.label} ${p.credits} ${zh ? '积分' : 'credits'} / $${p.usd}`).join(' · ');
+---
+
+<div data-account-panel="credits" data-lang={lang}>
+  <header class="account-page-head">
+    <h1>{zh ? '积分' : 'Credits'}</h1>
+    <p>
+      {
+        zh
+          ? '余额和流水保存在你的账户中。购买积分尚未开放。'
+          : 'Balance and ledger are saved with your account. Buying credits is not open yet.'
+      }
+    </p>
+  </header>
+
+  <p class="account-alert" data-account-alert hidden role="status">
+    <span data-alert-text></span>
+    <button type="button" class="btn btn-ghost btn-sm" data-retry hidden>Try again</button>
+  </p>
+
+  <div class="card account-stat" style="margin-bottom:1.25rem">
+    <p class="account-stat-label">{zh ? '当前余额' : 'Current balance'}</p>
+    <p class="account-stat-value" data-balance>—</p>
+    <p class="account-stat-meta">
+      {zh ? `计划每次生成 ${SITE.pricing.creditPerGenerate} 积分` : `${SITE.pricing.creditPerGenerate} credit per generate`}
+    </p>
+  </div>
+
+  <section class="account-block">
+    <div class="account-block-head">
+      <h2>{zh ? '流水' : 'Ledger'}</h2>
+    </div>
+    <p class="account-loading" data-loading>{zh ? '加载中…' : 'Loading…'}</p>
+    <div class="empty-state" data-empty hidden>
+      <h3>{zh ? '还没有流水' : 'No ledger entries yet'}</h3>
+      <p>
+        {
+          zh
+            ? '充值、扣费和退还会列在这里。购买积分尚未开放，本页不会扣款。'
+            : 'Top-ups, deductions, and refunds will be listed here. Buying credits is not open yet, and this page does not charge you.'
+        }
+      </p>
+    </div>
+    <ul class="ledger-list" data-list hidden></ul>
+  </section>
+
+  <section class="account-block">
+    <div class="account-block-head">
+      <h2>{zh ? '充值' : 'Top up'}</h2>
+    </div>
+    <div class="card callout info">
+      <strong>{zh ? '即将开放 — 结账尚未开通。' : 'Coming soon — checkout is not open yet.'}</strong>
+      {' '}
+      {
+        zh
+          ? `套餐（${packs}）稍后接入支付。本页不会产生任何扣款。`
+          : `Packs (${packs}) will open when payments are ready. No charge is made from this page.`
+      }
+    </div>
+    <div class="pack-row">
+      {
+        SITE.pricing.packs.map((p) => (
+          <button type="button" class="btn btn-ghost pack-btn" disabled aria-disabled="true">
+            {p.label} · {p.credits} {zh ? '积分' : 'credits'} · ${p.usd}
+            {p.popular ? (zh ? ' · 热门' : ' · Popular') : ''}
+          </button>
+        ))
+      }
+    </div>
+  </section>
+</div>

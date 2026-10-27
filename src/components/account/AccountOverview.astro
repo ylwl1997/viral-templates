@@ -1,0 +1,63 @@
+---
+import type { Lang } from '../../lib/site';
+
+interface Props {
+  lang?: Lang;
+  createHref: string;
+  creationsHref: string;
+  creditsHref: string;
+}
+
+const { lang = 'en', createHref, creationsHref, creditsHref } = Astro.props;
+const zh = lang === 'zh';
+---
+
+<div data-account-panel="overview" data-lang={lang}>
+  <header class="account-page-head">
+    <h1>{zh ? '概览' : 'Overview'}</h1>
+    <p>
+      {zh ? '已登录：' : 'Signed in as '}
+      <strong data-session-name>—</strong>
+    </p>
+  </header>
+
+  <p class="account-alert" data-account-alert hidden role="status">
+    <span data-alert-text></span>
+    <button type="button" class="btn btn-ghost btn-sm" data-retry hidden>Try again</button>
+  </p>
+
+  <div class="account-stat-grid">
+    <div class="card account-stat">
+      <p class="account-stat-label">{zh ? '积分' : 'Credits'}</p>
+      <p class="account-stat-value" data-balance>—</p>
+      <p class="account-stat-meta">{zh ? '保存在你的账户中' : 'Saved with your account'}</p>
+      <a href={creditsHref}>{zh ? '查看积分 →' : 'View credits →'}</a>
+    </div>
+    <div class="card account-stat">
+      <p class="account-stat-label">{zh ? '作品' : 'Creations'}</p>
+      <p class="account-stat-value" data-count>—</p>
+      <p class="account-stat-meta">{zh ? '保存在你的账户中' : 'Saved with your account'}</p>
+      <a href={creationsHref}>{zh ? '查看作品 →' : 'View creations →'}</a>
+    </div>
+  </div>
+
+  <section class="account-block">
+    <div class="account-block-head">
+      <h2>{zh ? '最近作品' : 'Recent creations'}</h2>
+      <a href={creationsHref}>{zh ? '查看全部' : 'See all'}</a>
+    </div>
+    <p class="account-loading" data-loading>{zh ? '加载中…' : 'Loading…'}</p>
+    <div class="empty-state" data-empty hidden>
+      <h3>{zh ? '还没有作品' : 'No creations yet'}</h3>
+      <p>
+        {
+          zh
+            ? '登录后点生成，会在这里留下排队中的任务。目前不会出现可下载的成片。'
+            : 'Generate while signed in to queue a job here. Finished videos are not available yet, so nothing will be downloadable.'
+        }
+      </p>
+      <a class="btn btn-primary btn-sm" data-empty-cta href={createHref}>{zh ? '去创作' : 'Start a creation'}</a>
+    </div>
+    <ul class="creation-list" data-list hidden></ul>
+  </section>
+</div>

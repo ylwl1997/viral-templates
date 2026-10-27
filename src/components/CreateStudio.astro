@@ -16,6 +16,7 @@ const slots = t.photoCount === 2 ? [0, 1] : [0];
 const uid = `cs-${t.slug}`;
 const signInBase = signInHref(lang);
 const creditsHref = accountHref(lang, 'credits');
+const creationsHref = accountHref(lang, 'creations');
 const generateReady = SITE.falConfigured;
 const payReady = SITE.waffoConfigured;
 ---
@@ -29,7 +30,6 @@ const payReady = SITE.waffoConfigured;
     <div>
       <strong>{label('Credits:', '积分：')}</strong>
       <span data-credits-balance>—</span>
-      <span class="badge" style="margin-left:0.5rem">{label('Demo', '演示')}</span>
       <a href={creditsHref} style="margin-left:0.65rem;font-size:0.88rem">{label('Account', '账户')}</a>
     </div>
     <div>
@@ -90,9 +90,7 @@ const payReady = SITE.waffoConfigured;
         disabled
         aria-disabled="true"
       >
-        {generateReady
-          ? label('Generate video', '生成视频')
-          : label('Coming soon', '即将开放')}
+        {label('Generate', '生成')}
       </button>
       <button
         class="btn btn-ghost"
@@ -110,6 +108,10 @@ const payReady = SITE.waffoConfigured;
           '请上传照片并确认授权以继续。'
         )}
       </div>
+      <p data-job-follow hidden>
+        <a data-job-download hidden rel="noopener noreferrer"></a>
+        <a data-creations-link href={creationsHref}>{label('View in Creations', '在作品中查看')}</a>
+      </p>
       <p class="debug-only" data-debug-only hidden style="margin-top:1rem;font-size:0.88rem;color:var(--muted)">
         {label(
           'Debug: generate/pay backends not configured on this host.',
@@ -124,7 +126,7 @@ const payReady = SITE.waffoConfigured;
   </div>
 </section>
 
-<script is:inline define:vars={{ photoCount: t.photoCount, uid, signInBase, lang, generateReady, payReady }}>
+<script is:inline define:vars={{ photoCount: t.photoCount, uid, signInBase, lang, slug: t.slug, payReady }}>
   (function () {
     const root = document.getElementById(uid);
     if (!root) return;
@@ -148,17 +150,11 @@ const payReady = SITE.waffoConfigured;
     }
     function syncGenerate() {
       if (!btn) return;
-      if (!generateReady) {
-        btn.disabled = true;
-        btn.setAttribute('aria-disabled', 'true');
-        btn.textContent = lang === 'zh' ? '即将开放' : 'Coming soon';
-        return;
-      }
       var ok = consent && consent.checked && readyCount() >= photoCount;
       btn.disabled = !ok;
       if (ok) btn.removeAttribute('aria-disabled');
       else btn.setAttribute('aria-disabled', 'true');
-      btn.textContent = lang === 'zh' ? '生成视频' : 'Generate video';
+      btn.textContent = lang === 'zh' ? '生成' : 'Generate';
     }
     root.querySelectorAll('.slot-file').forEach(function (input) {
       input.addEventListener('change', function () {
@@ -195,10 +191,25 @@ const payReady = SITE.waffoConfigured;
       }
       location.href = url;
     }
+    function refreshBalance() {
+      var bal = root.querySelector('[data-credits-balance]');
+      fetch('/api/account/credits?ledger=0', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (bal) bal.textContent = data && data.ok ? String(data.balance) : '—';
+        })
+        .catch(function () {
+          if (bal) bal.textContent = '—';
+        });
+    }
     function applySession(user) {
       var bal = root.querySelector('[data-credits-balance]');
       if (creditsBar) creditsBar.hidden = !user;
-      if (bal) bal.textContent = user ? '12' : '—';
+      if (!user) {
+        if (bal) bal.textContent = '—';
+        return;
+      }
+      refreshBalance();
     }
     if (window.__VT_SESSION__ !== undefined) applySession(window.__VT_SESSION__);
     document.addEventListener('vt:session', function (ev) {
@@ -218,9 +229,10 @@ const payReady = SITE.waffoConfigured;
         })
         .catch(function () { cb(null); });
     }
+    var busy = false;
     syncGenerate();
     btn.addEventListener('click', function () {
-      if (!generateReady || btn.disabled) return;
+      if (busy || btn.disabled) return;
       requireUser(function (user) {
         if (!user) {
           setStatus(
@@ -238,10 +250,65 @@ const payReady = SITE.waffoConfigured;
           setStatus(lang === 'zh' ? '请先确认成人授权。' : 'Confirm adult consent first.', 'err');
           return;
         }
-        setStatus(
-          lang === 'zh' ? '生成即将开放。当前为演示。' : 'Generate is coming soon. This is a demo.',
-          'cfg'
-        );
+        var follow = root.querySelector('[data-job-follow]');
+        var download = root.querySelector('[data-job-download]');
+        if (follow) follow.hidden = true;
+        if (download) download.hidden = true;
+        busy = true;
+        btn.disabled = true;
+        setStatus(lang === 'zh' ? '正在加入队列…' : 'Queuing…', 'cfg');
+        fetch('/api/jobs', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ template_slug: slug }),
+        })
+          .then(function (r) {
+            return r.json().then(function (data) {
+              return { ok: r.ok, data: data || {} };
+            });
+          })
+          .then(function (res) {
+            var data = res.data || {};
+            if (!res.ok || !data.ok) {
+              if (data.error === 'unauthorized') {
+                setStatus(
+                  lang === 'zh' ? '请先登录后再生成。正在跳转…' : 'Sign in required. Redirecting…',
+                  'err'
+                );
+                goSignIn();
+                return;
+              }
+              setStatus(lang === 'zh' ? '暂时无法保存这个任务。' : 'Could not save this job yet.', 'err');
+              return;
+            }
+            var job = data.job || {};
+            var note = lang === 'zh' ? job.note_zh || job.note_en || '' : job.note_en || '';
+            setStatus(note || (lang === 'zh' ? '已加入队列。' : 'Queued.'), 'cfg');
+            if (follow) follow.hidden = false;
+            var media = '';
+            if (job.status === 'ready' && job.result_url) {
+              try {
+                var parsed = new URL(job.result_url, location.origin);
+                if (parsed.protocol === 'https:' || parsed.protocol === 'http:') media = parsed.href;
+              } catch (e) {
+                media = '';
+              }
+            }
+            if (download && media) {
+              download.href = media;
+              download.textContent = lang === 'zh' ? '下载' : 'Download';
+              download.hidden = false;
+            }
+            refreshBalance();
+          })
+          .catch(function () {
+            setStatus(lang === 'zh' ? '暂时无法保存这个任务。' : 'Could not save this job yet.', 'err');
+          })
+          .finally(function () {
+            busy = false;
+            syncGenerate();
+          });
       });
     });
     if (pay) {

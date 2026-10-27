@@ -1038,6 +1038,42 @@
   margin-bottom: 0.75rem;
 }
 .account-block-head h2 { margin: 0; font-size: 1.15rem; }
+.account-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--secondary);
+}
+.account-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0 0 0.95rem;
+}
+.account-filters .is-on {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  color: var(--text);
+}
+.account-loading { margin: 0 0 0.8rem; color: var(--muted); }
+.creation-download { margin-top: 0.65rem; }
+.account-alert[hidden],
+.account-loading[hidden],
+.creation-list[hidden],
+.ledger-list[hidden],
+.empty-state[hidden],
+[data-empty-cta][hidden],
+[data-retry][hidden],
+[data-job-follow][hidden],
+[data-job-download][hidden] {
+  display: none !important;
+}
 .creation-list,
 .ledger-list {
   list-style: none;

@@ -1,0 +1,18 @@
+# Cloudflare Pages. One shared D1 database for the apex and every brand host.
+# Pages Functions read it as env.DB.
+#
+# Local:
+#   npm run pages:dev
+# Remote, once Cloudflare credentials are available:
+#   npx wrangler d1 create viral-templates
+#   put the printed database_id on the binding below
+#   npx wrangler d1 migrations apply viral-templates --remote
+#   Pages project → Settings → Bindings → D1 → variable name DB
+name = "viral-templates"
+compatibility_date = "2026-10-01"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "viral-templates"
+migrations_dir = "migrations"

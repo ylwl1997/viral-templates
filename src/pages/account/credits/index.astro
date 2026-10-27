@@ -1,7 +1,6 @@
 ---
 import AccountShell from '../../../components/account/AccountShell.astro';
-import { SITE } from '../../../lib/site';
-import { MOCK_CREDIT_BALANCE, MOCK_LEDGER } from '../../../lib/account-mock';
+import AccountCredits from '../../../components/account/AccountCredits.astro';
 
 const lang = 'en' as const;
 ---
@@ -9,54 +8,7 @@ const lang = 'en' as const;
   lang={lang}
   active="credits"
   title="Credits · Viral Templates"
-  description="Credit balance and ledger for Viral Templates (demo data in P0)."
+  description="Credit balance and ledger for your Viral Templates account."
 >
-  <header class="account-page-head">
-    <h1>Credits</h1>
-    <p>Balance is demo-only. Top-up and debit are not connected to checkout.</p>
-  </header>
-
-  <div class="card account-stat" style="margin-bottom:1.25rem">
-    <p class="account-stat-label">Current balance</p>
-    <p class="account-stat-value">{MOCK_CREDIT_BALANCE}</p>
-    <p class="account-stat-meta"><span class="badge">Demo</span> · {SITE.pricing.creditPerGenerate} credit / generate · Demo</p>
-  </div>
-
-  <section class="account-block">
-    <div class="account-block-head">
-      <h2>Ledger</h2>
-    </div>
-    <ul class="ledger-list">
-      {MOCK_LEDGER.map((row) => (
-        <li class="ledger-row card">
-          <div>
-            <strong class:list={[row.delta > 0 ? 'delta-pos' : 'delta-neg']}>
-              {row.delta > 0 ? `+${row.delta}` : row.delta}
-            </strong>
-            <span>{row.label_en}</span>
-          </div>
-          <time datetime={row.at}>{row.at}</time>
-        </li>
-      ))}
-    </ul>
-  </section>
-
-  <section class="account-block">
-    <div class="account-block-head">
-      <h2>Top up</h2>
-    </div>
-    <div class="card callout info">
-      <strong>Coming soon — checkout not open yet.</strong>
-      {' '}Packs ({SITE.pricing.packs.map((p) => `${p.label} ${p.credits} credits / $${p.usd}`).join(' · ')})
-      will open when payments are ready. No charge is made from this page.
-    </div>
-    <div class="pack-row">
-      {SITE.pricing.packs.map((p) => (
-        <button type="button" class="btn btn-ghost pack-btn" disabled aria-disabled="true">
-          {p.label} · {p.credits} credits · ${p.usd}
-          {p.popular ? ' · Popular' : ''}
-        </button>
-      ))}
-    </div>
-  </section>
+  <AccountCredits lang={lang} />
 </AccountShell>

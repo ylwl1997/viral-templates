@@ -1,0 +1,65 @@
+---
+import type { Lang } from '../../lib/site';
+
+interface Props {
+  lang?: Lang;
+  createHref: string;
+}
+
+const { lang = 'en', createHref } = Astro.props;
+const zh = lang === 'zh';
+const filters = [
+  { status: '', en: 'All', zh: '全部' },
+  { status: 'queued', en: 'Queued', zh: '排队中' },
+  { status: 'running', en: 'Running', zh: '生成中' },
+  { status: 'ready', en: 'Ready', zh: '已完成' },
+  { status: 'failed', en: 'Failed', zh: '失败' },
+];
+---
+
+<div data-account-panel="creations" data-lang={lang}>
+  <header class="account-page-head">
+    <h1>{zh ? '作品' : 'Creations'}</h1>
+    <p>
+      {
+        zh
+          ? '任务保存在你的账户里。目前还没有成片，因此没有可下载文件。'
+          : 'Jobs are saved with your account. Finished videos are not available yet, so there is nothing to download.'
+      }
+    </p>
+  </header>
+
+  <p class="account-alert" data-account-alert hidden role="status">
+    <span data-alert-text></span>
+    <button type="button" class="btn btn-ghost btn-sm" data-retry hidden>Try again</button>
+  </p>
+
+  <div class="account-filters" data-status-filters>
+    {
+      filters.map((item) => (
+        <button
+          type="button"
+          class:list={['btn', 'btn-ghost', 'btn-sm', item.status === '' && 'is-on']}
+          data-status={item.status}
+          aria-pressed={item.status === '' ? 'true' : 'false'}
+        >
+          {zh ? item.zh : item.en}
+        </button>
+      ))
+    }
+  </div>
+
+  <p class="account-loading" data-loading>{zh ? '加载中…' : 'Loading…'}</p>
+  <div class="empty-state" data-empty hidden>
+    <h3>{zh ? '还没有作品' : 'No creations yet'}</h3>
+    <p>
+      {
+        zh
+          ? '从模板页点生成后，排队中的任务会出现在这里。不会凭空出现已完成的视频。'
+          : 'Queue a job from a template. Nothing here is marked ready, and there is no video file.'
+      }
+    </p>
+    <a class="btn btn-primary btn-sm" data-empty-cta href={createHref}>{zh ? '去创作' : 'Start a creation'}</a>
+  </div>
+  <ul class="creation-list" data-list hidden></ul>
+</div>

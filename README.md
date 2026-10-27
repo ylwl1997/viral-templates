@@ -119,13 +119,13 @@ Schema: `migrations/0001_account.sql` (`users`, `credit_accounts`, `credit_ledge
 npm run test:account
 npm run build
 npx wrangler pages dev dist --port 8788
-# remote, after wrangler auth:
-# npx wrangler d1 create viral-templates
-# set database_id in wrangler.toml, then:
-# npm run d1:migrate:local   # or: npx wrangler d1 migrations apply viral-templates --remote
+# Remote D1 `viral-templates` already exists; 0001_account.sql is applied.
+# database_id is on the DB binding in wrangler.toml (same id for preview).
+# Publish production (and the DB binding) with Cloudflare credentials:
+# npm run deploy
 ```
 
-Pages → Settings → Bindings → D1 database → variable name **`DB`** (production and preview). Until that binding exists, account APIs return `503` `d1_unbound` and the UI shows a load error instead of demo numbers.
+`npm run deploy` runs `wrangler pages deploy` and attaches that D1 database as **`DB`** for production and preview. Until a deploy with this binding is live, account APIs return `503` `d1_unbound` and the UI shows a load error instead of demo numbers.
 
 ### Known limits
 

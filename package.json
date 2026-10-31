@@ -12,6 +12,7 @@
     "preview": "astro preview",
     "pages:dev": "astro build && wrangler pages dev dist --port 8788",
     "test:account": "node --experimental-sqlite scripts/account-d1.test.mjs",
+    "test:media": "node --experimental-sqlite scripts/r2-media.test.mjs",
     "d1:migrate:local": "wrangler d1 migrations apply viral-templates --local",
     "astro": "astro",
     "deploy": "astro build && wrangler pages deploy dist --project-name=viral-templates"

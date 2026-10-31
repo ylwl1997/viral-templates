@@ -121,8 +121,8 @@ export const HUB_FAQ: readonly FaqEntry[] = [
     id: 'retention',
     qEn: 'How long do you keep photos?',
     qZh: '照片保留多久？',
-    aEn: `About ${SITE.photoRetentionDays} days after upload. Details are on the Privacy page.`,
-    aZh: `上传后大约 ${SITE.photoRetentionDays} 天。细节见隐私政策。`,
+    aEn: `Photos are kept about ${SITE.photoRetentionDays} days after upload. Finished clips are kept about ${SITE.videoRetentionDays} days. Details are on the Privacy page.`,
+    aZh: `照片上传后大约保留 ${SITE.photoRetentionDays} 天。成片大约保留 ${SITE.videoRetentionDays} 天。细节见隐私政策。`,
   },
   {
     id: 'unlisted',

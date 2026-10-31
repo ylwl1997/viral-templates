@@ -1,4 +1,10 @@
-/** Keep in sync with migrations/0001_account.sql (checked by scripts/account-d1.test.mjs). */
+/**
+ * Fresh-install schema. migrations/0001_account.sql is the applied baseline
+ * (no media columns). migrations/0002_r2_media.sql adds the same columns on
+ * databases that already ran 0001. ensureMediaColumns() does that alter too.
+ * Checked by scripts/account-d1.test.mjs and scripts/r2-media.test.mjs.
+ */
+export const JOB_MEDIA_COLUMNS = ['upload_key', 'upload_key_2', 'upload_url', 'upload_url_2', 'result_key'];
 export const SCHEMA_SQL = `
 -- Shared account storage for the apex and every brand host.
 -- Keyed by the auth session user id. One database, not one per site.
@@ -41,6 +47,11 @@ CREATE TABLE IF NOT EXISTS jobs (
   template_name_zh TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('queued', 'running', 'ready', 'failed')),
   result_url TEXT,
+  upload_key TEXT,
+  upload_key_2 TEXT,
+  upload_url TEXT,
+  upload_url_2 TEXT,
+  result_key TEXT,
   error_code TEXT,
   note_en TEXT NOT NULL DEFAULT '',
   note_zh TEXT NOT NULL DEFAULT '',

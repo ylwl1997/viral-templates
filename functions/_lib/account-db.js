@@ -1,4 +1,4 @@
-import { SCHEMA_SQL, schemaStatements } from './schema.js';
+import { JOB_MEDIA_COLUMNS, SCHEMA_SQL, schemaStatements } from './schema.js';
 import { getTemplate } from './templates.js';
 
 const JOB_STATUSES = new Set(['queued', 'running', 'ready', 'failed']);
@@ -52,11 +52,29 @@ function assertUser(user) {
   };
 }
 
+export async function ensureMediaColumns(db) {
+  const info = await db.prepare(`PRAGMA table_info(jobs)`).all();
+  const have = new Set((info.results || []).map((row) => String(row.name)));
+  if (!have.has('id')) return;
+  for (const name of JOB_MEDIA_COLUMNS) {
+    if (have.has(name)) continue;
+    if (!/^[a-z0-9_]+$/.test(name)) throw fail('storage_error');
+    try {
+      await db.prepare(`ALTER TABLE jobs ADD COLUMN ${name} TEXT`).run();
+    } catch (err) {
+      const message = String(err && err.message ? err.message : err);
+      if (!/duplicate column/i.test(message)) throw err;
+    }
+    have.add(name);
+  }
+}
+
 export async function ensureSchema(db) {
   if (schemaReady) return;
   for (const sql of schemaStatements(SCHEMA_SQL)) {
     await db.prepare(sql).run();
   }
+  await ensureMediaColumns(db);
   schemaReady = true;
 }
 
@@ -97,7 +115,7 @@ export function publicResultUrl(status, raw) {
   }
 }
 
-export function mapJob(row) {
+export function mapJob(row, resultUrlOverride) {
   const status = JOB_STATUSES.has(row.status) ? row.status : 'failed';
   return {
     id: String(row.id),
@@ -105,7 +123,7 @@ export function mapJob(row) {
     template_name: String(row.template_name || ''),
     template_name_zh: String(row.template_name_zh || ''),
     status,
-    result_url: publicResultUrl(status, row.result_url),
+    result_url: publicResultUrl(status, resultUrlOverride || row.result_url),
     note_en: String(row.note_en || ''),
     note_zh: String(row.note_zh || ''),
     created_at: String(row.created_at || ''),
@@ -126,6 +144,7 @@ function mapLedger(row) {
 }
 
 const JOB_COLUMNS = `id, template_slug, template_name, template_name_zh, status, result_url, note_en, note_zh, created_at`;
+const JOB_LIST_COLUMNS = `${JOB_COLUMNS}, result_key`;
 
 export async function listJobs(db, user, options = {}) {
   const row = await ensureUser(db, user);
@@ -141,7 +160,7 @@ export async function listJobs(db, user, options = {}) {
   const listed = status
     ? await db
         .prepare(
-          `SELECT ${JOB_COLUMNS} FROM jobs
+          `SELECT ${JOB_LIST_COLUMNS} FROM jobs
            WHERE user_id = ? AND status = ?
            ORDER BY created_at DESC, id DESC
            LIMIT ?`,
@@ -150,14 +169,25 @@ export async function listJobs(db, user, options = {}) {
         .all()
     : await db
         .prepare(
-          `SELECT ${JOB_COLUMNS} FROM jobs
+          `SELECT ${JOB_LIST_COLUMNS} FROM jobs
            WHERE user_id = ?
            ORDER BY created_at DESC, id DESC
            LIMIT ?`,
         )
         .bind(row.user_id, limit)
         .all();
-  const jobs = (listed.results || []).map(mapJob);
+  const jobs = [];
+  for (const jobRow of listed.results || []) {
+    let override = null;
+    if (jobRow.status === 'ready' && jobRow.result_key && typeof options.signResult === 'function') {
+      try {
+        override = await options.signResult(jobRow);
+      } catch (err) {
+        console.error('result_sign', err && err.code ? err.code : 'error');
+      }
+    }
+    jobs.push(mapJob(jobRow, override));
+  }
   return { jobs, total: Number(countRow && countRow.total ? countRow.total : 0) };
 }
 
@@ -257,25 +287,94 @@ export async function getCredits(db, user, options = {}) {
   return { balance, ledger: (listed.results || []).map(mapLedger) };
 }
 
+function cleanMediaKey(value, prefix) {
+  if (value == null || value === '') return null;
+  if (typeof value !== 'string') throw fail('storage_error');
+  const key = value.trim();
+  if (key.length > 240 || key.includes('..') || key.includes('\\') || !key.startsWith(prefix)) {
+    throw fail('storage_error');
+  }
+  const photo = /^uploads\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/[01]\.(jpg|png|webp)$/;
+  const video = /^results\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\.mp4$/;
+  if (prefix === 'uploads/' && !photo.test(key)) throw fail('storage_error');
+  if (prefix === 'results/' && !video.test(key)) throw fail('storage_error');
+  return key;
+}
+
+function cleanMediaUrl(value, jobId, kind) {
+  if (value == null || value === '') return null;
+  if (typeof value !== 'string' || value.length > 2000) throw fail('storage_error');
+  let url;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    throw fail('storage_error');
+  }
+  if ((url.protocol !== 'https:' && url.protocol !== 'http:') || url.username || url.password) {
+    throw fail('storage_error');
+  }
+  if (url.pathname !== `/api/media/jobs/${jobId}/${kind}`) throw fail('storage_error');
+  return url.toString();
+}
+
+export async function getJobMediaRecord(db, jobId) {
+  const id = cleanId(jobId);
+  if (!id) return null;
+  await ensureSchema(db);
+  return db
+    .prepare(
+      `SELECT id, user_id, status, upload_key, upload_key_2, upload_url, upload_url_2, result_key, result_url
+       FROM jobs WHERE id = ?`,
+    )
+    .bind(id)
+    .first();
+}
+
 /**
- * Queue a job for a signed-in user. Does not call a video provider,
- * does not set status ready, and does not store a media URL.
+ * Queue a job for a signed-in user. Does not call a video provider and does
+ * not set status ready. Optional upload keys record a photo already stored
+ * in R2. result_url stays empty until attachJobResult.
  */
-export async function createStubJob(db, user, templateSlug) {
+export async function createStubJob(db, user, templateSlug, options = {}) {
   const template = getTemplate(templateSlug);
   if (!template) throw fail('bad_template');
   const row = await ensureUser(db, user);
-  const id = newId('job');
+  const id = options.id ? cleanId(options.id) : newId('job');
+  if (!id || !id.startsWith('job_')) throw fail('storage_error');
+  const uploadKey = cleanMediaKey(options.upload_key, 'uploads/');
+  const uploadKey2 = cleanMediaKey(options.upload_key_2, 'uploads/');
+  const uploadUrl = cleanMediaUrl(options.upload_url, id, 'photo');
+  const uploadUrl2 = cleanMediaUrl(options.upload_url_2, id, 'photo-2');
+  if (uploadKey && !uploadKey.startsWith(`uploads/${row.user_id}/${id}/`)) throw fail('storage_error');
+  if (uploadKey2 && !uploadKey2.startsWith(`uploads/${row.user_id}/${id}/`)) throw fail('storage_error');
+  if (Boolean(uploadKey) !== Boolean(uploadUrl)) throw fail('storage_error');
+  if (Boolean(uploadKey2) !== Boolean(uploadUrl2)) throw fail('storage_error');
   const now = new Date().toISOString();
   const status = 'queued';
   await db
     .prepare(
       `INSERT INTO jobs (
          id, user_id, template_slug, template_name, template_name_zh,
-         status, result_url, error_code, note_en, note_zh, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)`,
+         status, result_url, upload_key, upload_key_2, upload_url, upload_url_2, result_key,
+         error_code, note_en, note_zh, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)`,
     )
-    .bind(id, row.user_id, template.slug, template.name, template.nameZh, status, STUB_NOTE_EN, STUB_NOTE_ZH, now, now)
+    .bind(
+      id,
+      row.user_id,
+      template.slug,
+      template.name,
+      template.nameZh,
+      status,
+      uploadKey,
+      uploadKey2,
+      uploadUrl,
+      uploadUrl2,
+      STUB_NOTE_EN,
+      STUB_NOTE_ZH,
+      now,
+      now,
+    )
     .run();
   const saved = await db
     .prepare(`SELECT ${JOB_COLUMNS} FROM jobs WHERE id = ? AND user_id = ?`)
@@ -285,4 +384,47 @@ export async function createStubJob(db, user, templateSlug) {
   const job = mapJob(saved);
   if (job.status !== 'queued' || job.result_url) throw fail('storage_error');
   return job;
+}
+
+/**
+ * Mark a job ready with an MP4 that is already in R2.
+ * Does not call a video provider. result_url must be this app's download URL.
+ */
+export async function attachJobResult(db, jobId, result) {
+  const id = cleanId(jobId);
+  if (!id) throw fail('not_found');
+  await ensureSchema(db);
+  const existing = await db.prepare(`SELECT id, user_id, status FROM jobs WHERE id = ?`).bind(id).first();
+  if (!existing) throw fail('not_found');
+  if (existing.status === 'failed') throw fail('bad_status');
+  const resultKey = cleanMediaKey(result && result.result_key, 'results/');
+  const resultUrl = cleanMediaUrl(result && result.result_url, id, 'result');
+  if (!resultKey || !resultUrl) throw fail('bad_video');
+  if (resultKey !== `results/${existing.user_id}/${id}.mp4`) throw fail('storage_error');
+  const noteEn = oneLine(result.note_en, 400) || 'Your clip is ready to download.';
+  const noteZh = oneLine(result.note_zh, 400) || '成片可以下载了。';
+  const now = new Date().toISOString();
+  await db
+    .prepare(
+      `UPDATE jobs
+       SET status = 'ready',
+           result_key = ?,
+           result_url = ?,
+           error_code = NULL,
+           note_en = ?,
+           note_zh = ?,
+           updated_at = ?
+       WHERE id = ? AND status IN ('queued', 'running', 'ready')`,
+    )
+    .bind(resultKey, resultUrl, noteEn, noteZh, now, id)
+    .run();
+  const saved = await db
+    .prepare(
+      `SELECT ${JOB_COLUMNS}, result_key, upload_key, upload_key_2, user_id
+       FROM jobs WHERE id = ?`,
+    )
+    .bind(id)
+    .first();
+  if (!saved || saved.status !== 'ready' || saved.result_key !== resultKey) throw fail('storage_error');
+  return { job: mapJob(saved), record: saved };
 }

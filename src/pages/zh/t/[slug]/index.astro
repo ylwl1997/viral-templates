@@ -41,6 +41,7 @@ const theme = t.theme;
         lede={`${t.taglineZh}。需成人同意。`}
         logo={t.logo}
         mediaSrc={t.poster}
+        demoVideo={t.demoVideo}
         mediaAlt={`${t.displayNameZh} 预览`}
         rail={theme.heroPreset === 'editorial' ? [t.displayNameZh, `${t.photoCount} 张照片`, t.durationZh] : undefined}
         primaryCta={{ href: createHref, label: '创作' }}
@@ -53,6 +54,7 @@ const theme = t.theme;
         <p class="sub">左侧是示例静帧，右侧是模板效果。你的照片在创作页上传。这里不是成片。</p>
         <MediaCompare
           poster={t.poster}
+          demoVideo={t.demoVideo}
           alt={`${t.displayNameZh} 模板效果`}
           originalLabel="示例静帧"
           resultLabel="模板效果"
@@ -76,7 +78,7 @@ const theme = t.theme;
           oneShotMeta={`每次生成 ${SITE.pricing.creditPerGenerate} 积分 · 演示`}
           packs={packs}
           popularLabel="热门"
-          note="创作页支付在开放前显示即将开放。"
+          note="登录后生成会把任务排进账户并扣积分。购买积分尚未开通。"
         />
       </section>
 

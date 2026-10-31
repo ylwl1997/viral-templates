@@ -48,8 +48,10 @@ export type Template = {
   accent: BrandTheme['accent'];
   /** Public path to brand mark (svg/png). */
   logo: string;
-  /** Optional 9:16 still/loop poster for Live media slots. */
+  /** Optional 9:16 still for Live media slots (poster / fallback). */
   poster?: string;
+  /** Optional muted looping demo clip for Live gallery and compare slots. */
+  demoVideo?: string;
   /** Full brand theme — required; do not ship logo-only clones. */
   theme: BrandTheme;
   disclaimerEn: string;
@@ -79,7 +81,8 @@ export const TEMPLATES: readonly Template[] = [
     howZh: ['上传 1 张成人同意照片', '确认授权', '生成短片'],
     accent: 'magenta',
     logo: '/brand/templates/bby-wow.svg',
-    poster: '/brand/templates/bby-wow-poster.svg',
+    poster: '/brand/templates/bby-wow-poster.jpg',
+    demoVideo: '/brand/templates/bby-wow-demo.mp4',
     theme: { accent: 'magenta', heroPreset: 'split', typeVoice: 'playful', cardStyle: 'glow', coverStyle: 'orb', ambience: 'noise' },
     disclaimerEn: 'Adult consent only · no minors. Not affiliated with Karol G, CapCut, or any label.',
     disclaimerZh: '仅限成人同意照片 · 禁止未成年人。非 Karol G / CapCut 官方。',
@@ -106,7 +109,8 @@ export const TEMPLATES: readonly Template[] = [
     howZh: ['上传 2 张成人同意照片', '确认授权（无演唱会素材）', '生成短片'],
     accent: 'amber',
     logo: '/brand/templates/kiss-cam.svg',
-    poster: '/brand/templates/kiss-cam-poster.svg',
+    poster: '/brand/templates/kiss-cam-poster.jpg',
+    demoVideo: '/brand/templates/kiss-cam-demo.mp4',
     theme: { accent: 'amber', heroPreset: 'editorial', typeVoice: 'bold', cardStyle: 'ribbon', coverStyle: 'stripes', ambience: 'grid' },
     disclaimerEn:
       'Adult consent only · no minors. Fan-made AI remix — not official Coldplay / CapCut. No real concert footage.',
@@ -134,7 +138,8 @@ export const TEMPLATES: readonly Template[] = [
     howZh: ['上传 1 张成人同意照片', '确认授权与安全提示', '生成短片'],
     accent: 'cyan',
     logo: '/brand/templates/ceiling-fan.svg',
-    poster: '/brand/templates/ceiling-fan-poster.svg',
+    poster: '/brand/templates/ceiling-fan-poster.jpg',
+    demoVideo: '/brand/templates/ceiling-fan-demo.mp4',
     theme: { accent: 'cyan', heroPreset: 'centered', typeVoice: 'cool', cardStyle: 'mesh', coverStyle: 'radial', ambience: 'none' },
     disclaimerEn:
       'Adult consent only · no minors. Pure AI — never strap a phone to a spinning fan. Not affiliated with CapCut.',

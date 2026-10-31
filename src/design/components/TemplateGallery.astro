@@ -1,6 +1,7 @@
 ---
 import { keywordPath, pathFor, type Lang } from '../../lib/site';
 import type { Template } from '../../lib/templates';
+import LoopMedia from './LoopMedia.astro';
 
 interface Props {
   lang: Lang;
@@ -18,7 +19,6 @@ const isSoon = mode === 'soon';
     const tagline = lang === 'zh' ? t.taglineZh : t.taglineEn;
     const dur = lang === 'zh' ? t.durationZh : t.durationEn;
     const cover = `cover-${t.theme.coverStyle}`;
-    const poster = t.poster;
     return (
       <article class:list={['template-card', isSoon && 'soon']} data-brand={t.slug}>
         <a class="template-preview-link" href={keywordPath(lang, t.slug, '')} aria-label={name}>
@@ -30,8 +30,8 @@ const isSoon = mode === 'soon';
             </span>
             {!isSoon ? (
               <div class="media-slot media-slot-card">
-                {poster ? (
-                  <img class="media-poster" src={poster} alt="" width="180" height="320" />
+                {t.poster || t.demoVideo ? (
+                  <LoopMedia poster={t.poster} video={t.demoVideo} alt="" width={180} height={320} />
                 ) : (
                   <div class="media-fallback">
                     <img class="template-mark" src={t.logo} width="48" height="48" alt="" />

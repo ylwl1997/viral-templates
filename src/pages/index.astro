@@ -1,8 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { SITE, pathFor, keywordPath } from '../lib/site';
-import { LIVE_TEMPLATES, SOON_TEMPLATES } from '../lib/templates';
+import { LIVE_TEMPLATES } from '../lib/templates';
 import TemplateGallery from '../design/components/TemplateGallery.astro';
+import LoopMedia from '../design/components/LoopMedia.astro';
 import StepsHow from '../design/components/StepsHow.astro';
 import FinalCta from '../design/components/FinalCta.astro';
 
@@ -30,8 +31,8 @@ const lang = 'en' as const;
       {LIVE_TEMPLATES.map((t) => (
         <a class="hero-reel-item" href={keywordPath(lang, t.slug, '')}>
           <div class="media-slot">
-            {t.poster ? (
-              <img class="media-poster" src={t.poster} alt="" width="180" height="320" />
+            {t.poster || t.demoVideo ? (
+              <LoopMedia poster={t.poster} video={t.demoVideo} alt="" width={180} height={320} />
             ) : (
               <div class="media-fallback"></div>
             )}
@@ -50,14 +51,6 @@ const lang = 'en' as const;
     <TemplateGallery lang={lang} templates={LIVE_TEMPLATES} mode="live" />
   </section>
 
-  <section class="section wrap" id="soon">
-    <div class="section-head">
-      <h2>Coming soon</h2>
-      <p class="sub">More looks are on the way. Open a page to follow along.</p>
-    </div>
-    <TemplateGallery lang={lang} templates={SOON_TEMPLATES} mode="soon" />
-  </section>
-
   <section class="section wrap" id="how">
     <div class="section-head">
       <h2>How it works</h2>
@@ -67,7 +60,7 @@ const lang = 'en' as const;
       steps={[
         { title: 'Choose a look', body: 'Browse the templates and open Create.' },
         { title: 'Upload and consent', body: 'Adult-consent photos only. No minors.' },
-        { title: 'Generate', body: 'Signed-in Generate queues a job on your account. A finished clip is not available yet. Pay shows Coming soon.' },
+        { title: 'Generate', body: 'Signed-in Generate queues a job on your account and uses a credit. A finished clip is not available yet.' },
       ]}
     />
   </section>

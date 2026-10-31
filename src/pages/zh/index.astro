@@ -1,8 +1,9 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { SITE, pathFor, keywordPath } from '../../lib/site';
-import { LIVE_TEMPLATES, SOON_TEMPLATES } from '../../lib/templates';
+import { LIVE_TEMPLATES } from '../../lib/templates';
 import TemplateGallery from '../../design/components/TemplateGallery.astro';
+import LoopMedia from '../../design/components/LoopMedia.astro';
 import StepsHow from '../../design/components/StepsHow.astro';
 import FinalCta from '../../design/components/FinalCta.astro';
 
@@ -30,8 +31,8 @@ const lang = 'zh' as const;
       {LIVE_TEMPLATES.map((t) => (
         <a class="hero-reel-item" href={keywordPath(lang, t.slug, '')}>
           <div class="media-slot">
-            {t.poster ? (
-              <img class="media-poster" src={t.poster} alt="" width="180" height="320" />
+            {t.poster || t.demoVideo ? (
+              <LoopMedia poster={t.poster} video={t.demoVideo} alt="" width={180} height={320} />
             ) : (
               <div class="media-fallback"></div>
             )}
@@ -50,14 +51,6 @@ const lang = 'zh' as const;
     <TemplateGallery lang={lang} templates={LIVE_TEMPLATES} mode="live" />
   </section>
 
-  <section class="section wrap" id="soon">
-    <div class="section-head">
-      <h2>即将上线</h2>
-      <p class="sub">更多风格还在准备。可以先打开页面看看。</p>
-    </div>
-    <TemplateGallery lang={lang} templates={SOON_TEMPLATES} mode="soon" />
-  </section>
-
   <section class="section wrap" id="how">
     <div class="section-head">
       <h2>如何使用</h2>
@@ -67,7 +60,7 @@ const lang = 'zh' as const;
       steps={[
         { title: '选择风格', body: '浏览模板并打开创作。' },
         { title: '上传与授权', body: '仅限成人同意照片。禁止未成年人。' },
-        { title: '生成', body: '登录后点生成会把任务排进你的账户。目前还没有成片。支付显示即将开放。' },
+        { title: '生成', body: '登录后生成会把任务排进你的账户，并扣一次积分。目前还没有成片。' },
       ]}
     />
   </section>

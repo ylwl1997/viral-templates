@@ -337,6 +337,10 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  background: #1c1917;
+}
+video.media-poster {
+  pointer-events: none;
 }
 .media-fallback {
   width: 100%;

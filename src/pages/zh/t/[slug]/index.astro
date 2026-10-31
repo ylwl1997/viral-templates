@@ -1,12 +1,7 @@
 ---
 import KeywordLayout from '../../../../layouts/KeywordLayout.astro';
+import BrandHome from '../../../../components/brand/BrandHome.astro';
 import { TEMPLATES, type Template } from '../../../../lib/templates';
-import { SITE, keywordPath } from '../../../../lib/site';
-import BrandHero from '../../../../design/components/BrandHero.astro';
-import StepsHow from '../../../../design/components/StepsHow.astro';
-import PricingGrid from '../../../../design/components/PricingGrid.astro';
-import FinalCta from '../../../../design/components/FinalCta.astro';
-import MediaCompare from '../../../../design/components/MediaCompare.astro';
 
 export function getStaticPaths() {
   return TEMPLATES.map((template) => ({
@@ -18,11 +13,6 @@ export function getStaticPaths() {
 interface Props { template: Template }
 const { template: t } = Astro.props;
 const lang = 'zh' as const;
-const isLive = t.status === 'live';
-const createHref = keywordPath(lang, t.slug, 'create');
-const { packs, oneShotUsd, kissCamOneShotUsd } = SITE.pricing;
-const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
-const theme = t.theme;
 ---
 <KeywordLayout
   template={t}
@@ -31,80 +21,5 @@ const theme = t.theme;
   page=""
   lang={lang}
 >
-  {isLive ? (
-    <>
-      <BrandHero
-        preset={theme.heroPreset}
-        eyebrow={t.durationZh}
-        eyebrowLogo={t.logo}
-        title={t.heroZh}
-        lede={`${t.taglineZh}。需成人同意。`}
-        logo={t.logo}
-        mediaSrc={t.poster}
-        demoVideo={t.demoVideo}
-        mediaAlt={`${t.displayNameZh} 预览`}
-        rail={theme.heroPreset === 'editorial' ? [t.displayNameZh, `${t.photoCount} 张照片`, t.durationZh] : undefined}
-        primaryCta={{ href: createHref, label: '创作' }}
-        secondaryCta={{ href: '#look', label: '看效果' }}
-      />
-
-      <section class="section wrap" id="look">
-        <p class="eyebrow">效果</p>
-        <h2>{t.photoCount === 2 ? '两张照片进去' : '一张照片进去'}，套进这个画面。</h2>
-        <p class="sub">左侧是示例静帧，右侧是模板效果。你的照片在创作页上传。这里不是成片。</p>
-        <MediaCompare
-          poster={t.poster}
-          demoVideo={t.demoVideo}
-          alt={`${t.displayNameZh} 模板效果`}
-          originalLabel="示例静帧"
-          resultLabel="模板效果"
-        />
-      </section>
-
-      <section class="section wrap" id="how">
-        <h2>如何使用</h2>
-        <p class="sub">三步完成。</p>
-        <StepsHow
-          steps={t.howZh.map((step, i) => ({ title: `步骤 ${i + 1}`, body: step }))}
-        />
-      </section>
-
-      <section class="section wrap" id="pricing">
-        <h2>价格</h2>
-        <p class="sub">演示价格 — 支付开放后可结账。</p>
-        <PricingGrid
-          oneShotLabel="单次"
-          oneShotUsd={oneShot}
-          oneShotMeta={`每次生成 ${SITE.pricing.creditPerGenerate} 积分 · 演示`}
-          packs={packs}
-          popularLabel="热门"
-          note="登录后生成会把任务排进账户并扣积分。购买积分尚未开通。"
-        />
-      </section>
-
-      <section class="section wrap">
-        <div class="callout warn">
-          <strong>合规。</strong> {t.disclaimerZh} 照片约 {SITE.photoRetentionDays} 天删除 — 见 <a href="/zh/privacy/">隐私</a> / <a href="/zh/terms/">条款</a> / <a href="/zh/faq/">FAQ</a>。
-        </div>
-      </section>
-
-      <FinalCta
-        title={`用 ${t.displayNameZh} 创作`}
-        lede="上传、确认授权，生成开放后即可制作。"
-        primary={{ href: createHref, label: '创作' }}
-        secondary={{ href: '#pricing', label: '价格' }}
-      />
-    </>
-  ) : (
-    <BrandHero
-      preset={theme.heroPreset}
-      eyebrow="即将上线"
-      eyebrowLogo={t.logo}
-      title={t.displayNameZh}
-      lede={`${t.taglineZh}。我们正在打磨体验 — 创作暂未开放。`}
-      logo={t.logo}
-      rail={theme.heroPreset === 'editorial' ? [t.displayNameZh, '即将上线'] : undefined}
-      soon
-    />
-  )}
+  <BrandHome template={t} lang={lang} />
 </KeywordLayout>

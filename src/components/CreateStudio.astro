@@ -22,6 +22,9 @@ const generateReady = SITE.falConfigured;
 const payReady = SITE.waffoConfigured;
 const duration = lang === 'zh' ? t.durationZh : t.durationEn;
 const name = lang === 'zh' ? t.displayNameZh : t.displayName;
+const primaryCase = t.cases?.[0];
+const sources = primaryCase?.sources ?? [];
+const photoLabel = label('Your photo', '上传的照片');
 ---
 <section class="wrap create-studio" id={uid} data-generate-ready={generateReady ? '1' : '0'} data-pay-ready={payReady ? '1' : '0'}>
   <div class="credits-bar" data-credits-bar hidden>
@@ -149,15 +152,22 @@ const name = lang === 'zh' ? t.displayNameZh : t.displayName;
 
     <aside class="studio-side">
       <MediaCompare
-        poster={t.poster}
-        demoVideo={t.demoVideo}
-        alt={label(`${name} template look`, `${name} 模板效果`)}
-        originalLabel={label('Sample still', '示例原片')}
-        resultLabel={label('Template look', '模板效果')}
-        note={label(
-          'The still on the left is a sample. Your upload replaces it. Generate saves a queued job — a finished clip is not available yet.',
-          '左侧是示例静帧，上传后会换成你的照片。生成只会把任务排进账户，目前还没有成片。'
-        )}
+        sources={sources}
+        sourceLabels={sources.length > 1 ? [`${photoLabel} · A`, `${photoLabel} · B`] : undefined}
+        poster={primaryCase?.resultPoster ?? t.poster}
+        demoVideo={primaryCase?.resultVideo ?? t.demoVideo}
+        alt={label(`${name} sample`, `${name} 示例`)}
+        originalLabel={photoLabel}
+        resultLabel={label('Result', '生成的视频')}
+        note={sources.length > 1
+          ? label(
+              'These photos are the people in the clip. Your uploads replace them. Generate saves a queued job — a finished clip is not available yet.',
+              '这两张照片就是成片里的人。上传后会换成你的照片。生成只会把任务排进账户，目前还没有成片。',
+            )
+          : label(
+              'The photo matches the person in the clip. Your upload replaces it. Generate saves a queued job — a finished clip is not available yet.',
+              '照片与成片是同一个人。上传后会换成你的照片。生成只会把任务排进账户，目前还没有成片。',
+            )}
         liveOriginal
       />
     </aside>
@@ -210,10 +220,11 @@ const name = lang === 'zh' ? t.displayNameZh : t.displayName;
         if (placeholder) placeholder.hidden = true;
         const slotEl = input.closest('.slot');
         if (slotEl) slotEl.classList.add('has-file');
-        if (slot === '0') {
-          var compare = root.querySelector('[data-compare-original]');
-          var cap = root.querySelector('[data-compare-caption]');
-          if (compare) compare.src = url;
+        var compare = root.querySelector('[data-compare-original="' + slot + '"]');
+        if (compare) {
+          compare.src = url;
+          var fig = compare.closest('figure');
+          var cap = fig && fig.querySelector('figcaption');
           if (cap) cap.textContent = lang === 'zh' ? '你的照片' : 'Your photo';
         }
         setStatus(

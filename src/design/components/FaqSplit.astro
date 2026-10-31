@@ -1,0 +1,32 @@
+---
+interface Item { q: string; a: string }
+interface Props {
+  title: string;
+  lede: string;
+  items: Item[];
+  cta?: { href: string; label: string };
+  /** Document title on the FAQ page; section title everywhere else. */
+  heading?: 'h1' | 'h2';
+  id?: string;
+}
+
+const { title, lede, items, cta, heading = 'h2', id } = Astro.props;
+---
+<section class="section wrap faq-split" id={id}>
+  <div class="faq-intro">
+    {heading === 'h1' ? <h1>{title}</h1> : <h2>{title}</h2>}
+    <p>{lede}</p>
+    {cta && <a class="btn btn-line" href={cta.href}>{cta.label}</a>}
+  </div>
+  <div class="faq-main">
+    <div class="accordion faq faq-list">
+      {items.map((item) => (
+        <details>
+          <summary>{item.q}</summary>
+          <p>{item.a}</p>
+        </details>
+      ))}
+    </div>
+    <slot name="after" />
+  </div>
+</section>

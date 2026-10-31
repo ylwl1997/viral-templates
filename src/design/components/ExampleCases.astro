@@ -1,0 +1,60 @@
+---
+import { keywordPath, type Lang } from '../../lib/site';
+import type { Template } from '../../lib/templates';
+import LoopMedia from './LoopMedia.astro';
+
+interface Props {
+  lang: Lang;
+  templates: readonly Template[];
+}
+
+const { lang, templates } = Astro.props;
+const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+
+const cards = templates.flatMap((template) =>
+  (template.cases ?? []).map((item) => ({ template, item })),
+);
+---
+{cards.length > 0 && (
+  <div class="example-wall">
+    {cards.map(({ template: t, item }) => {
+      const name = lang === 'zh' ? t.displayNameZh : t.displayName;
+      const label = lang === 'zh' ? item.labelZh : item.labelEn;
+      const dual = item.sources.length > 1;
+      const href = `${keywordPath(lang, t.slug, '')}#case-${item.id}`;
+      return (
+        <a class:list={['example-card', dual && 'is-dual']} href={href}>
+          <div class="example-media">
+            <div class="example-source-col">
+              <div class:list={['example-sources', dual && 'is-dual']}>
+                {item.sources.map((src) => (
+                  <div class="example-source">
+                    <img src={src} alt="" width="864" height="1152" />
+                  </div>
+                ))}
+              </div>
+              <span class="example-cap">{dual ? L('Your photos', '上传的照片') : L('Your photo', '上传的照片')}</span>
+            </div>
+            <span class="compare-arrow" aria-hidden="true">→</span>
+            <div class="example-result-col">
+              <div class="media-slot">
+                <LoopMedia
+                  poster={item.resultPoster ?? t.poster}
+                  video={item.resultVideo ?? t.demoVideo}
+                  alt=""
+                  width={180}
+                  height={320}
+                />
+              </div>
+              <span class="example-cap">{L('Result', '生成的视频')}</span>
+            </div>
+          </div>
+          <div class="example-copy">
+            <h3>{name}</h3>
+            <p>{label}</p>
+          </div>
+        </a>
+      );
+    })}
+  </div>
+)}

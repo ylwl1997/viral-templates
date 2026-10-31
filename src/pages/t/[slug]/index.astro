@@ -1,12 +1,7 @@
 ---
 import KeywordLayout from '../../../layouts/KeywordLayout.astro';
+import BrandHome from '../../../components/brand/BrandHome.astro';
 import { TEMPLATES, type Template } from '../../../lib/templates';
-import { SITE, keywordPath } from '../../../lib/site';
-import BrandHero from '../../../design/components/BrandHero.astro';
-import StepsHow from '../../../design/components/StepsHow.astro';
-import PricingGrid from '../../../design/components/PricingGrid.astro';
-import FinalCta from '../../../design/components/FinalCta.astro';
-import MediaCompare from '../../../design/components/MediaCompare.astro';
 
 export function getStaticPaths() {
   return TEMPLATES.map((template) => ({
@@ -18,11 +13,6 @@ export function getStaticPaths() {
 interface Props { template: Template }
 const { template: t } = Astro.props;
 const lang = 'en' as const;
-const isLive = t.status === 'live';
-const createHref = keywordPath(lang, t.slug, 'create');
-const { packs, oneShotUsd, kissCamOneShotUsd } = SITE.pricing;
-const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
-const theme = t.theme;
 ---
 <KeywordLayout
   template={t}
@@ -31,81 +21,5 @@ const theme = t.theme;
   page=""
   lang={lang}
 >
-  {isLive ? (
-    <>
-      <BrandHero
-        preset={theme.heroPreset}
-        eyebrow={t.durationEn}
-        eyebrowLogo={t.logo}
-        title={t.heroEn}
-        lede={`${t.taglineEn}. Adult consent required.`}
-        logo={t.logo}
-        mediaSrc={t.poster}
-        demoVideo={t.demoVideo}
-        mediaAlt={`${t.displayName} preview`}
-        rail={theme.heroPreset === 'editorial' ? [t.displayName, `${t.photoCount} ${t.photoCount === 2 ? 'photos' : 'photo'}`, t.durationEn] : undefined}
-        primaryCta={{ href: createHref, label: 'Create' }}
-        secondaryCta={{ href: '#look', label: 'See the look' }}
-      />
-
-      <section class="section wrap" id="look">
-        <p class="eyebrow">The look</p>
-        <h2>{t.photoCount === 2 ? 'Two photos in.' : 'One photo in.'} A clip in this frame.</h2>
-        <p class="sub">
-          A sample still beside the template. Your own photo goes in on Create. Nothing here is a finished render.
-        </p>
-        <MediaCompare
-          poster={t.poster}
-          demoVideo={t.demoVideo}
-          alt={`${t.displayName} template look`}
-          originalLabel="Sample still"
-          resultLabel="Template look"
-        />
-      </section>
-
-      <section class="section wrap" id="how">
-        <h2>How it works</h2>
-        <p class="sub">Three simple steps.</p>
-        <StepsHow
-          steps={t.howEn.map((step, i) => ({ title: `Step ${i + 1}`, body: step }))}
-        />
-      </section>
-
-      <section class="section wrap" id="pricing">
-        <h2>Pricing</h2>
-        <p class="sub">Demo prices. Checkout opens when payments are ready.</p>
-        <PricingGrid
-          oneShotLabel="One-shot"
-          oneShotUsd={oneShot}
-          oneShotMeta={`${SITE.pricing.creditPerGenerate} credit / generate · Demo`}
-          packs={packs}
-          note="Signed-in Generate queues a job and uses a credit. Buying credits is not open yet."
-        />
-      </section>
-
-      <section class="section wrap">
-        <div class="callout warn">
-          <strong>Compliance.</strong> {t.disclaimerEn} Photos deleted ~{SITE.photoRetentionDays} days — see <a href="/privacy/">Privacy</a> / <a href="/terms/">Terms</a> / <a href="/faq/">FAQ</a>.
-        </div>
-      </section>
-
-      <FinalCta
-        title={`Create with ${t.displayName}`}
-        lede="Upload, confirm consent, then generate."
-        primary={{ href: createHref, label: 'Create' }}
-        secondary={{ href: '#pricing', label: 'Pricing' }}
-      />
-    </>
-  ) : (
-    <BrandHero
-      preset={theme.heroPreset}
-      eyebrow="Coming soon"
-      eyebrowLogo={t.logo}
-      title={t.displayName}
-      lede={`${t.taglineEn}. We’re polishing this experience — create isn’t open yet.`}
-      logo={t.logo}
-      rail={theme.heroPreset === 'editorial' ? [t.displayName, 'Coming soon'] : undefined}
-      soon
-    />
-  )}
+  <BrandHome template={t} lang={lang} />
 </KeywordLayout>

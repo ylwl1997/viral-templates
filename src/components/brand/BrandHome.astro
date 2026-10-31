@@ -1,0 +1,56 @@
+---
+import BrandHero from '../../design/components/BrandHero.astro';
+import { keywordPath, type Lang } from '../../lib/site';
+import type { Template } from '../../lib/templates';
+import BrandFan from './BrandFan.astro';
+import BrandParty from './BrandParty.astro';
+import BrandStadium from './BrandStadium.astro';
+
+interface Props { template: Template; lang: Lang }
+const { template: t, lang } = Astro.props;
+const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const isLive = t.status === 'live' && t.story && (t.cases?.length ?? 0) > 0;
+const createHref = keywordPath(lang, t.slug, 'create');
+const theme = t.theme;
+const name = L(t.displayName, t.displayNameZh);
+const duration = L(t.durationEn, t.durationZh);
+const photoLine = L(
+  `${t.photoCount} ${t.photoCount === 2 ? 'photos' : 'photo'}`,
+  `${t.photoCount} 张照片`,
+);
+---
+{isLive ? (
+  <>
+    <BrandHero
+      preset={theme.heroPreset}
+      eyebrow={duration}
+      eyebrowLogo={t.logo}
+      title={L(t.heroEn, t.heroZh)}
+      lede={L(`${t.taglineEn}. Adult consent required.`, `${t.taglineZh}。需成人同意。`)}
+      logo={t.logo}
+      mediaSrc={t.poster}
+      demoVideo={t.demoVideo}
+      mediaAlt={L(`${t.displayName} preview`, `${t.displayNameZh} 预览`)}
+      rail={theme.heroPreset === 'editorial' ? [name, photoLine, duration] : undefined}
+      primaryCta={{ href: createHref, label: L('Create', '创作') }}
+      secondaryCta={{ href: '#look', label: L('See the look', '看效果') }}
+    />
+    {t.story?.layout === 'party' && <BrandParty template={t} lang={lang} />}
+    {t.story?.layout === 'stadium' && <BrandStadium template={t} lang={lang} />}
+    {t.story?.layout === 'fan' && <BrandFan template={t} lang={lang} />}
+  </>
+) : (
+  <BrandHero
+    preset={theme.heroPreset}
+    eyebrow={L('Coming soon', '即将上线')}
+    eyebrowLogo={t.logo}
+    title={name}
+    lede={L(
+      `${t.taglineEn}. We’re polishing this experience — create isn’t open yet.`,
+      `${t.taglineZh}。我们正在打磨体验 — 创作暂未开放。`,
+    )}
+    logo={t.logo}
+    rail={theme.heroPreset === 'editorial' ? [name, L('Coming soon', '即将上线')] : undefined}
+    soon
+  />
+)}

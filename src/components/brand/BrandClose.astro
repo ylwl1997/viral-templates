@@ -1,0 +1,68 @@
+---
+import FaqSplit from '../../design/components/FaqSplit.astro';
+import FinalCta from '../../design/components/FinalCta.astro';
+import PricingGrid from '../../design/components/PricingGrid.astro';
+import StepsHow from '../../design/components/StepsHow.astro';
+import { SITE, keywordPath, type Lang } from '../../lib/site';
+import { localizeFaq, type Template } from '../../lib/templates';
+
+interface Props {
+  template: Template;
+  lang: Lang;
+  howLede: string;
+  faqLede: string;
+}
+
+const { template: t, lang, howLede, faqLede } = Astro.props;
+const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const createHref = keywordPath(lang, t.slug, 'create');
+const { packs, oneShotUsd, kissCamOneShotUsd } = SITE.pricing;
+const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
+const steps = (lang === 'zh' ? t.howZh : t.howEn).map((step, i) => ({
+  title: L(`Step ${i + 1}`, `步骤 ${i + 1}`),
+  body: step,
+}));
+const name = lang === 'zh' ? t.displayNameZh : t.displayName;
+---
+<section class="section wrap" id="how">
+  <h2>{L('How it works', '如何使用')}</h2>
+  <p class="sub">{howLede}</p>
+  <StepsHow steps={steps} />
+</section>
+
+<section class="section wrap" id="pricing">
+  <h2>{L('Pricing', '价格')}</h2>
+  <p class="sub">{L('Demo prices. Checkout opens when payments are ready.', '演示价格。支付开放后可结账。')}</p>
+  <PricingGrid
+    oneShotLabel={L('One-shot', '单次')}
+    oneShotUsd={oneShot}
+    oneShotMeta={L(
+      `${SITE.pricing.creditPerGenerate} credit / generate · Demo`,
+      `每次生成 ${SITE.pricing.creditPerGenerate} 积分 · 演示`,
+    )}
+    packs={packs}
+    popularLabel={L('Popular', '热门')}
+    note={L(
+      'Signed-in Generate queues a job and uses a credit. Buying credits is not open yet.',
+      '登录后生成会把任务排进账户并扣积分。购买积分尚未开通。',
+    )}
+  />
+</section>
+
+<FaqSplit
+  id="faq"
+  title={L('Questions', '常见问题')}
+  lede={faqLede}
+  items={localizeFaq(t.faq, lang)}
+  cta={{ href: createHref, label: L('Create', '创作') }}
+/>
+
+<FinalCta
+  title={L(`Create with ${name}`, `用 ${name} 创作`)}
+  lede={L(
+    'Upload and confirm consent, then generate. A finished clip is not available on this demo yet.',
+    '上传并确认授权后再生成。这个演示目前还没有成片。',
+  )}
+  primary={{ href: createHref, label: L('Create', '创作') }}
+  secondary={{ href: '#pricing', label: L('Pricing', '价格') }}
+/>

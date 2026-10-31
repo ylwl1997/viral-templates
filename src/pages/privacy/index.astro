@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { SITE } from '../../lib/site';
 ---
 <Layout
   title="Privacy"
@@ -9,6 +10,6 @@ import Layout from '../../layouts/Layout.astro';
 >
   <div class="page-head wrap"><h1>Privacy</h1><p>Demo policy — expand before collecting real user photos in production.</p></div>
   <section class="section wrap prose">
-    <p>Uploaded photos are intended for short-lived processing (~30 days retention target). Generate and payments are not live on this demo. Do not upload photos of minors.</p>
+    <p>Uploaded photos are kept for about {SITE.photoRetentionDays} days. Finished clips, when a job has one, are kept for about {SITE.videoRetentionDays} days. Generate and payments are not live on this demo. Do not upload photos of minors.</p>
   </section>
 </Layout>

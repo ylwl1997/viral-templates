@@ -26,7 +26,7 @@ const primaryCase = t.cases?.[0];
 const sources = primaryCase?.sources ?? [];
 const photoLabel = label('Your photo', '上传的照片');
 ---
-<section class="wrap create-studio" id={uid} data-generate-ready={generateReady ? '1' : '0'} data-pay-ready={payReady ? '1' : '0'}>
+<section class="wrap create-studio" id={uid} data-generate-ready={generateReady ? '1' : '0'} data-pay-ready={payReady ? '1' : '0'} data-r2-ready={SITE.r2Configured ? '1' : '0'}>
   <div class="credits-bar" data-credits-bar hidden>
     <div>
       <strong>{label('Credits', '积分')}</strong>
@@ -140,10 +140,11 @@ const photoLabel = label('Your photo', '上传的照片');
       </p>
       <p class="debug-only" data-debug-only hidden>
         {label(
-          'Debug: generate and pay are not configured on this host.',
-          '调试：本主机未配置生成与支付。'
+          `Debug: generate and pay are not configured on this build. Media storage flag: ${SITE.r2Configured ? 'on' : 'off'}.`,
+          `调试：此构建未配置生成与支付。媒体存储标记：${SITE.r2Configured ? '开' : '关'}。`
         )}
       </p>
+      <p class="debug-only" data-debug-media hidden></p>
       <p class="studio-note">
         <a href={home}>{label('Back to this look', '返回该风格')}</a>
         · <a href={pathFor(lang, '/faq/')}>FAQ</a>
@@ -313,11 +314,16 @@ const photoLabel = label('Your photo', '上传的照片');
         busy = true;
         btn.disabled = true;
         setStatus(lang === 'zh' ? '正在加入队列…' : 'Queuing…', 'cfg');
+        var body = new FormData();
+        body.append('template_slug', slug);
+        Object.keys(files).sort().forEach(function (slot) {
+          var file = files[slot];
+          body.append('photo_' + slot, file, file.name || ('photo-' + slot));
+        });
         fetch('/api/jobs', {
           method: 'POST',
           credentials: 'same-origin',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ template_slug: slug }),
+          body: body,
         })
           .then(function (r) {
             return r.json().then(function (data) {
@@ -335,12 +341,33 @@ const photoLabel = label('Your photo', '上传的照片');
                 goSignIn();
                 return;
               }
+              if (data.error === 'bad_photo') {
+                setStatus(lang === 'zh' ? '请上传 JPG、PNG 或 WebP 照片。' : 'Use a JPG, PNG, or WebP photo.', 'err');
+                return;
+              }
+              if (data.error === 'photo_too_large') {
+                setStatus(lang === 'zh' ? '照片太大了。' : 'That photo is too large.', 'err');
+                return;
+              }
               setStatus(lang === 'zh' ? '暂时无法保存这个任务。' : 'Could not save this job yet.', 'err');
               return;
             }
             var job = data.job || {};
             var note = lang === 'zh' ? job.note_zh || job.note_en || '' : job.note_en || '';
-            setStatus(note || (lang === 'zh' ? '已加入队列。' : 'Queued.'), 'cfg');
+            var debugMedia = root.querySelector('[data-debug-media]');
+            if (debugMedia && isDebug()) {
+              var configured = data.media && data.media.r2_configured ? 'on' : 'off';
+              var stored = data.media && data.media.stored ? 'stored' : 'not stored';
+              var code = data.media && data.media.error ? ' (' + data.media.error + ')' : '';
+              debugMedia.hidden = false;
+              debugMedia.textContent = 'Debug: media binding ' + configured + ', photo ' + stored + code + '.';
+            }
+            if (data.media && data.media.error === 'r2_unbound') {
+              var miss = lang === 'zh' ? '照片暂时没有保存。' : 'The photo was not saved yet.';
+              setStatus(miss + ' ' + (note || (lang === 'zh' ? '已加入队列。' : 'Queued.')), 'err');
+            } else {
+              setStatus(note || (lang === 'zh' ? '已加入队列。' : 'Queued.'), 'cfg');
+            }
             if (follow) follow.hidden = false;
             var media = '';
             if (job.status === 'ready' && job.result_url) {

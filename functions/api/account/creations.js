@@ -1,5 +1,6 @@
 import { accountError, openAccount } from '../../_lib/account-api.js';
 import { listJobs } from '../../_lib/account-db.js';
+import { resultUrlSigner } from '../../_lib/job-media.js';
 import { jsonNoStore } from '../../_lib/session.js';
 
 export async function onRequestGet(context) {
@@ -10,6 +11,7 @@ export async function onRequestGet(context) {
     const data = await listJobs(opened.db, opened.user, {
       status: url.searchParams.get('status') || '',
       limit: url.searchParams.get('limit') || '',
+      signResult: resultUrlSigner(context.env, context.request),
     });
     return jsonNoStore({ ok: true, ...data });
   } catch (err) {

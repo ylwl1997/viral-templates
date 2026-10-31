@@ -1,12 +1,26 @@
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { SCHEMA_SQL, schemaStatements } from '../functions/_lib/schema.js';
+import { JOB_MEDIA_COLUMNS, SCHEMA_SQL, schemaStatements } from '../functions/_lib/schema.js';
 import { appendLedger, createStubJob, getCredits, listJobs } from '../functions/_lib/account-db.js';
 
-const migration = fs.readFileSync(new URL('../migrations/0001_account.sql', import.meta.url), 'utf8').trim();
-if (migration !== SCHEMA_SQL.trim()) {
-  console.error('schema drift: migrations/0001_account.sql does not match functions/_lib/schema.js');
+const baseline = fs.readFileSync(new URL('../migrations/0001_account.sql', import.meta.url), 'utf8').trim();
+const alter = fs.readFileSync(new URL('../migrations/0002_r2_media.sql', import.meta.url), 'utf8');
+if (baseline.includes('upload_key')) {
+  console.error('0001 is already applied remotely; add media columns in 0002, not 0001');
   process.exit(1);
+}
+for (const table of ['users', 'credit_accounts', 'credit_ledger', 'jobs']) {
+  const marker = `CREATE TABLE IF NOT EXISTS ${table}`;
+  if (!baseline.includes(marker) || !SCHEMA_SQL.includes(marker)) {
+    console.error('schema drift: missing ' + table);
+    process.exit(1);
+  }
+}
+for (const name of JOB_MEDIA_COLUMNS) {
+  if (!SCHEMA_SQL.includes(name) || !alter.includes(`ADD COLUMN ${name} TEXT`)) {
+    console.error('media column missing from fresh schema or 0002: ' + name);
+    process.exit(1);
+  }
 }
 if (schemaStatements().length < 7) {
   console.error('schema splitter dropped statements');

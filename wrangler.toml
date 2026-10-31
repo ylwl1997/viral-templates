@@ -19,3 +19,17 @@ database_name = "viral-templates"
 database_id = "f4c1f28f-f89a-4aba-91f6-ad4f23095a96"
 preview_database_id = "f4c1f28f-f89a-4aba-91f6-ad4f23095a96"
 migrations_dir = "migrations"
+
+# Private media bucket. Create it before deploy (it is not created for you):
+#   npx wrangler r2 bucket create viral-templates-media
+# One bucket, key prefixes (do not enable the r2.dev public URL):
+#   uploads/{userId}/{jobId}/{0|1}.{jpg|png|webp}   photos, default 7 days
+#   results/{userId}/{jobId}.mp4                    finished clips, default 30 days
+#   templates/                                      reserved; the app does not write it
+# Lifecycle rules are set on the bucket, not by this binding. See docs/r2-media.md.
+# Local `wrangler pages dev` simulates MEDIA on disk. It does not use the remote bucket.
+# Optional preview isolation (create that bucket first; otherwise leave this unset):
+#   preview_bucket_name = "viral-templates-media-preview"
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "viral-templates-media"

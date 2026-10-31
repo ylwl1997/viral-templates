@@ -5,6 +5,17 @@ export const SITE_APEX =
   (import.meta.env.PUBLIC_SITE_APEX as string | undefined)?.replace(/^https?:\/\//, '').replace(/\/$/, '') ||
   'viral-templates.pages.dev';
 
+function retentionDays(raw: string | undefined, fallback: number): number {
+  if (raw == null || raw === '') return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > 365) return fallback;
+  return n;
+}
+
+/** Customer-facing retention. Runtime object metadata uses the same defaults (PHOTO_/VIDEO_RETENTION_DAYS). */
+const photoRetentionDays = retentionDays(import.meta.env.PUBLIC_PHOTO_RETENTION_DAYS as string | undefined, 7);
+const videoRetentionDays = retentionDays(import.meta.env.PUBLIC_VIDEO_RETENTION_DAYS as string | undefined, 30);
+
 export const SITE = {
   name: 'Viral Templates',
   shortName: 'ViralTemplates',
@@ -19,7 +30,10 @@ export const SITE = {
     'YOUR_ADSTERRA_SOCIAL_BAR_ZONE_ID',
   falConfigured: false,
   waffoConfigured: false,
-  photoRetentionDays: 30,
+  /** Static build flag. Set PUBLIC_R2_CONFIGURED=1 after the MEDIA bucket is bound. Runtime storage follows env.MEDIA even when this stays false. */
+  r2Configured: (import.meta.env.PUBLIC_R2_CONFIGURED as string | undefined) === '1',
+  photoRetentionDays,
+  videoRetentionDays,
   pricing: {
     oneShotUsd: 2.99,
     kissCamOneShotUsd: 4.99,
@@ -31,9 +45,9 @@ export const SITE = {
     ],
   },
   disclaimerEn:
-    'Adult consent only · no minors. Independent AI remix tools — not official Coldplay / Karol G / CapCut / any label. Kiss Cam uses no real concert footage. Ceiling Fan: never strap a phone to a fan. Photos deleted ~30 days (see Privacy).',
+    `Adult consent only · no minors. Independent AI remix tools — not official Coldplay / Karol G / CapCut / any label. Kiss Cam uses no real concert footage. Ceiling Fan: never strap a phone to a fan. Photos deleted ~${photoRetentionDays} days; finished clips ~${videoRetentionDays} days (see Privacy).`,
   disclaimerZh:
-    '仅限成人同意照片 · 禁止未成年人。独立 AI remix · 非 Coldplay / Karol G / CapCut 官方。Kiss Cam 不含真实演唱会素材。吊扇模板：切勿把手机绑在风扇上。照片约 30 天删除（见隐私政策）。',
+    `仅限成人同意照片 · 禁止未成年人。独立 AI remix · 非 Coldplay / Karol G / CapCut 官方。Kiss Cam 不含真实演唱会素材。吊扇模板：切勿把手机绑在风扇上。照片约 ${photoRetentionDays} 天删除，成片约 ${videoRetentionDays} 天（见隐私政策）。`,
 } as const;
 
 export type Lang = 'en' | 'zh';

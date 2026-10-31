@@ -1,5 +1,6 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import { SITE } from '../../../lib/site';
 ---
 <Layout
   title="隐私政策"
@@ -9,6 +10,6 @@ import Layout from '../../../layouts/Layout.astro';
 >
   <div class="page-head wrap"><h1>隐私政策</h1><p>演示政策 — 正式收集照片前请完善。</p></div>
   <section class="section wrap prose">
-    <p>上传照片计划短期处理（约 30 天保留）。本演示未开放生成与支付。请勿上传未成年人照片。</p>
+    <p>上传的照片大约保留 {SITE.photoRetentionDays} 天。成片（如果任务有成片）大约保留 {SITE.videoRetentionDays} 天。本演示未开放生成与支付。请勿上传未成年人照片。</p>
   </section>
 </Layout>

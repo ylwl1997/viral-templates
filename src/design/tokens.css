@@ -1,81 +1,79 @@
-/* Multi-site UI kit — shared token structure. Brand sites override via [data-theme]. */
+/* Multi-site UI kit — shared token structure.
+   Paper chrome by default. Brand sites retint surfaces via [data-theme].
+   Color lives in 9:16 media; chrome stays quiet. */
 :root {
-  /* Surfaces — 3–4 clear steps so cards float off the page */
-  --bg: #05070f;
-  --bg-elevated: #0b1220;
-  --surface: #121a2e;
-  --surface-2: #1c2742;
-  --surface-3: #263556;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.14);
+  --bg: #f7f4ee;
+  --bg-elevated: #fffcf8;
+  --surface: #fffcf8;
+  --surface-2: #f3efe6;
+  --surface-3: #e7e1d6;
+  --border: rgba(28, 25, 23, 0.1);
+  --border-strong: rgba(28, 25, 23, 0.18);
 
-  /* Text — body stays bright; muted still readable */
-  --text: #f4f7fb;
-  --text-muted: #97a3bc;
-  --secondary: #d0d8e8;
+  --text: #1c1917;
+  --text-muted: #6b645c;
+  --secondary: #3f3a34;
   --muted: var(--text-muted);
-  --faint: #5a6882;
+  --faint: #8a8178;
 
-  /* Accent (hub default — sky → indigo, higher sat for primary CTA) */
-  --accent: #38bdf8;
-  --accent-2: #818cf8;
-  --accent-bright: #7dd3fc;
-  --accent-soft: rgba(56, 189, 248, 0.16);
+  /* Hub accent is a rose used for eyebrows and links — not button fill. */
+  --accent: #9c3d4a;
+  --accent-2: #9c3d4a;
+  --accent-bright: #7e2e3a;
+  --accent-soft: rgba(156, 61, 74, 0.08);
   --accent-dim: var(--accent-soft);
-  --accent-ink: #061018;
-  --link: #7dd3fc;
-  --link-hover: #bae6fd;
-  --glow: rgba(56, 189, 248, 0.22);
-  --glow-2: rgba(129, 140, 248, 0.22);
-  --shadow-glow: 0 0 48px var(--glow);
+  --accent-ink: #fffcf8;
+  --link: #9c3d4a;
+  --link-hover: #7e2e3a;
+  --eyebrow: #9c3d4a;
 
-  /* Status */
-  --ok: #34d399;
-  --warn: #fbbf24;
-  --danger: #f87171;
+  /* Ink is the only primary action color. */
+  --ink: #1c1917;
+  --on-ink: #f7f4ee;
+  --glow: transparent;
+  --glow-2: transparent;
+  --shadow-glow: none;
 
-  /* Radius / shadow / motion */
+  --ok: #3f6b52;
+  --warn: #8a5a12;
+  --danger: #9f1239;
+
   --radius-sm: 10px;
   --radius-md: 14px;
-  --radius-lg: 22px;
+  --radius-lg: 20px;
   --radius: var(--radius-md);
-  --shadow: 0 16px 48px rgba(0, 0, 0, 0.38);
+  --shadow: 0 1px 0 rgba(28, 25, 23, 0.04), 0 16px 40px rgba(28, 25, 23, 0.06);
   --ease: 160ms cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Type — display tier + system body */
-  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC",
-    sans-serif;
-  --font: var(--font-display);
+  --font-display: "Fraunces", "Noto Serif SC", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font: "Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --font-weight-display: 780;
-  --font-weight-title: 700;
-  --letter-display: -0.035em;
-  --letter-title: -0.025em;
-  --type-hero: clamp(2.15rem, 5.4vw, 3.4rem);
-  --type-h2: clamp(1.5rem, 3vw, 1.95rem);
+  --font-weight-display: 560;
+  --font-weight-title: 560;
+  --letter-display: -0.03em;
+  --letter-title: -0.02em;
+  --type-hero: clamp(2.7rem, 5.4vw, 4.35rem);
+  --type-h2: clamp(1.7rem, 3vw, 2.35rem);
   --type-body: 1.0625rem;
-  --type-small: 0.9rem;
-  --leading-body: 1.65;
-  --leading-tight: 1.1;
+  --type-small: 0.92rem;
+  --leading-body: 1.6;
+  --leading-tight: 1.02;
 
-  /* Layout rhythm — denser product site */
-  --wrap: min(1220px, calc(100% - 2.25rem));
-  --wrap-wide: min(1280px, calc(100% - 2.25rem));
-  --header-h: 3.6rem;
-  --measure: 64ch;
-  --section-y: 2.35rem;
-  --hero-y: 3.25rem;
+  --wrap: min(1120px, calc(100% - 2.5rem));
+  --wrap-wide: min(1180px, calc(100% - 2.5rem));
+  --header-h: 4rem;
+  --measure: 66ch;
+  --section-y: 3.25rem;
+  --hero-y: 3.5rem;
 
-  /* Brand ambience (hub: quiet grid) */
-  --ambience-opacity: 0.045;
+  --ambience-opacity: 0.35;
   --ambience-mode: none;
-  --card-edge: transparent;
+  --card-edge: 0 1px 0 rgba(28, 25, 23, 0.04);
   --card-texture: none;
-  --cover-a: rgba(56, 189, 248, 0.28);
-  --cover-b: rgba(129, 140, 248, 0.2);
-  --cover-c: var(--surface-2);
+  --cover-a: rgba(156, 61, 74, 0.16);
+  --cover-b: rgba(28, 25, 23, 0.06);
+  --cover-c: #efe8dc;
 
-  /* Stage / glow helpers */
-  --stage-glow: radial-gradient(ellipse 70% 55% at 50% 0%, var(--glow), transparent 70%);
+  --stage-glow: none;
 }

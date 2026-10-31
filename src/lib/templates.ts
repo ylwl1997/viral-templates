@@ -73,8 +73,8 @@ export const TEMPLATES: readonly Template[] = [
       'Turn one adult-consent photo into a ~10s vertical party-dance AI video. Adult consent required.',
     seoDescZh:
       '用 1 张成人同意照片生成约 10 秒竖屏派对舞 AI 短片。需成人同意。',
-    heroEn: 'Upload one photo. Get a vertical party-dance remix.',
-    heroZh: '上传一张照片，生成竖屏派对舞 remix。',
+    heroEn: 'One photo. A vertical party-dance clip.',
+    heroZh: '一张照片，一条竖屏派对舞短片。',
     howEn: ['Upload 1 adult-consent photo', 'Confirm consent', 'Generate your clip'],
     howZh: ['上传 1 张成人同意照片', '确认授权', '生成短片'],
     accent: 'magenta',
@@ -100,8 +100,8 @@ export const TEMPLATES: readonly Template[] = [
       'Two adult-consent photos → stadium kiss-cam style AI clip. No real concert footage. Adult consent required.',
     seoDescZh:
       '两张成人同意照片 → 球场大屏风 AI 短片。无真实演唱会素材。需成人同意。',
-    heroEn: 'Two photos. One stadium jumbotron moment — AI only.',
-    heroZh: '两张照片，一秒球场大屏 —— 纯 AI。',
+    heroEn: 'Two photos. One jumbotron moment.',
+    heroZh: '两张照片，一个球场大屏瞬间。',
     howEn: ['Upload 2 adult-consent photos', 'Confirm consent (no concert footage)', 'Generate your clip'],
     howZh: ['上传 2 张成人同意照片', '确认授权（无演唱会素材）', '生成短片'],
     accent: 'amber',
@@ -128,8 +128,8 @@ export const TEMPLATES: readonly Template[] = [
       'One adult-consent photo → ~12–15s AI ceiling-fan outfit change. Never strap a phone to a fan. Adult consent required.',
     seoDescZh:
       '1 张成人同意照片 → 约 12–15 秒吊扇换装转场。切勿把手机绑在风扇上。需成人同意。',
-    heroEn: 'One photo. An AI fan-wipe outfit change — never a real fan.',
-    heroZh: '一张照片，AI 吊扇换装 —— 切勿使用真风扇。',
+    heroEn: 'One photo. A fan-wipe outfit change — never a real fan.',
+    heroZh: '一张照片，一次吊扇换装 —— 切勿使用真风扇。',
     howEn: ['Upload 1 adult-consent photo', 'Confirm consent & safety note', 'Generate your clip'],
     howZh: ['上传 1 张成人同意照片', '确认授权与安全提示', '生成短片'],
     accent: 'cyan',

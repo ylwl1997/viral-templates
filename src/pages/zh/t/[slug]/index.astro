@@ -6,6 +6,7 @@ import BrandHero from '../../../../design/components/BrandHero.astro';
 import StepsHow from '../../../../design/components/StepsHow.astro';
 import PricingGrid from '../../../../design/components/PricingGrid.astro';
 import FinalCta from '../../../../design/components/FinalCta.astro';
+import MediaCompare from '../../../../design/components/MediaCompare.astro';
 
 export function getStaticPaths() {
   return TEMPLATES.map((template) => ({
@@ -34,17 +35,29 @@ const theme = t.theme;
     <>
       <BrandHero
         preset={theme.heroPreset}
-        eyebrow={`9:16 · ${t.durationZh}`}
+        eyebrow={t.durationZh}
         eyebrowLogo={t.logo}
         title={t.heroZh}
-        lede={`${t.taglineZh}。需 ${t.photoCount} 张照片 — 在创作页上传。需成人同意。`}
+        lede={`${t.taglineZh}。需成人同意。`}
         logo={t.logo}
         mediaSrc={t.poster}
-        mediaAlt={`${t.displayNameZh} 9:16 预览`}
-        rail={theme.heroPreset === 'editorial' ? [t.displayNameZh, `${t.photoCount} 张照片`, t.durationZh, 'AI remix'] : undefined}
-        primaryCta={{ href: createHref, label: '开始创作' }}
-        secondaryCta={{ href: '#how', label: '如何使用' }}
+        mediaAlt={`${t.displayNameZh} 预览`}
+        rail={theme.heroPreset === 'editorial' ? [t.displayNameZh, `${t.photoCount} 张照片`, t.durationZh] : undefined}
+        primaryCta={{ href: createHref, label: '创作' }}
+        secondaryCta={{ href: '#look', label: '看效果' }}
       />
+
+      <section class="section wrap" id="look">
+        <p class="eyebrow">效果</p>
+        <h2>{t.photoCount === 2 ? '两张照片进去' : '一张照片进去'}，套进这个画面。</h2>
+        <p class="sub">左侧是示例静帧，右侧是模板效果。你的照片在创作页上传。这里不是成片。</p>
+        <MediaCompare
+          poster={t.poster}
+          alt={`${t.displayNameZh} 模板效果`}
+          originalLabel="示例静帧"
+          resultLabel="模板效果"
+        />
+      </section>
 
       <section class="section wrap" id="how">
         <h2>如何使用</h2>
@@ -62,6 +75,7 @@ const theme = t.theme;
           oneShotUsd={oneShot}
           oneShotMeta={`每次生成 ${SITE.pricing.creditPerGenerate} 积分 · 演示`}
           packs={packs}
+          popularLabel="热门"
           note="创作页支付在开放前显示即将开放。"
         />
       </section>
@@ -75,7 +89,7 @@ const theme = t.theme;
       <FinalCta
         title={`用 ${t.displayNameZh} 创作`}
         lede="上传、确认授权，生成开放后即可制作。"
-        primary={{ href: createHref, label: '开始创作' }}
+        primary={{ href: createHref, label: '创作' }}
         secondary={{ href: '#pricing', label: '价格' }}
       />
     </>

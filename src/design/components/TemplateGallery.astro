@@ -52,14 +52,13 @@ const isSoon = mode === 'soon';
           <p>{tagline}</p>
           <div class="template-actions">
             {!isSoon && (
-              <a class="btn btn-primary btn-sm" href={`${pathFor(lang, '/create/')}?t=${t.slug}`}>
+              <a class="link-cta" href={`${pathFor(lang, '/create/')}?t=${t.slug}`}>
                 {label('Create', '创作')}
               </a>
             )}
-            <a class="btn btn-ghost btn-sm" href={keywordPath(lang, t.slug, '')}>
+            <a class="link-quiet" href={keywordPath(lang, t.slug, '')}>
               {isSoon ? label('Preview', '预览') : label('View', '查看')}
             </a>
-            <span class="badge">{isSoon ? label('Soon', '即将上线') : label('Live', '已上线')}</span>
           </div>
         </div>
       </article>

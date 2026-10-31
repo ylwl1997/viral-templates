@@ -7,54 +7,45 @@ import StepsHow from '../design/components/StepsHow.astro';
 import FinalCta from '../design/components/FinalCta.astro';
 
 const lang = 'en' as const;
-const previewA = LIVE_TEMPLATES[0];
-const previewB = LIVE_TEMPLATES[1] ?? LIVE_TEMPLATES[0];
 ---
 <Layout
-  title={`${SITE.name} — AI viral video templates`}
-  description="Choose a trending AI look, upload a photo, and create a short vertical clip. Adult consent required."
+  title={`${SITE.name} — short vertical clips from a photo`}
+  description="Pick a look, upload a photo, and make a short vertical clip. Adult consent required."
   canonicalPath="/"
   lang={lang}
 >
   <section class="hero wrap hero-hub">
     <div class="hero-copy">
-      <div class="eyebrow">Trending looks</div>
-      <h1>AI viral video <span class="grad">templates</span></h1>
+      <p class="eyebrow">Templates</p>
+      <h1>A short clip, from a photo you already have.</h1>
       <p class="lede">
-        Pick a look, upload a photo, get a vertical clip. Adult consent required.
+        Choose a look, upload, and keep the frame vertical. Adult consent required.
       </p>
       <div class="hero-cta">
         <a class="btn btn-primary" href={pathFor(lang, '/create/')}>Start creating</a>
         <a class="btn btn-ghost" href="#templates">Browse templates</a>
       </div>
     </div>
-    <div class="hero-media-stack" aria-hidden="true">
-      <a class="hero-phone-a media-slot" href={keywordPath(lang, previewA.slug, '')} tabindex="-1">
-        {previewA.poster ? (
-          <img class="media-poster" src={previewA.poster} alt="" width="200" height="356" />
-        ) : (
-          <div class="media-fallback cover-orb" style={`--cover-a: rgba(244,114,182,.45); --cover-b: rgba(192,132,252,.3); --cover-c: #1a1024`}>
-            <img src={previewA.logo} width="56" height="56" alt="" />
+    <div class="hero-reel">
+      {LIVE_TEMPLATES.map((t) => (
+        <a class="hero-reel-item" href={keywordPath(lang, t.slug, '')}>
+          <div class="media-slot">
+            {t.poster ? (
+              <img class="media-poster" src={t.poster} alt="" width="180" height="320" />
+            ) : (
+              <div class="media-fallback"></div>
+            )}
           </div>
-        )}
-        <span class="media-badge">9:16</span>
-      </a>
-      <a class="hero-phone-b media-slot" href={keywordPath(lang, previewB.slug, '')} tabindex="-1">
-        {previewB.poster ? (
-          <img class="media-poster" src={previewB.poster} alt="" width="168" height="300" />
-        ) : (
-          <div class="media-fallback">
-            <img src={previewB.logo} width="48" height="48" alt="" />
-          </div>
-        )}
-      </a>
+          <span class="hero-reel-cap">{t.displayName}</span>
+        </a>
+      ))}
     </div>
   </section>
 
   <section class="section wrap" id="templates">
     <div class="section-head">
       <h2>Templates</h2>
-      <p class="sub">Live looks you can open and create with.</p>
+      <p class="sub">Open a look, or start from the studio.</p>
     </div>
     <TemplateGallery lang={lang} templates={LIVE_TEMPLATES} mode="live" />
   </section>
@@ -62,7 +53,7 @@ const previewB = LIVE_TEMPLATES[1] ?? LIVE_TEMPLATES[0];
   <section class="section wrap" id="soon">
     <div class="section-head">
       <h2>Coming soon</h2>
-      <p class="sub">More looks in the pipeline — open a brand page to follow along.</p>
+      <p class="sub">More looks are on the way. Open a page to follow along.</p>
     </div>
     <TemplateGallery lang={lang} templates={SOON_TEMPLATES} mode="soon" />
   </section>
@@ -70,20 +61,20 @@ const previewB = LIVE_TEMPLATES[1] ?? LIVE_TEMPLATES[0];
   <section class="section wrap" id="how">
     <div class="section-head">
       <h2>How it works</h2>
-      <p class="sub">Same studio flow on the hub or on any live template page.</p>
+      <p class="sub">The same quiet studio, here or on a look’s own page.</p>
     </div>
     <StepsHow
       steps={[
-        { title: 'Choose a template', body: 'Browse trending looks and open Create.' },
-        { title: 'Upload & consent', body: 'Adult-consent photos only. No minors.' },
-        { title: 'Generate', body: 'Signed-in Generate queues a job on your account. Finished videos are not available yet. Pay shows Coming soon.' },
+        { title: 'Choose a look', body: 'Browse the templates and open Create.' },
+        { title: 'Upload and consent', body: 'Adult-consent photos only. No minors.' },
+        { title: 'Generate', body: 'Signed-in Generate queues a job on your account. A finished clip is not available yet. Pay shows Coming soon.' },
       ]}
     />
   </section>
 
   <FinalCta
-    title="Ready to create?"
-    lede="Open the hub studio or jump into a live brand page."
+    title="Ready when you are."
+    lede="Open the studio, or start from a look you already like."
     primary={{ href: pathFor(lang, '/create/'), label: 'Start creating' }}
     secondary={{ href: pathFor(lang, '/pricing/'), label: 'Pricing' }}
   />

@@ -26,8 +26,9 @@ const isLive = t.status === 'live';
   {isLive ? (
     <>
       <div class="page-head wrap">
-        <h1>创作 — {t.displayNameZh}</h1>
-        <p>{t.taglineZh}。生成会把任务排进你的账户。目前还没有成片。</p>
+        <p class="eyebrow">{t.displayNameZh}</p>
+        <h1>创作</h1>
+        <p>{t.taglineZh}</p>
       </div>
       <CreateStudio template={t} lang={lang} />
     </>

@@ -2,6 +2,9 @@
 import LoopMedia from './LoopMedia.astro';
 
 interface Props {
+  /** Upload stills. Same people as the result. Empty stays a quiet frame — never a stick figure. */
+  sources?: readonly string[];
+  sourceLabels?: readonly string[];
   poster?: string;
   /** Muted looping demo for the result frame. Poster remains the fallback still. */
   demoVideo?: string;
@@ -13,25 +16,62 @@ interface Props {
   liveOriginal?: boolean;
 }
 
-const { poster, demoVideo, alt = '', originalLabel, resultLabel, note, liveOriginal } = Astro.props;
+const {
+  sources = [],
+  sourceLabels,
+  poster,
+  demoVideo,
+  alt = '',
+  originalLabel,
+  resultLabel,
+  note,
+  liveOriginal,
+} = Astro.props;
+
+const stills = sources.filter(Boolean);
+const multi = stills.length > 1;
 ---
 <div class="compare-block">
-  <div class="compare">
-    <figure class="compare-frame">
-      <div class="media-slot">
-        <img
-          class="media-poster"
-          data-compare-original={liveOriginal ? '' : undefined}
-          src="/brand/sample-original.svg"
-          alt=""
-          width="360"
-          height="640"
-        />
+  <div class:list={['compare', multi && 'compare-multi']}>
+    {multi ? (
+      <div class="compare-sources">
+        {stills.map((src, i) => (
+          <figure class="compare-frame is-source">
+            <div class="media-slot">
+              <img
+                class="media-poster"
+                data-compare-original={liveOriginal ? String(i) : undefined}
+                src={src}
+                alt=""
+                width="864"
+                height="1152"
+              />
+            </div>
+            <figcaption>{sourceLabels?.[i] ?? originalLabel}</figcaption>
+          </figure>
+        ))}
       </div>
-      <figcaption data-compare-caption={liveOriginal ? '' : undefined}>{originalLabel}</figcaption>
-    </figure>
+    ) : (
+      <figure class="compare-frame is-source">
+        <div class="media-slot">
+          {stills[0] ? (
+            <img
+              class="media-poster"
+              data-compare-original={liveOriginal ? '0' : undefined}
+              src={stills[0]}
+              alt=""
+              width="864"
+              height="1152"
+            />
+          ) : (
+            <div class="media-fallback"></div>
+          )}
+        </div>
+        <figcaption>{originalLabel}</figcaption>
+      </figure>
+    )}
     <span class="compare-arrow" aria-hidden="true">→</span>
-    <figure class="compare-frame">
+    <figure class="compare-frame is-result">
       <div class="media-slot">
         {poster || demoVideo ? (
           <LoopMedia poster={poster} video={demoVideo} alt={alt} width={360} height={640} />

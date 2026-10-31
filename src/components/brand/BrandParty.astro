@@ -1,0 +1,70 @@
+---
+import type { Lang } from '../../lib/site';
+import type { Template } from '../../lib/templates';
+import BrandClose from './BrandClose.astro';
+import BrandLook from './BrandLook.astro';
+
+interface Props { template: Template; lang: Lang }
+const { template: t, lang } = Astro.props;
+const story = t.story;
+if (!story) throw new Error('Bby Wow is missing its story');
+const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const { lead, support, beats, diy } = story;
+---
+<section class="section wrap">
+  <div class="party-lead">
+    <p class="eyebrow">{L(lead.eyebrowEn, lead.eyebrowZh)}</p>
+    <h2>{L(lead.titleEn, lead.titleZh)}</h2>
+    <p class="story-body">{L(lead.bodyEn, lead.bodyZh)}</p>
+    <ol class="party-beats">
+      {beats.map((beat) => (
+        <li>
+          <h3>{L(beat.titleEn, beat.titleZh)}</h3>
+          <p>{L(beat.bodyEn, beat.bodyZh)}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<section class="section wrap party-why">
+  <p class="party-num" aria-hidden="true">1</p>
+  <div>
+    <p class="eyebrow">{L(support.eyebrowEn, support.eyebrowZh)}</p>
+    <h2>{L(support.titleEn, support.titleZh)}</h2>
+    <p class="story-body">{L(support.bodyEn, support.bodyZh)}</p>
+  </div>
+</section>
+
+<BrandLook
+  template={t}
+  lang={lang}
+  variant="party"
+  title={L('The selfie, then the dance.', '自拍进去，舞出来。')}
+  lede={L('The person in the photo is the person in the clip.', '照片里的人就是成片里的人。')}
+/>
+
+<section class="section wrap party-diy">
+  <p class="eyebrow">{L(diy.eyebrowEn, diy.eyebrowZh)}</p>
+  <h2>{L(diy.titleEn, diy.titleZh)}</h2>
+  <div class="diy-split">
+    <div>
+      <h3>{L(diy.hardTitleEn, diy.hardTitleZh)}</h3>
+      <p>{L(diy.hardEn, diy.hardZh)}</p>
+    </div>
+    <div class="diy-easy">
+      <h3>{L(diy.easyTitleEn, diy.easyTitleZh)}</h3>
+      <p>{L(diy.easyEn, diy.easyZh)}</p>
+    </div>
+  </div>
+</section>
+
+<BrandClose
+  template={t}
+  lang={lang}
+  howLede={L('From a photo you already have.', '从你已经有的照片开始。')}
+  faqLede={L(
+    'The dance, the photo, credits, and what this demo does not return yet.',
+    '关于这支舞、照片、积分，以及这个演示目前还交不回的东西。',
+  )}
+/>

@@ -1,0 +1,63 @@
+---
+import type { Lang } from '../../lib/site';
+import type { Template } from '../../lib/templates';
+import BrandClose from './BrandClose.astro';
+import BrandLook from './BrandLook.astro';
+
+interface Props { template: Template; lang: Lang }
+const { template: t, lang } = Astro.props;
+const story = t.story;
+if (!story) throw new Error('Ceiling Fan is missing its story');
+const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const { lead, support, beats, diy } = story;
+---
+<section class="section wrap fan-safety">
+  <p class="eyebrow">{L(lead.eyebrowEn, lead.eyebrowZh)}</p>
+  <h2>{L(lead.titleEn, lead.titleZh)}</h2>
+  <p class="story-body">{L(lead.bodyEn, lead.bodyZh)}</p>
+</section>
+
+<section class="section wrap fan-story">
+  <div class="fan-story-col">
+    <p class="eyebrow">{L(support.eyebrowEn, support.eyebrowZh)}</p>
+    <h2>{L(support.titleEn, support.titleZh)}</h2>
+    <p class="story-body">{L(support.bodyEn, support.bodyZh)}</p>
+    <ul class="fan-beats">
+      {beats.map((beat) => (
+        <li>
+          <h3>{L(beat.titleEn, beat.titleZh)}</h3>
+          <p>{L(beat.bodyEn, beat.bodyZh)}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<BrandLook
+  template={t}
+  lang={lang}
+  variant="fan"
+  title={L('The photo you upload. The wipe you don’t film.', '上传的是照片，转场不用实拍。')}
+  lede={L('Same person, from the portrait to the fan wipe.', '同一个人，从肖像到扇叶转场。')}
+/>
+
+<section class="section wrap fan-diy">
+  <div class="fan-diy-col">
+    <p class="eyebrow">{L(diy.eyebrowEn, diy.eyebrowZh)}</p>
+    <h2>{L(diy.titleEn, diy.titleZh)}</h2>
+    <h3>{L(diy.hardTitleEn, diy.hardTitleZh)}</h3>
+    <p class="story-body">{L(diy.hardEn, diy.hardZh)}</p>
+    <h3 class="fan-diy-next">{L(diy.easyTitleEn, diy.easyTitleZh)}</h3>
+    <p class="story-body">{L(diy.easyEn, diy.easyZh)}</p>
+  </div>
+</section>
+
+<BrandClose
+  template={t}
+  lang={lang}
+  howLede={L('Three steps. None of them use a real fan.', '三步。都不用真风扇。')}
+  faqLede={L(
+    'The wipe, the portrait, and the fan you leave alone.',
+    '关于转场、肖像，以及那台不要去碰的风扇。',
+  )}
+/>

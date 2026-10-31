@@ -3,9 +3,13 @@ import Layout from '../layouts/Layout.astro';
 import { SITE, pathFor, keywordPath } from '../lib/site';
 import { LIVE_TEMPLATES } from '../lib/templates';
 import TemplateGallery from '../design/components/TemplateGallery.astro';
+import ExampleCases from '../design/components/ExampleCases.astro';
+import FaqSplit from '../design/components/FaqSplit.astro';
 import LoopMedia from '../design/components/LoopMedia.astro';
 import StepsHow from '../design/components/StepsHow.astro';
 import FinalCta from '../design/components/FinalCta.astro';
+import { HUB_FAQ_COMPACT } from '../lib/hubFaq';
+import { localizeFaq } from '../lib/templates';
 
 const lang = 'en' as const;
 ---
@@ -43,6 +47,14 @@ const lang = 'en' as const;
     </div>
   </section>
 
+  <section class="section wrap" id="examples">
+    <div class="section-head">
+      <h2>Examples</h2>
+      <p class="sub">The photo that goes in, and the clip that comes out. The people match.</p>
+    </div>
+    <ExampleCases lang={lang} templates={LIVE_TEMPLATES} />
+  </section>
+
   <section class="section wrap" id="templates">
     <div class="section-head">
       <h2>Templates</h2>
@@ -64,6 +76,14 @@ const lang = 'en' as const;
       ]}
     />
   </section>
+
+  <FaqSplit
+    id="faq"
+    title="Questions"
+    lede="Photos, consent, and what generate returns on this demo."
+    cta={{ href: pathFor(lang, '/faq/'), label: 'All questions' }}
+    items={localizeFaq(HUB_FAQ_COMPACT, lang)}
+  />
 
   <FinalCta
     title="Ready when you are."

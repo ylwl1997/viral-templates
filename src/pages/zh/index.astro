@@ -3,9 +3,13 @@ import Layout from '../../layouts/Layout.astro';
 import { SITE, pathFor, keywordPath } from '../../lib/site';
 import { LIVE_TEMPLATES } from '../../lib/templates';
 import TemplateGallery from '../../design/components/TemplateGallery.astro';
+import ExampleCases from '../../design/components/ExampleCases.astro';
+import FaqSplit from '../../design/components/FaqSplit.astro';
 import LoopMedia from '../../design/components/LoopMedia.astro';
 import StepsHow from '../../design/components/StepsHow.astro';
 import FinalCta from '../../design/components/FinalCta.astro';
+import { HUB_FAQ_COMPACT } from '../../lib/hubFaq';
+import { localizeFaq } from '../../lib/templates';
 
 const lang = 'zh' as const;
 ---
@@ -43,6 +47,14 @@ const lang = 'zh' as const;
     </div>
   </section>
 
+  <section class="section wrap" id="examples">
+    <div class="section-head">
+      <h2>示例</h2>
+      <p class="sub">进去的是照片，出来的是短片。照片里的人就是成片里的人。</p>
+    </div>
+    <ExampleCases lang={lang} templates={LIVE_TEMPLATES} />
+  </section>
+
   <section class="section wrap" id="templates">
     <div class="section-head">
       <h2>模板</h2>
@@ -64,6 +76,14 @@ const lang = 'zh' as const;
       ]}
     />
   </section>
+
+  <FaqSplit
+    id="faq"
+    title="常见问题"
+    lede="照片、授权，以及这个演示里生成会返回什么。"
+    cta={{ href: pathFor(lang, '/faq/'), label: '全部问题' }}
+    items={localizeFaq(HUB_FAQ_COMPACT, lang)}
+  />
 
   <FinalCta
     title="准备好了再开始。"

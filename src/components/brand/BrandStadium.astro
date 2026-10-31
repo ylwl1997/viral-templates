@@ -1,0 +1,67 @@
+---
+import type { Lang } from '../../lib/site';
+import type { Template } from '../../lib/templates';
+import BrandClose from './BrandClose.astro';
+import BrandLook from './BrandLook.astro';
+
+interface Props { template: Template; lang: Lang }
+const { template: t, lang } = Astro.props;
+const story = t.story;
+if (!story) throw new Error('Kiss Cam is missing its story');
+const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const { lead, support, beats, diy } = story;
+---
+<section class="section wrap stadium-top">
+  <div class="stadium-essay">
+    <p class="eyebrow">{L(lead.eyebrowEn, lead.eyebrowZh)}</p>
+    <h2>{L(lead.titleEn, lead.titleZh)}</h2>
+    <p class="story-body">{L(lead.bodyEn, lead.bodyZh)}</p>
+  </div>
+  <ol class="stadium-ritual">
+    {beats.map((beat) => (
+      <li>
+        <h3>{L(beat.titleEn, beat.titleZh)}</h3>
+        <p>{L(beat.bodyEn, beat.bodyZh)}</p>
+      </li>
+    ))}
+  </ol>
+</section>
+
+<section class="section wrap">
+  <aside class="stadium-disclaimer">
+    <p class="eyebrow">{L(support.eyebrowEn, support.eyebrowZh)}</p>
+    <h2>{L(support.titleEn, support.titleZh)}</h2>
+    <p class="story-body">{L(support.bodyEn, support.bodyZh)}</p>
+  </aside>
+</section>
+
+<BrandLook
+  template={t}
+  lang={lang}
+  variant="stadium"
+  title={L('Two photos. One board.', '两张照片，一块大屏。')}
+  lede={L('Both stills are the two people in the clip.', '两张静帧就是成片里的两个人。')}
+/>
+
+<section class="section wrap stadium-diy">
+  <p class="eyebrow">{L(diy.eyebrowEn, diy.eyebrowZh)}</p>
+  <h2>{L(diy.titleEn, diy.titleZh)}</h2>
+  <div class="stadium-diy-hard">
+    <h3>{L(diy.hardTitleEn, diy.hardTitleZh)}</h3>
+    <p>{L(diy.hardEn, diy.hardZh)}</p>
+  </div>
+  <div class="stadium-diy-easy">
+    <h3>{L(diy.easyTitleEn, diy.easyTitleZh)}</h3>
+    <p>{L(diy.easyEn, diy.easyZh)}</p>
+  </div>
+</section>
+
+<BrandClose
+  template={t}
+  lang={lang}
+  howLede={L('Two photos, then the board.', '先是两张照片，然后是这块大屏。')}
+  faqLede={L(
+    'The two photos, the board, and what this clip is not taken from.',
+    '关于两张照片、大屏，以及这条片子不是从哪里拿来的。',
+  )}
+/>

@@ -1,0 +1,49 @@
+---
+import MediaCompare from '../../design/components/MediaCompare.astro';
+import type { Lang } from '../../lib/site';
+import type { Template, TemplateStory } from '../../lib/templates';
+
+interface Props {
+  template: Template;
+  lang: Lang;
+  title: string;
+  lede: string;
+  variant: TemplateStory['layout'];
+}
+
+const { template: t, lang, title, lede, variant } = Astro.props;
+const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const cases = t.cases ?? [];
+const many = cases.length > 1;
+const photoLabel = L('Your photo', '上传的照片');
+const resultLabel = L('Result', '生成的视频');
+---
+{cases.length > 0 && (
+  <section class:list={['section', 'wrap', 'look-section', `look-${variant}`]} id="look">
+    <div class="look-copy">
+      <p class="eyebrow">{many ? L('Examples', '示例') : (lang === 'zh' ? cases[0].labelZh : cases[0].labelEn)}</p>
+      <h2>{title}</h2>
+      <p class="sub">{lede}</p>
+    </div>
+    <div class="look-cases">
+      {cases.map((item) => {
+        const dual = item.sources.length > 1;
+        return (
+          <article class="case-block" id={`case-${item.id}`}>
+            {many && <h3 class="case-label">{lang === 'zh' ? item.labelZh : item.labelEn}</h3>}
+            <MediaCompare
+              sources={item.sources}
+              sourceLabels={dual ? [`${photoLabel} · A`, `${photoLabel} · B`] : undefined}
+              poster={item.resultPoster ?? t.poster}
+              demoVideo={item.resultVideo ?? t.demoVideo}
+              alt={L(`${t.displayName} sample`, `${t.displayNameZh} 示例`)}
+              originalLabel={photoLabel}
+              resultLabel={resultLabel}
+              note={lang === 'zh' ? item.noteZh : item.noteEn}
+            />
+          </article>
+        );
+      })}
+    </div>
+  </section>
+)}

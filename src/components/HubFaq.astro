@@ -1,0 +1,32 @@
+---
+import FaqSplit from '../design/components/FaqSplit.astro';
+import { HUB_FAQ } from '../lib/hubFaq';
+import { keywordPath, pathFor, type Lang } from '../lib/site';
+import { LIVE_TEMPLATES, localizeFaq } from '../lib/templates';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+---
+<FaqSplit
+  heading="h1"
+  id="questions"
+  title={L('Questions', '常见问题')}
+  lede={L(
+    'Photos, consent, credits, and what this demo does not do yet.',
+    '关于照片、授权、积分，以及这个演示目前还做不到的事。',
+  )}
+  cta={{ href: pathFor(lang, '/create/'), label: L('Start creating', '开始制作') }}
+  items={localizeFaq(HUB_FAQ, lang)}
+>
+  <div slot="after" class="faq-more">
+    <p>{L('Questions about a look', '某个效果自己的问题')}</p>
+    <ul>
+      {LIVE_TEMPLATES.map((t) => (
+        <li>
+          <a href={`${keywordPath(lang, t.slug, '')}#faq`}>{lang === 'zh' ? t.displayNameZh : t.displayName}</a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</FaqSplit>

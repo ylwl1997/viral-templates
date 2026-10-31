@@ -1,5 +1,7 @@
 /** Template catalog. logo = public path to brand mark. Ops routing uses slug — never in customer copy. */
 
+import { BBY_LIVE, FAN_LIVE, KISS_LIVE } from './liveCases';
+
 export type TemplateStatus = 'live' | 'soon';
 
 /** Hero composition — must visibly differ across live brands. */
@@ -12,6 +14,80 @@ export type CardStyle = 'glow' | 'ribbon' | 'mesh' | 'soft';
 export type CoverStyle = 'orb' | 'stripes' | 'radial' | 'grid';
 /** Fixed-layer ambience (noise / grid intensity via CSS). */
 export type Ambience = 'none' | 'noise' | 'grid';
+
+/** One before → after example. A second case is data: the look section lists every entry. */
+export type TemplateCase = {
+  id: string;
+  labelEn: string;
+  labelZh: string;
+  /** Upload stills of the same people as the result. Kiss Cam uses two. */
+  sources: readonly string[];
+  resultPoster?: string;
+  resultVideo?: string;
+  noteEn?: string;
+  noteZh?: string;
+};
+
+export type StoryBeat = {
+  titleEn: string;
+  titleZh: string;
+  bodyEn: string;
+  bodyZh: string;
+};
+
+export type StoryBlock = {
+  eyebrowEn: string;
+  eyebrowZh: string;
+  titleEn: string;
+  titleZh: string;
+  bodyEn: string;
+  bodyZh: string;
+};
+
+export type StoryDiy = {
+  eyebrowEn: string;
+  eyebrowZh: string;
+  titleEn: string;
+  titleZh: string;
+  hardTitleEn: string;
+  hardTitleZh: string;
+  hardEn: string;
+  hardZh: string;
+  easyTitleEn: string;
+  easyTitleZh: string;
+  easyEn: string;
+  easyZh: string;
+};
+
+/** Copy for a brand story. `layout` picks the page rhythm — party, stadium, or fan. */
+export type TemplateStory = {
+  layout: 'party' | 'stadium' | 'fan';
+  lead: StoryBlock;
+  support: StoryBlock;
+  beats: readonly StoryBeat[];
+  diy: StoryDiy;
+};
+
+export type FaqEntry = {
+  id: string;
+  qEn: string;
+  qZh: string;
+  aEn: string;
+  aZh: string;
+};
+
+export type LivePack = {
+  cases: readonly TemplateCase[];
+  story: TemplateStory;
+  faq: readonly FaqEntry[];
+};
+
+export function localizeFaq(items: readonly FaqEntry[] | undefined, lang: 'en' | 'zh') {
+  return (items ?? []).map((item) => ({
+    q: lang === 'zh' ? item.qZh : item.qEn,
+    a: lang === 'zh' ? item.aZh : item.aEn,
+  }));
+}
 
 /**
  * Per-brand theme. Required for every new site — logo+accent alone is not enough.
@@ -56,6 +132,12 @@ export type Template = {
   theme: BrandTheme;
   disclaimerEn: string;
   disclaimerZh: string;
+  /** Before → after examples. Live templates ship at least one. */
+  cases?: readonly TemplateCase[];
+  /** Product story. Rendered with the layout named in `story.layout`. */
+  story?: TemplateStory;
+  /** On-page keyword questions for this look. */
+  faq?: readonly FaqEntry[];
 };
 
 export const TEMPLATES: readonly Template[] = [
@@ -86,6 +168,7 @@ export const TEMPLATES: readonly Template[] = [
     theme: { accent: 'magenta', heroPreset: 'split', typeVoice: 'playful', cardStyle: 'glow', coverStyle: 'orb', ambience: 'noise' },
     disclaimerEn: 'Adult consent only · no minors. Not affiliated with Karol G, CapCut, or any label.',
     disclaimerZh: '仅限成人同意照片 · 禁止未成年人。非 Karol G / CapCut 官方。',
+    ...BBY_LIVE,
   },
   {
     slug: 'kiss-cam',
@@ -115,6 +198,7 @@ export const TEMPLATES: readonly Template[] = [
     disclaimerEn:
       'Adult consent only · no minors. Fan-made AI remix — not official Coldplay / CapCut. No real concert footage.',
     disclaimerZh: '仅限成人同意 · 禁止未成年人。粉丝向 AI remix · 非 Coldplay / CapCut 官方。不含真实演唱会素材。',
+    ...KISS_LIVE,
   },
   {
     slug: 'ceiling-fan',
@@ -144,6 +228,7 @@ export const TEMPLATES: readonly Template[] = [
     disclaimerEn:
       'Adult consent only · no minors. Pure AI — never strap a phone to a spinning fan. Not affiliated with CapCut.',
     disclaimerZh: '仅限成人同意 · 禁止未成年人。纯 AI · 切勿把手机绑在旋转风扇上。非 CapCut 官方。',
+    ...FAN_LIVE,
   },
   {
     slug: 'bulin-47',
@@ -289,7 +374,7 @@ export const TEMPLATES: readonly Template[] = [
     disclaimerEn: 'Coming soon · adult consent will be required.',
     disclaimerZh: '即将上线 · 上线后需成人同意照片。',
   },
-] as const;
+];
 
 export const TEMPLATE_SLUGS = TEMPLATES.map((t) => t.slug);
 

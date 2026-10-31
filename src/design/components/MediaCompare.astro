@@ -1,0 +1,42 @@
+---
+interface Props {
+  poster?: string;
+  alt?: string;
+  originalLabel: string;
+  resultLabel: string;
+  note?: string;
+  /** When true, the original frame can be replaced after upload (studio). */
+  liveOriginal?: boolean;
+}
+
+const { poster, alt = '', originalLabel, resultLabel, note, liveOriginal } = Astro.props;
+---
+<div class="compare-block">
+  <div class="compare">
+    <figure class="compare-frame">
+      <div class="media-slot">
+        <img
+          class="media-poster"
+          data-compare-original={liveOriginal ? '' : undefined}
+          src="/brand/sample-original.svg"
+          alt=""
+          width="360"
+          height="640"
+        />
+      </div>
+      <figcaption data-compare-caption={liveOriginal ? '' : undefined}>{originalLabel}</figcaption>
+    </figure>
+    <span class="compare-arrow" aria-hidden="true">→</span>
+    <figure class="compare-frame">
+      <div class="media-slot">
+        {poster ? (
+          <img class="media-poster" src={poster} alt={alt} width="360" height="640" />
+        ) : (
+          <div class="media-fallback"></div>
+        )}
+      </div>
+      <figcaption>{resultLabel}</figcaption>
+    </figure>
+  </div>
+  {note && <p class="compare-note">{note}</p>}
+</div>

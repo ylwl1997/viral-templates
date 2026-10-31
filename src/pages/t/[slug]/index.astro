@@ -6,6 +6,7 @@ import BrandHero from '../../../design/components/BrandHero.astro';
 import StepsHow from '../../../design/components/StepsHow.astro';
 import PricingGrid from '../../../design/components/PricingGrid.astro';
 import FinalCta from '../../../design/components/FinalCta.astro';
+import MediaCompare from '../../../design/components/MediaCompare.astro';
 
 export function getStaticPaths() {
   return TEMPLATES.map((template) => ({
@@ -34,17 +35,31 @@ const theme = t.theme;
     <>
       <BrandHero
         preset={theme.heroPreset}
-        eyebrow={`9:16 · ${t.durationEn}`}
+        eyebrow={t.durationEn}
         eyebrowLogo={t.logo}
         title={t.heroEn}
-        lede={`${t.taglineEn}. Needs ${t.photoCount} photo${t.photoCount === 2 ? 's' : ''} — upload in Create. Adult consent required.`}
+        lede={`${t.taglineEn}. Adult consent required.`}
         logo={t.logo}
         mediaSrc={t.poster}
-        mediaAlt={`${t.displayName} 9:16 preview`}
-        rail={theme.heroPreset === 'editorial' ? [t.displayName, `${t.photoCount} photos`, t.durationEn, 'AI remix'] : undefined}
-        primaryCta={{ href: createHref, label: 'Create now' }}
-        secondaryCta={{ href: '#how', label: 'How it works' }}
+        mediaAlt={`${t.displayName} preview`}
+        rail={theme.heroPreset === 'editorial' ? [t.displayName, `${t.photoCount} ${t.photoCount === 2 ? 'photos' : 'photo'}`, t.durationEn] : undefined}
+        primaryCta={{ href: createHref, label: 'Create' }}
+        secondaryCta={{ href: '#look', label: 'See the look' }}
       />
+
+      <section class="section wrap" id="look">
+        <p class="eyebrow">The look</p>
+        <h2>{t.photoCount === 2 ? 'Two photos in.' : 'One photo in.'} A clip in this frame.</h2>
+        <p class="sub">
+          A sample still beside the template. Your own photo goes in on Create. Nothing here is a finished render.
+        </p>
+        <MediaCompare
+          poster={t.poster}
+          alt={`${t.displayName} template look`}
+          originalLabel="Sample still"
+          resultLabel="Template look"
+        />
+      </section>
 
       <section class="section wrap" id="how">
         <h2>How it works</h2>
@@ -56,7 +71,7 @@ const theme = t.theme;
 
       <section class="section wrap" id="pricing">
         <h2>Pricing</h2>
-        <p class="sub">Demo figures — checkout opens when payments are ready.</p>
+        <p class="sub">Demo prices. Checkout opens when payments are ready.</p>
         <PricingGrid
           oneShotLabel="One-shot"
           oneShotUsd={oneShot}
@@ -74,8 +89,8 @@ const theme = t.theme;
 
       <FinalCta
         title={`Create with ${t.displayName}`}
-        lede="Upload, confirm consent, then generate when ready."
-        primary={{ href: createHref, label: 'Create now' }}
+        lede="Upload, confirm consent, then generate."
+        primary={{ href: createHref, label: 'Create' }}
         secondary={{ href: '#pricing', label: 'Pricing' }}
       />
     </>

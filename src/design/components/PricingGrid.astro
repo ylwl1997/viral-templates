@@ -14,9 +14,10 @@ interface Props {
   note?: string;
   /** @deprecated use note */
   stubNote?: string;
+  popularLabel?: string;
 }
 
-const { oneShotLabel, oneShotUsd, oneShotMeta, packs, note, stubNote } = Astro.props;
+const { oneShotLabel, oneShotUsd, oneShotMeta, packs, note, stubNote, popularLabel = 'Popular' } = Astro.props;
 const footerNote = note || stubNote;
 ---
 <div class="pricing-grid">
@@ -27,9 +28,12 @@ const footerNote = note || stubNote;
   </div>
   {packs.map((p) => (
     <div class:list={['price-card', p.popular && 'popular']}>
-      <h3>{p.label}{p.popular ? ' · ★' : ''}</h3>
+      <h3>
+        {p.label}
+        {p.popular && <span class="popular-tag">{popularLabel}</span>}
+      </h3>
       <p class="amount">${p.usd}</p>
-      <p class="meta">{p.credits} credits · {p.popular ? 'Popular' : 'Demo'}</p>
+      <p class="meta">{p.credits} credits · Demo</p>
     </div>
   ))}
 </div>

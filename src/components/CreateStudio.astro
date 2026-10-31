@@ -2,6 +2,7 @@
 import { SITE, type Lang, keywordPath, pathFor } from '../lib/site';
 import { accountHref, signInHref } from '../lib/auth';
 import type { Template } from '../lib/templates';
+import MediaCompare from '../design/components/MediaCompare.astro';
 
 interface Props {
   template: Template;
@@ -19,18 +20,15 @@ const creditsHref = accountHref(lang, 'credits');
 const creationsHref = accountHref(lang, 'creations');
 const generateReady = SITE.falConfigured;
 const payReady = SITE.waffoConfigured;
+const duration = lang === 'zh' ? t.durationZh : t.durationEn;
+const name = lang === 'zh' ? t.displayNameZh : t.displayName;
 ---
-<section class="section wrap create-studio" id={uid} data-generate-ready={generateReady ? '1' : '0'} data-pay-ready={payReady ? '1' : '0'}>
-  <div class="callout warn create-consent">
-    <strong>{label('Adult consent only.', '仅限成人同意。')}</strong>
-    {' '}{label('No minors. Confirm below before generate.', '禁止未成年人。生成前请勾选确认。')}
-  </div>
-
+<section class="wrap create-studio" id={uid} data-generate-ready={generateReady ? '1' : '0'} data-pay-ready={payReady ? '1' : '0'}>
   <div class="credits-bar" data-credits-bar hidden>
     <div>
-      <strong>{label('Credits:', '积分：')}</strong>
-      <span data-credits-balance>—</span>
-      <a href={creditsHref} style="margin-left:0.65rem;font-size:0.88rem">{label('Account', '账户')}</a>
+      <strong>{label('Credits', '积分')}</strong>
+      {' '}<span data-credits-balance>—</span>
+      <a href={creditsHref} style="margin-left:0.65rem">{label('Account', '账户')}</a>
     </div>
     <div>
       {label('From', '起')} <strong>${price}</strong>
@@ -38,91 +36,130 @@ const payReady = SITE.waffoConfigured;
     </div>
   </div>
 
-  <div class="studio" style="margin-top:1.25rem">
-    <div>
-      {t.photoCount === 2 ? (
-        <div class="upload-slots" data-slots="2">
-          {slots.map((i) => (
-            <label class="slot" data-slot={i}>
-              <input type="file" accept="image/jpeg,image/png,image/webp" class="slot-file" data-slot={i} />
-              <span class="slot-label">
-                {label(`Photo ${i === 0 ? 'A' : 'B'}`, `照片 ${i === 0 ? 'A' : 'B'}`)}
-                <br /><small>{label('Person / pet', '人物 / 宠物')}</small>
-              </span>
-              <img class="slot-preview" data-slot={i} alt="" hidden />
+  <div class="studio-board">
+    <div class="card studio-card">
+      <div class="studio-step">
+        <span class="step-index">1</span>
+        <div>
+          <h3>{label('Your photo', '你的照片')}</h3>
+          {t.photoCount === 2 ? (
+            <div class="upload-slots" data-slots="2">
+              {slots.map((i) => (
+                <label class="slot" data-slot={i}>
+                  <input type="file" accept="image/jpeg,image/png,image/webp" class="slot-file" data-slot={i} />
+                  <span class="slot-label">
+                    {label(`Photo ${i === 0 ? 'A' : 'B'}`, `照片 ${i === 0 ? 'A' : 'B'}`)}
+                    <br /><small>JPG, PNG, WebP</small>
+                  </span>
+                  <img class="slot-preview" data-slot={i} alt="" hidden />
+                </label>
+              ))}
+            </div>
+          ) : (
+            <label class="upload-zone" for={`${uid}-photo`}>
+              <input id={`${uid}-photo`} class="slot-file" data-slot="0" type="file" accept="image/jpeg,image/png,image/webp" />
+              <div id={`${uid}-ph`}>
+                <strong>{label('Drop a photo or click to upload', '拖放照片，或点击上传')}</strong>
+                <div class="hint">JPG, PNG, WebP · {label('you need the rights to use it', '需拥有使用权')}</div>
+              </div>
+              <img id={`${uid}-preview`} class="preview-img slot-preview" data-slot="0" alt="" hidden />
             </label>
-          ))}
-        </div>
-      ) : (
-        <label class="upload-zone" for={`${uid}-photo`}>
-          <input id={`${uid}-photo`} class="slot-file" data-slot="0" type="file" accept="image/jpeg,image/png,image/webp" />
-          <div id={`${uid}-ph`}>
-            <strong>{label('Drop photo or click to upload', '拖放或点击上传照片')}</strong>
-            <div class="hint">JPG / PNG / WebP · {label('you must own rights', '需拥有使用权')}</div>
-          </div>
-          <img id={`${uid}-preview`} class="preview-img slot-preview" data-slot="0" alt="Preview" hidden />
-        </label>
-      )}
-      <label class="consent-check">
-        <input id={`${uid}-consent`} type="checkbox" />
-        <span>
-          {label(
-            `I confirm ${t.photoCount === 2 ? 'these photos show' : 'this photo shows'} adult(s) (18+) or pets with permission, and I have rights to use ${t.photoCount === 2 ? 'them' : 'it'}.`,
-            `我确认${t.photoCount === 2 ? '这些照片为' : '该照片为'}成人（18+）或经授权宠物，且我拥有使用权。`
           )}
-        </span>
-      </label>
-    </div>
+        </div>
+      </div>
 
-    <div class="card studio-generate-panel">
-      <h3>{label('Generate', '生成')}</h3>
-      <p style="margin-bottom:0.35rem;color:var(--muted);font-size:0.85rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:650">
-        {label('Output', '输出')}
-      </p>
-      <p style="margin-bottom:1rem">
-        vertical 9:16 · {lang === 'zh' ? t.durationZh : t.durationEn}
-      </p>
-      <button
-        class="btn btn-primary"
-        id={`${uid}-generate`}
-        type="button"
-        style="width:100%"
-        disabled
-        aria-disabled="true"
-      >
-        {label('Generate', '生成')}
-      </button>
-      <button
-        class="btn btn-ghost"
-        id={`${uid}-pay`}
-        type="button"
-        style="width:100%;margin-top:0.65rem"
-        disabled={!payReady}
-        aria-disabled={!payReady ? 'true' : undefined}
-      >
-        {payReady ? label('Pay', '支付') : label('Coming soon', '即将开放')}
-      </button>
+      <div class="studio-step">
+        <span class="step-index">2</span>
+        <div>
+          <h3>{label('Look', '风格')}</h3>
+          <slot name="look">
+            <p class="look-static">{name} · {duration}</p>
+          </slot>
+        </div>
+      </div>
+
+      <div class="studio-step">
+        <span class="step-index">3</span>
+        <div>
+          <h3>{label('Length', '时长')}</h3>
+          <div class="length-option">
+            <strong>{duration}</strong>
+            <span>${price} · {SITE.pricing.creditPerGenerate} {label(SITE.pricing.creditPerGenerate === 1 ? 'credit' : 'credits', '积分')}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="studio-step">
+        <span class="step-index">4</span>
+        <div>
+          <h3>{label('Consent', '授权')}</h3>
+          <label class="consent-check">
+            <input id={`${uid}-consent`} type="checkbox" />
+            <span>
+              {label(
+                `This photo is of me, or I have permission. ${t.photoCount === 2 ? 'Both people are' : 'They are'} 18 or older, or it is a pet with the owner’s permission.`,
+                `这是我本人，或我已获得授权。${t.photoCount === 2 ? '两人均' : '对方'}年满 18 岁，或为已获主人同意的宠物。`
+              )}
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div class="studio-actions">
+        <button
+          class="btn btn-primary"
+          id={`${uid}-generate`}
+          type="button"
+          disabled
+          aria-disabled="true"
+        >
+          {label('Generate', '生成')}
+        </button>
+        <button
+          class="btn btn-ghost"
+          id={`${uid}-pay`}
+          type="button"
+          disabled={!payReady}
+          aria-disabled={!payReady ? 'true' : undefined}
+        >
+          {payReady ? label('Pay', '支付') : label('Coming soon', '即将开放')}
+        </button>
+      </div>
       <div class="status-box" id={`${uid}-status`}>
         {label(
-          'Upload photo(s) and confirm consent to continue.',
-          '请上传照片并确认授权以继续。'
+          'Add a photo and confirm consent to continue.',
+          '上传照片并确认授权后才能继续。'
         )}
       </div>
       <p data-job-follow hidden>
         <a data-job-download hidden rel="noopener noreferrer"></a>
         <a data-creations-link href={creationsHref}>{label('View in Creations', '在作品中查看')}</a>
       </p>
-      <p class="debug-only" data-debug-only hidden style="margin-top:1rem;font-size:0.88rem;color:var(--muted)">
+      <p class="debug-only" data-debug-only hidden>
         {label(
-          'Debug: generate/pay backends not configured on this host.',
-          '调试：本主机未配置生成/支付后端。'
+          'Debug: generate and pay are not configured on this host.',
+          '调试：本主机未配置生成与支付。'
         )}
       </p>
-      <p style="margin-top:0.75rem;font-size:0.88rem;">
-        <a href={home}>← {label('Back to home', '返回首页')}</a>
+      <p class="studio-note">
+        <a href={home}>{label('Back to this look', '返回该风格')}</a>
         · <a href={pathFor(lang, '/faq/')}>FAQ</a>
       </p>
     </div>
+
+    <aside class="studio-side">
+      <MediaCompare
+        poster={t.poster}
+        alt={label(`${name} template look`, `${name} 模板效果`)}
+        originalLabel={label('Sample still', '示例原片')}
+        resultLabel={label('Template look', '模板效果')}
+        note={label(
+          'The still on the left is a sample. Your upload replaces it. Generate saves a queued job — a finished clip is not available yet.',
+          '左侧是示例静帧，上传后会换成你的照片。生成只会把任务排进账户，目前还没有成片。'
+        )}
+        liveOriginal
+      />
+    </aside>
   </div>
 </section>
 
@@ -164,13 +201,20 @@ const payReady = SITE.waffoConfigured;
         files[slot] = file;
         const preview = root.querySelector('.slot-preview[data-slot="' + slot + '"]');
         const placeholder = document.getElementById(uid + '-ph');
+        var url = URL.createObjectURL(file);
         if (preview) {
-          preview.src = URL.createObjectURL(file);
+          preview.src = url;
           preview.hidden = false;
         }
         if (placeholder) placeholder.hidden = true;
         const slotEl = input.closest('.slot');
         if (slotEl) slotEl.classList.add('has-file');
+        if (slot === '0') {
+          var compare = root.querySelector('[data-compare-original]');
+          var cap = root.querySelector('[data-compare-caption]');
+          if (compare) compare.src = url;
+          if (cap) cap.textContent = lang === 'zh' ? '你的照片' : 'Your photo';
+        }
         setStatus(
           lang === 'zh' ? '照片已就绪。请确认授权。' : 'Photo ready. Confirm consent to continue.',
           'cfg'

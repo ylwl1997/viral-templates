@@ -1,184 +1,180 @@
 /*
-  Brand themes — same kit structure, distinct look.
-  Applied via body[data-theme="{slug}"] + data-hero / data-voice / data-card / data-cover / data-ambience.
-  Hub (apex) uses default :root tokens — gallery of brands, not a recolored brand page.
+  Brand themes — same kit, different paper, type, and composition.
+  body[data-theme] + data-hero / data-voice / data-card / data-cover / data-ambience.
+  Hub stays on :root cream. Accent colors links and eyebrows. Buttons stay ink.
 */
 
-/* —— Type voices (display font + weight/tracking must be eye-distinct) —— */
+/* —— Type voices —— */
 [data-voice="playful"] {
-  --font-weight-display: 800;
-  --font-weight-title: 720;
-  --letter-display: -0.042em;
-  --letter-title: -0.03em;
-  --type-hero: clamp(2.25rem, 5.8vw, 3.55rem);
-  --leading-tight: 1.06;
-}
-[data-voice="bold"] {
-  --font-weight-display: 860;
-  --font-weight-title: 780;
-  --letter-display: -0.048em;
-  --letter-title: -0.038em;
-  --type-hero: clamp(2.45rem, 6.4vw, 4rem);
+  --font-display: "Fraunces", "Noto Serif SC", Georgia, serif;
+  --font-weight-display: 500;
+  --font-weight-title: 560;
+  --letter-display: -0.025em;
+  --letter-title: -0.02em;
+  --type-hero: clamp(2.6rem, 5.2vw, 4rem);
   --leading-tight: 1.04;
 }
-[data-voice="cool"] {
-  --font-weight-display: 680;
+[data-voice="bold"] {
+  --font-display: "Fraunces", "Noto Serif SC", Georgia, serif;
+  --font-weight-display: 700;
   --font-weight-title: 650;
-  --letter-display: -0.022em;
-  --letter-title: -0.016em;
-  --type-hero: clamp(2rem, 4.8vw, 3.05rem);
+  --letter-display: -0.04em;
+  --letter-title: -0.03em;
+  --type-hero: clamp(3rem, 6.6vw, 5rem);
+  --leading-tight: 0.98;
+}
+[data-voice="cool"] {
+  --font-display: "Outfit", "PingFang SC", "Noto Sans SC", ui-sans-serif, sans-serif;
+  --font-weight-display: 500;
+  --font-weight-title: 500;
+  --letter-display: -0.03em;
+  --letter-title: -0.02em;
+  --type-hero: clamp(2.15rem, 4.4vw, 3.15rem);
   --type-body: 1.05rem;
-  --leading-tight: 1.16;
+  --leading-tight: 1.12;
 }
 
-/* —— Card surface styles —— */
+/* —— Card treatments (quiet; still distinguishable) —— */
 [data-card="glow"] {
-  --card-edge: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), 0 12px 40px var(--glow);
-  --card-texture: radial-gradient(460px 200px at 12% 0%, var(--accent-soft), transparent 72%);
+  --card-edge: 0 18px 40px color-mix(in srgb, var(--accent) 12%, transparent);
+  --card-texture: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 42%);
 }
 [data-card="ribbon"] {
   --card-edge: inset 3px 0 0 var(--accent);
-  --card-texture: linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, transparent), transparent 42%);
+  --card-texture: none;
 }
 [data-card="mesh"] {
-  --card-edge: 0 10px 32px rgba(0, 0, 0, 0.28);
-  --card-texture:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 44%),
-    linear-gradient(315deg, color-mix(in srgb, var(--accent-2) 14%, transparent) 0%, transparent 42%);
+  --card-edge: none;
+  --card-texture: repeating-linear-gradient(
+    -32deg,
+    transparent,
+    transparent 10px,
+    color-mix(in srgb, var(--accent) 9%, transparent) 10px,
+    color-mix(in srgb, var(--accent) 9%, transparent) 11px
+  );
 }
 [data-card="soft"] {
-  --card-edge: none;
+  --card-edge: 0 1px 0 rgba(28, 25, 23, 0.05);
   --card-texture: none;
 }
 
-/* —— Accent + brand skins (live 3 must read as different sites) —— */
+/* —— Live brands —— */
 
-/* Bby Wow — party / purple-black + pink glow */
+/* Bby Wow — blush paper, soft serif, poster-left split */
 [data-theme="bby-wow"],
 .kw-site.accent-magenta {
-  --accent: #f472b6;
-  --accent-2: #c084fc;
-  --accent-bright: #fda4d5;
-  --accent-soft: rgba(244, 114, 182, 0.18);
+  --accent: #9d3458;
+  --accent-2: #9d3458;
+  --accent-bright: #7a2343;
+  --accent-soft: rgba(157, 52, 88, 0.08);
   --accent-dim: var(--accent-soft);
-  --glow: rgba(244, 114, 182, 0.38);
-  --glow-2: rgba(192, 132, 252, 0.28);
-  --shadow-glow: 0 0 56px rgba(244, 114, 182, 0.34);
-  --link: #fda4d5;
-  --link-hover: #fbcfe8;
-  --accent-ink: #1a0614;
-  --cover-a: rgba(244, 114, 182, 0.52);
-  --cover-b: rgba(192, 132, 252, 0.38);
-  --cover-c: #1c1028;
-  --bg: #090510;
-  --bg-elevated: #140a1c;
-  --surface: #1e1430;
-  --surface-2: #2a1c3e;
-  --surface-3: #362650;
+  --link: #9d3458;
+  --link-hover: #7a2343;
+  --eyebrow: #9d3458;
+  --accent-ink: #fffaf8;
+  --cover-a: rgba(157, 52, 88, 0.2);
+  --cover-b: rgba(90, 40, 60, 0.08);
+  --cover-c: #f6e4ea;
+  --bg: #fbf3f0;
+  --bg-elevated: #fffaf8;
+  --surface: #fffaf8;
+  --surface-2: #f6ebe7;
+  --surface-3: #eddcd6;
 }
-[data-theme="bby-wow"] {
-  --ambience-opacity: 0.085;
-}
+[data-theme="bby-wow"] { --ambience-opacity: 0.5; }
 
-/* Kiss Cam — stadium / warm charcoal + amber glow */
+/* Kiss Cam — newsprint, heavy serif, left rule */
 [data-theme="kiss-cam"],
 .kw-site.accent-amber {
-  --accent: #fbbf24;
-  --accent-2: #f59e0b;
-  --accent-bright: #fcd34d;
-  --accent-soft: rgba(251, 191, 36, 0.16);
+  --accent: #8a5a12;
+  --accent-2: #8a5a12;
+  --accent-bright: #6d460c;
+  --accent-soft: rgba(138, 90, 18, 0.1);
   --accent-dim: var(--accent-soft);
-  --glow: rgba(251, 191, 36, 0.32);
-  --glow-2: rgba(245, 158, 11, 0.22);
-  --shadow-glow: 0 0 48px rgba(251, 191, 36, 0.28);
-  --link: #fcd34d;
-  --link-hover: #fde68a;
-  --accent-ink: #1a1200;
-  --cover-a: rgba(251, 191, 36, 0.48);
-  --cover-b: rgba(245, 158, 11, 0.34);
-  --cover-c: #16120a;
-  --bg: #0c0a06;
-  --bg-elevated: #161208;
-  --surface: #221c10;
-  --surface-2: #2e2616;
-  --surface-3: #3a3220;
+  --link: #8a5a12;
+  --link-hover: #6d460c;
+  --eyebrow: #8a5a12;
+  --accent-ink: #fbf8f1;
+  --cover-a: rgba(138, 90, 18, 0.18);
+  --cover-b: rgba(60, 40, 12, 0.08);
+  --cover-c: #efe4cc;
+  --bg: #f3efe4;
+  --bg-elevated: #fbf8f1;
+  --surface: #fbf8f1;
+  --surface-2: #efe8d8;
+  --surface-3: #e4d9c4;
 }
-[data-theme="kiss-cam"] {
-  --ambience-opacity: 0.07;
-}
+[data-theme="kiss-cam"] { --ambience-opacity: 0.7; }
 
-/* Ceiling Fan — ink-teal / cyan-green (pull away from Hub sky) */
+/* Ceiling Fan — cool mist, grotesque, flat hatch */
 [data-theme="ceiling-fan"],
 .kw-site.accent-cyan {
-  --accent: #2dd4bf;
-  --accent-2: #14b8a6;
-  --accent-bright: #5eead4;
-  --accent-soft: rgba(45, 212, 191, 0.16);
+  --accent: #0e5c56;
+  --accent-2: #0e5c56;
+  --accent-bright: #0a4540;
+  --accent-soft: rgba(14, 92, 86, 0.08);
   --accent-dim: var(--accent-soft);
-  --glow: rgba(45, 212, 191, 0.32);
-  --glow-2: rgba(20, 184, 166, 0.2);
-  --shadow-glow: 0 0 44px rgba(45, 212, 191, 0.28);
-  --link: #5eead4;
-  --link-hover: #99f6e4;
-  --accent-ink: #041412;
-  --cover-a: rgba(45, 212, 191, 0.45);
-  --cover-b: rgba(20, 184, 166, 0.3);
-  --cover-c: #06181c;
-  --bg: #031014;
-  --bg-elevated: #061a20;
-  --surface: #0c242c;
-  --surface-2: #143038;
-  --surface-3: #1c3c44;
+  --link: #0e5c56;
+  --link-hover: #0a4540;
+  --eyebrow: #0e5c56;
+  --accent-ink: #f4f8f7;
+  --cover-a: rgba(14, 92, 86, 0.16);
+  --cover-b: rgba(20, 50, 48, 0.06);
+  --cover-c: #e3eeeb;
+  --bg: #eef3f1;
+  --bg-elevated: #f7faf9;
+  --surface: #f7faf9;
+  --surface-2: #e4eeeb;
+  --surface-3: #d5e3df;
 }
-[data-theme="ceiling-fan"] {
-  --ambience-opacity: 0.06;
-}
+[data-theme="ceiling-fan"] { --ambience-opacity: 0; }
 
-/* Soon brands — accent only until they ship their own preset */
+/* —— Soon brands: own paper, not a dark leftover —— */
 .kw-site.accent-violet,
 [data-theme="smalltown-boy-cats"] {
-  --accent: #a78bfa; --accent-2: #8b5cf6; --accent-bright: #c4b5fd;
-  --accent-soft: rgba(167, 139, 250, 0.14); --glow: rgba(167, 139, 250, 0.28);
-  --glow-2: rgba(139, 92, 246, 0.18);
-  --link: #c4b5fd; --link-hover: #ddd6fe; --accent-ink: #120a24;
-  --cover-a: rgba(167, 139, 250, 0.35); --cover-b: rgba(139, 92, 246, 0.2); --cover-c: #12101c;
+  --accent: #5b4596; --accent-2: #5b4596; --accent-bright: #433476;
+  --accent-soft: rgba(91, 69, 150, 0.08);
+  --link: #5b4596; --link-hover: #433476; --eyebrow: #5b4596; --accent-ink: #faf8ff;
+  --cover-a: rgba(91, 69, 150, 0.16); --cover-b: rgba(40, 30, 70, 0.06); --cover-c: #ece6f6;
+  --bg: #f4f1f8; --bg-elevated: #fbfaff; --surface: #fbfaff; --surface-2: #efeaf6; --surface-3: #e3dced;
 }
 .kw-site.accent-rose,
 [data-theme="clapping-cat"] {
-  --accent: #fb7185; --accent-2: #f43f5e; --accent-bright: #fda4af;
-  --accent-soft: rgba(251, 113, 133, 0.14); --glow: rgba(251, 113, 133, 0.28);
-  --glow-2: rgba(244, 63, 94, 0.16);
-  --link: #fda4af; --link-hover: #fecdd3; --accent-ink: #1a060c;
-  --cover-a: rgba(251, 113, 133, 0.35); --cover-b: rgba(244, 63, 94, 0.18); --cover-c: #160a10;
+  --accent: #9f3d4e; --accent-2: #9f3d4e; --accent-bright: #7d2d3c;
+  --accent-soft: rgba(159, 61, 78, 0.08);
+  --link: #9f3d4e; --link-hover: #7d2d3c; --eyebrow: #9f3d4e; --accent-ink: #fffafb;
+  --cover-a: rgba(159, 61, 78, 0.16); --cover-b: rgba(80, 30, 40, 0.06); --cover-c: #f8e6ea;
+  --bg: #faf3f4; --bg-elevated: #fffafa; --surface: #fffafa; --surface-2: #f6e8eb; --surface-3: #eddde1;
 }
 .kw-site.accent-lime,
 [data-theme="knight-cat"] {
-  --accent: #a3e635; --accent-2: #84cc16; --accent-bright: #bef264;
-  --accent-soft: rgba(163, 230, 53, 0.14); --glow: rgba(163, 230, 53, 0.28);
-  --glow-2: rgba(132, 204, 22, 0.16);
-  --accent-ink: #14200a; --link: #bef264; --link-hover: #d9f99d;
-  --cover-a: rgba(163, 230, 53, 0.32); --cover-b: rgba(132, 204, 22, 0.16); --cover-c: #0e140a;
+  --accent: #3f6212; --accent-2: #3f6212; --accent-bright: #2f4a0c;
+  --accent-soft: rgba(63, 98, 18, 0.1);
+  --link: #3f6212; --link-hover: #2f4a0c; --eyebrow: #3f6212; --accent-ink: #f7faf2;
+  --cover-a: rgba(63, 98, 18, 0.16); --cover-b: rgba(30, 50, 12, 0.06); --cover-c: #e7f0d8;
+  --bg: #f3f6ec; --bg-elevated: #fbfcf7; --surface: #fbfcf7; --surface-2: #e8efdc; --surface-3: #dbe6cc;
 }
 .kw-site.accent-orange,
 [data-theme="bulin-47"] {
-  --accent: #fb923c; --accent-2: #f97316; --accent-bright: #fdba74;
-  --accent-soft: rgba(251, 146, 60, 0.14); --glow: rgba(251, 146, 60, 0.28);
-  --glow-2: rgba(249, 115, 22, 0.16);
-  --link: #fdba74; --link-hover: #fed7aa; --accent-ink: #1a0c04;
-  --cover-a: rgba(251, 146, 60, 0.35); --cover-b: rgba(249, 115, 22, 0.18); --cover-c: #16100a;
+  --accent: #9a4b16; --accent-2: #9a4b16; --accent-bright: #7a3a10;
+  --accent-soft: rgba(154, 75, 22, 0.1);
+  --link: #9a4b16; --link-hover: #7a3a10; --eyebrow: #9a4b16; --accent-ink: #fffaf6;
+  --cover-a: rgba(154, 75, 22, 0.16); --cover-b: rgba(80, 40, 10, 0.06); --cover-c: #f6e6d4;
+  --bg: #f8f3ea; --bg-elevated: #fffaf5; --surface: #fffaf5; --surface-2: #f3e7d8; --surface-3: #ead9c4;
 }
 .kw-site.accent-sky,
 [data-theme="zombie-love"] {
-  --accent: #38bdf8; --accent-2: #0ea5e9; --accent-bright: #7dd3fc;
-  --accent-soft: rgba(56, 189, 248, 0.14); --glow: rgba(56, 189, 248, 0.22);
-  --glow-2: rgba(14, 165, 233, 0.14);
-  --cover-a: rgba(56, 189, 248, 0.3); --cover-b: rgba(14, 165, 233, 0.16); --cover-c: #0a1218;
+  --accent: #1d4e6e; --accent-2: #1d4e6e; --accent-bright: #163c56;
+  --accent-soft: rgba(29, 78, 110, 0.08);
+  --link: #1d4e6e; --link-hover: #163c56; --eyebrow: #1d4e6e; --accent-ink: #f5f9fb;
+  --cover-a: rgba(29, 78, 110, 0.16); --cover-b: rgba(15, 30, 45, 0.06); --cover-c: #e3ebf2;
+  --bg: #eef2f5; --bg-elevated: #f7f9fb; --surface: #f7f9fb; --surface-2: #e4ebf1; --surface-3: #d5e0e9;
 }
 .kw-site.accent-slate,
 [data-theme="car-jump"] {
-  --accent: #94a3b8; --accent-2: #64748b; --accent-bright: #cbd5e1;
-  --accent-soft: rgba(148, 163, 184, 0.14); --glow: rgba(148, 163, 184, 0.25);
-  --glow-2: rgba(100, 116, 139, 0.14);
-  --link: #cbd5e1; --link-hover: #e2e8f0; --accent-ink: #0a0e14;
-  --cover-a: rgba(148, 163, 184, 0.28); --cover-b: rgba(100, 116, 139, 0.16); --cover-c: #101418;
+  --accent: #3f4654; --accent-2: #3f4654; --accent-bright: #2c3340;
+  --accent-soft: rgba(63, 70, 84, 0.08);
+  --link: #3f4654; --link-hover: #2c3340; --eyebrow: #3f4654; --accent-ink: #f7f7f6;
+  --cover-a: rgba(63, 70, 84, 0.14); --cover-b: rgba(20, 24, 30, 0.06); --cover-c: #e6e5e2;
+  --bg: #f2f1ef; --bg-elevated: #fafaf8; --surface: #fafaf8; --surface-2: #e8e6e2; --surface-3: #dbd8d2;
 }

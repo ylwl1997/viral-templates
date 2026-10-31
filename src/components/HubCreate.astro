@@ -9,44 +9,39 @@ const { lang = 'en' } = Astro.props;
 const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
 const first = LIVE_TEMPLATES[0];
 ---
-<section class="section wrap hub-create" id="hub-create" data-default={first?.slug}>
-  <div class="picker-bar">
-    <span class="picker-label">{label('Template', '模板')}</span>
-    <div class="picker-row" role="tablist" aria-label={label('Choose template', '选择模板')}>
-      {LIVE_TEMPLATES.map((t, i) => (
-        <button
-          type="button"
-          role="tab"
-          class:list={['picker-chip', i === 0 && 'is-on']}
-          data-pick={t.slug}
-          aria-selected={i === 0 ? 'true' : 'false'}
-        >
-          <img src={t.logo} width="22" height="22" alt="" />
-          <span>{lang === 'zh' ? t.displayNameZh : t.displayName}</span>
-        </button>
-      ))}
-    </div>
-    <p class="picker-hint">
-      {label('Prefer a dedicated brand page?', '想打开独立品牌工作室？')}
-      {LIVE_TEMPLATES.map((t, i) => (
-        <a
-          class="brand-link"
-          data-brand={t.slug}
-          href={keywordPath(lang, t.slug, 'create')}
-          hidden={i !== 0}
-        >
-          {lang === 'zh' ? t.displayNameZh : t.displayName} →
-        </a>
-      ))}
-    </p>
-  </div>
-
+<div class="hub-create" id="hub-create" data-default={first?.slug}>
   {LIVE_TEMPLATES.map((t, i) => (
     <div class="hub-panel" data-panel={t.slug} hidden={i !== 0}>
-      <CreateStudio template={t} lang={lang} />
+      <CreateStudio template={t} lang={lang}>
+        <div slot="look">
+          <div class="picker-row" role="tablist" aria-label={label('Choose a look', '选择风格')}>
+            {LIVE_TEMPLATES.map((opt) => (
+              <button
+                type="button"
+                role="tab"
+                class:list={['picker-chip', opt.slug === t.slug && 'is-on']}
+                data-pick={opt.slug}
+                data-voice={opt.theme.typeVoice}
+                data-card={opt.theme.cardStyle}
+                data-cover={opt.theme.coverStyle}
+                data-ambience={opt.theme.ambience}
+                aria-selected={opt.slug === t.slug ? 'true' : 'false'}
+              >
+                <img src={opt.logo} width="22" height="22" alt="" />
+                <span>{lang === 'zh' ? opt.displayNameZh : opt.displayName}</span>
+              </button>
+            ))}
+          </div>
+          <p class="picker-hint">
+            <a href={keywordPath(lang, t.slug, '')}>
+              {label(`Open the ${t.displayName} page`, `打开 ${t.displayNameZh} 页面`)}
+            </a>
+          </p>
+        </div>
+      </CreateStudio>
     </div>
   ))}
-</section>
+</div>
 
 <script is:inline>
   (function () {
@@ -55,20 +50,22 @@ const first = LIVE_TEMPLATES[0];
     var params = new URLSearchParams(location.search);
     var want = params.get('t') || root.getAttribute('data-default');
     function show(slug) {
+      var match = null;
       root.querySelectorAll('.picker-chip').forEach(function (btn) {
         var on = btn.getAttribute('data-pick') === slug;
         btn.classList.toggle('is-on', on);
         btn.setAttribute('aria-selected', on ? 'true' : 'false');
+        if (on && !match) match = btn;
       });
       root.querySelectorAll('.hub-panel').forEach(function (panel) {
         panel.hidden = panel.getAttribute('data-panel') !== slug;
       });
-      root.querySelectorAll('.brand-link').forEach(function (a) {
-        a.hidden = a.getAttribute('data-brand') !== slug;
-      });
-      /* Critiquito P0: Create inherits ?t= theme — chip / focus / primary follow brand accent */
-      if (slug) {
+      if (slug && match) {
         document.body.setAttribute('data-theme', slug);
+        document.body.setAttribute('data-voice', match.getAttribute('data-voice') || '');
+        document.body.setAttribute('data-card', match.getAttribute('data-card') || '');
+        document.body.setAttribute('data-cover', match.getAttribute('data-cover') || '');
+        document.body.setAttribute('data-ambience', match.getAttribute('data-ambience') || 'none');
         root.setAttribute('data-theme', slug);
       }
       var url = new URL(location.href);

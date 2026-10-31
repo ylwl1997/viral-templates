@@ -67,7 +67,7 @@ const zh = zhHref ?? (en === '/' ? '/zh/' : `/zh${en.endsWith('/') ? en : `${en}
       {cta && ('disabled' in cta ? (
         <span class="btn btn-ghost btn-sm" aria-disabled="true">{cta.label}</span>
       ) : (
-        <a class="btn btn-primary btn-sm header-cta" href={cta.href}>{cta.label}</a>
+        <a class="btn btn-ghost btn-sm header-cta" href={cta.href}>{cta.label}</a>
       ))}
     </div>
   </div>

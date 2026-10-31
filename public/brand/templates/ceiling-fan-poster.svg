@@ -1,14 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 640" fill="none">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="360" y2="640" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#042f2e"/><stop offset="1" stop-color="#083344"/>
-    </linearGradient>
-  </defs>
-  <rect width="360" height="640" fill="url(#bg)"/>
-  <circle cx="180" cy="160" r="18" fill="#67e8f9"/>
-  <g opacity=".9" stroke="#a5f3fc" stroke-width="18" stroke-linecap="round">
-    <path d="M180 160 L180 70"/><path d="M180 160 L255 205"/><path d="M180 160 L105 205"/>
+  <rect width="360" height="640" fill="#d5e4df"/>
+  <rect y="500" width="360" height="140" fill="#c4b49a"/>
+  <rect x="36" y="70" width="110" height="150" rx="2" fill="#eef5f3" stroke="#8aa39c"/>
+  <rect x="210" y="120" width="100" height="80" rx="2" fill="#b7cdc6"/>
+  <g stroke="#0e5c56" stroke-width="8" stroke-linecap="round">
+    <path d="M180 78v46"/>
+    <path d="M180 78c-46-8-70 20-62 36"/>
+    <path d="M180 78c46-8 70 20 62 36"/>
+    <path d="M180 78c-8 40 16 62 8 70" opacity=".35"/>
   </g>
-  <ellipse cx="180" cy="380" rx="70" ry="90" fill="#99f6e4" opacity=".85"/>
-  <path d="M110 470c18-55 50-85 70-85s52 30 70 85v90H110v-90z" fill="#22d3ee" opacity=".75"/>
+  <circle cx="180" cy="78" r="7" fill="#0e5c56"/>
+  <ellipse cx="180" cy="250" rx="34" ry="40" fill="#e7c3a8"/>
+  <path d="M160 248c6 4 12 4 15-1M188 248c6 4 12 4 16-1" stroke="#5c4034" stroke-width="2" stroke-linecap="round"/>
+  <path d="M168 270c8 6 16 6 24 0" stroke="#a36b58" stroke-width="2" stroke-linecap="round"/>
+  <path d="M154 300h52c10 36 6 80-4 110h-44c-10-30-14-74-4-110z" fill="#f4f7f6"/>
+  <path d="M168 340h24v18h-24z" fill="#0e5c56"/>
+  <path d="M120 330c-6 50 8 110 16 160" stroke="#245c56" stroke-width="16" stroke-linecap="round"/>
+  <path d="M240 330c6 50-8 110-16 160" stroke="#245c56" stroke-width="16" stroke-linecap="round"/>
+  <path d="M150 500c-4 40 2 80 10 110h24c2-36 6-74 2-110" fill="#1f3d3a"/>
+  <path d="M186 500c4 40-2 80-10 110h24c6-36 10-74 6-110" fill="#1f3d3a"/>
+  <ellipse cx="300" cy="430" rx="28" ry="10" fill="#9bb0a8"/>
+  <rect x="292" y="430" width="16" height="70" fill="#7f948c"/>
 </svg>

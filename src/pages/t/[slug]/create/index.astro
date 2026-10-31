@@ -26,8 +26,9 @@ const isLive = t.status === 'live';
   {isLive ? (
     <>
       <div class="page-head wrap">
-        <h1>Create — {t.displayName}</h1>
-        <p>{t.taglineEn}. Generate saves a queued job to your account. Finished videos are not available yet.</p>
+        <p class="eyebrow">{t.displayName}</p>
+        <h1>Create</h1>
+        <p>{t.taglineEn}</p>
       </div>
       <CreateStudio template={t} lang={lang} />
     </>

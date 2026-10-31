@@ -11,8 +11,8 @@ export const SITE = {
   /** Canonical origin for sitemap / shared legal pages (https). */
   url: `https://${SITE_APEX}`,
   apex: SITE_APEX,
-  taglineEn: 'AI viral video templates — upload a photo, get a short clip',
-  taglineZh: 'AI 爆款视频模板 — 上传照片，生成竖屏短片',
+  taglineEn: 'Short vertical clips from a photo you already have.',
+  taglineZh: '用已有的照片，做一条竖屏短片。',
   ga4Id: (import.meta.env.PUBLIC_GA4_MEASUREMENT_ID as string) || '',
   adsterraSocialBarZone:
     (import.meta.env.PUBLIC_ADSTERRA_SOCIAL_BAR_ZONE as string) ||

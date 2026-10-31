@@ -1,0 +1,32 @@
+---
+interface Props {
+  poster?: string;
+  video?: string;
+  /** Still-image description. Looping demo video stays decorative. */
+  alt?: string;
+  width?: number;
+  height?: number;
+}
+
+const { poster, video, alt = '', width = 180, height = 320 } = Astro.props;
+---
+{video ? (
+  <video
+    class="media-poster"
+    poster={poster}
+    muted
+    playsinline
+    loop
+    autoplay
+    preload="metadata"
+    aria-hidden="true"
+    width={width}
+    height={height}
+  >
+    <source src={video} type="video/mp4" />
+  </video>
+) : poster ? (
+  <img class="media-poster" src={poster} alt={alt} width={width} height={height} />
+) : (
+  <slot />
+)}

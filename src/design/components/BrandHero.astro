@@ -1,5 +1,6 @@
 ---
 import type { HeroPreset } from '../../lib/templates';
+import LoopMedia from './LoopMedia.astro';
 
 interface Props {
   preset: HeroPreset;
@@ -11,8 +12,10 @@ interface Props {
   secondaryCta?: { href: string; label: string };
   rail?: string[];
   logo?: string;
-  /** 9:16 still or loop poster for Live brands */
+  /** 9:16 still poster for Live brands */
   mediaSrc?: string;
+  /** Muted looping demo. Poster stays the fallback still. */
+  demoVideo?: string;
   mediaAlt?: string;
   soon?: boolean;
 }
@@ -28,18 +31,19 @@ const {
   rail,
   logo,
   mediaSrc,
+  demoVideo,
   mediaAlt = '',
   soon,
 } = Astro.props;
 
-const showMedia = !soon && !!(mediaSrc || logo);
+const showMedia = !soon && !!(mediaSrc || demoVideo || logo);
 ---
 <section class:list={['hero', 'wrap', `hero-preset-${preset}`, soon && 'soon-hero', showMedia && 'hero-has-media']}>
   {showMedia && (
     <div class="hero-media" aria-hidden={mediaAlt ? undefined : 'true'}>
       <div class="media-slot media-slot-hero">
-        {mediaSrc ? (
-          <img class="media-poster" src={mediaSrc} alt={mediaAlt} width="360" height="640" />
+        {mediaSrc || demoVideo ? (
+          <LoopMedia poster={mediaSrc} video={demoVideo} alt={mediaAlt} width={360} height={640} />
         ) : (
           <div class="media-fallback">
             {logo && <img src={logo} width="72" height="72" alt="" />}

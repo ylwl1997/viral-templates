@@ -41,6 +41,7 @@ const theme = t.theme;
         lede={`${t.taglineEn}. Adult consent required.`}
         logo={t.logo}
         mediaSrc={t.poster}
+        demoVideo={t.demoVideo}
         mediaAlt={`${t.displayName} preview`}
         rail={theme.heroPreset === 'editorial' ? [t.displayName, `${t.photoCount} ${t.photoCount === 2 ? 'photos' : 'photo'}`, t.durationEn] : undefined}
         primaryCta={{ href: createHref, label: 'Create' }}
@@ -55,6 +56,7 @@ const theme = t.theme;
         </p>
         <MediaCompare
           poster={t.poster}
+          demoVideo={t.demoVideo}
           alt={`${t.displayName} template look`}
           originalLabel="Sample still"
           resultLabel="Template look"
@@ -77,7 +79,7 @@ const theme = t.theme;
           oneShotUsd={oneShot}
           oneShotMeta={`${SITE.pricing.creditPerGenerate} credit / generate · Demo`}
           packs={packs}
-          note="Pay on Create shows Coming soon until checkout is ready."
+          note="Signed-in Generate queues a job and uses a credit. Buying credits is not open yet."
         />
       </section>
 

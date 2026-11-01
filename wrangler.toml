@@ -27,6 +27,13 @@ migrations_dir = "migrations"
 #   results/{userId}/{jobId}.mp4                    finished clips, default 30 days
 #   templates/                                      reserved; the app does not write it
 # Lifecycle rules are set on the bucket, not by this binding. See docs/r2-media.md.
+# Bailian remake worker (values are NOT stored in this file):
+#   BAILIAN_API_KEY              Pages secret. Do not commit.
+#   JOB_PROCESS_SECRET           Pages secret for POST /api/jobs/process
+#   BAILIAN_DASHSCOPE_BASE_URL   optional text. Default is the workspace host in functions/_lib/bailian.js
+#   BAILIAN_MODE                 optional text: wan-std (default) or wan-pro
+#   BAILIAN_PUBLIC_MEDIA_BASE    leave unset. *.pages.dev is rejected (Aliyun cannot fetch it).
+# See docs/bailian-animate.md.
 # Local `wrangler pages dev` simulates MEDIA on disk. It does not use the remote bucket.
 # Optional preview isolation (create that bucket first; otherwise leave this unset):
 #   preview_bucket_name = "viral-templates-media-preview"

@@ -65,19 +65,19 @@ export const HUB_FAQ: readonly FaqEntry[] = [
   },
   {
     id: 'generate',
-    qEn: 'Does generate return a finished video yet?',
-    qZh: '生成现在会给出成片吗？',
+    qEn: 'Does generate return a finished video?',
+    qZh: '生成会给出成片吗？',
     aEn:
-      'Signed-in Generate queues a job on your account and uses one credit. It does not produce a finished video yet. Buying credits is not open. There is no fake success clip.',
-    aZh: '登录后生成会把任务排进你的账户并扣 1 积分。目前不会产出成片。购买积分尚未开通。不会伪造成功视频。',
+      'Signed-in Generate queues a job on your account and uses one credit. When it finishes, the clip is on your account. Buying credits is not open. There is no fake success clip.',
+    aZh: '登录后生成会把任务排进你的账户并扣 1 积分。完成后，成片会出现在你的账户里。购买积分尚未开通。不会伪造成功视频。',
   },
   {
     id: 'length',
     qEn: 'How long does a clip run?',
     qZh: '短片有多长？',
     aEn:
-      'About 10 seconds for Bby Wow, 11–12 seconds for Kiss Cam, and 12–15 seconds for Ceiling Fan. Those are the lengths of the looks. A file is not ready to download on this demo.',
-    aZh: 'Bby Wow 大约 10 秒，Kiss Cam 大约 11–12 秒，Ceiling Fan 大约 12–15 秒。这是效果的时长。这个演示里还不能下载成片。',
+      'About 10 seconds for Bby Wow, 11–12 seconds for Kiss Cam, and 12–15 seconds for Ceiling Fan. Those are the lengths of the looks. The file shows on your account when the job is ready.',
+    aZh: 'Bby Wow 大约 10 秒，Kiss Cam 大约 11–12 秒，Ceiling Fan 大约 12–15 秒。这是效果的时长。任务完成后，成片会出现在你的账户里。',
   },
   {
     id: 'credits',
@@ -113,9 +113,9 @@ export const HUB_FAQ: readonly FaqEntry[] = [
     qEn: 'What if generate fails? Is there a refund?',
     qZh: '生成失败会退款吗？',
     aEn:
-      'Checkout is not open on this demo, so no card is charged. A generate that fails to produce a clip is not a finished purchase. Today the job is queued and a credit is used, and no video file is returned. When payments exist, refund rules will be on the Terms page.',
+      'Checkout is not open on this demo, so no card is charged. The job is queued and a credit is used. The clip appears on your account when generation succeeds. If it fails, no clip is saved. When payments exist, refund rules will be on the Terms page.',
     aZh:
-      '这个演示未开放结账，所以不会扣银行卡。没有成片的生成，不是一次完成的购买。目前任务会排队并扣 1 积分，没有视频文件。支付上线后，退款规则写在服务条款里。',
+      '这个演示未开放结账，所以不会扣银行卡。任务会排队并扣 1 积分。生成成功后，成片会出现在你的账户里。失败则没有成片。支付上线后，退款规则写在服务条款里。',
   },
   {
     id: 'retention',

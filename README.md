@@ -106,11 +106,12 @@ Auth + account APIs (Pages Functions):
 - `POST /api/auth/logout`
 - `GET /api/account/creations`
 - `GET /api/account/credits`
-- `POST /api/jobs` — signed-in Generate queues a job. Status stays `queued`. Photo bytes are stored in R2 when the `MEDIA` binding is present; otherwise the job still queues and `media.error` is `r2_unbound`.
-- `POST /api/jobs/{id}/result` — ops-only. Stores a finished MP4 and sets `result_url`. Requires `RESULT_INGEST_SECRET`. Does not call a video provider.
+- `POST /api/jobs` — signed-in Generate queues a job. Photo bytes are stored in R2 when the `MEDIA` binding is present; otherwise the job still queues and `media.error` is `r2_unbound`.
+- `POST /api/jobs/process` — ops-only. Claims queued jobs, calls Bailian `wan2.2-animate-move`, stores the MP4 in R2, and marks the job `ready` or `failed`. Requires `JOB_PROCESS_SECRET` and `BAILIAN_API_KEY`. See [`docs/bailian-animate.md`](docs/bailian-animate.md).
+- `POST /api/jobs/{id}/result` — ops-only manual ingest. Stores a finished MP4 and sets `result_url`. Requires `RESULT_INGEST_SECRET`. Does not call Bailian.
 - `GET /api/media/jobs/{id}/{photo|photo-2|result}` — private download (owner session or signed `exp` + `sig`).
 
-**How to sign in:** with `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `AUTH_SECRET` set, **Sign in** opens a dialog on the current page → **Continue with Google** (popup). `/account/sign-in/` still works as a bookmark. The first sign-in creates the D1 user at **0** credits. Without those Google secrets, `*.pages.dev` / localhost show **Preview sign-in** instead. A popup sign-in stays on the page and refreshes the session; the sign-in route itself still lands on `next` (default `/account/`). Generate (photo + consent, while signed in) adds a queued row and does not produce a video file. Unsigned Generate opens the same dialog with `next=` set to the current page.
+**How to sign in:** with `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `AUTH_SECRET` set, **Sign in** opens a dialog on the current page → **Continue with Google** (popup). `/account/sign-in/` still works as a bookmark. The first sign-in creates the D1 user at **0** credits. Without those Google secrets, `*.pages.dev` / localhost show **Preview sign-in** instead. A popup sign-in stays on the page and refreshes the session; the sign-in route itself still lands on `next` (default `/account/`). Generate (photo + consent, while signed in) adds a queued row. A clip appears after `POST /api/jobs/process` runs Bailian and stores the MP4. Unsigned Generate opens the same dialog with `next=` set to the current page.
 
 Google Cloud origins, the exact redirect URI for `viral-templates.pages.dev`, and where to put the secrets are in [`docs/google-oauth.md`](docs/google-oauth.md).
 
@@ -124,6 +125,7 @@ Schema: `migrations/0001_account.sql` (`users`, `credit_accounts`, `credit_ledge
 npm run test:account
 npm run test:auth
 npm run test:media
+npm run test:bailian
 npm run build
 npx wrangler pages dev dist --port 8788
 # Remote D1 `viral-templates` already exists; 0001_account.sql is applied.
@@ -141,14 +143,16 @@ Private bucket **`viral-templates-media`**, Pages binding **`MEDIA`** (`env.MEDI
 | Key | What | Default retention |
 |-----|------|-------------------|
 | `uploads/{userId}/{jobId}/0.jpg` (also `png` / `webp`; slot 2 is `/1.ext`) | Photo from Create | 7 days |
-| `results/{userId}/{jobId}.mp4` | Finished clip, only after result ingest | 30 days |
+| `results/{userId}/{jobId}.mp4` | Finished clip, after Bailian or result ingest | 30 days |
 | `templates/` | Reserved. The app does not write here | — |
 
 Downloads are `/api/media/jobs/{jobId}/{photo|photo-2|result}`. The owner’s session cookie works. A signed `?exp=&sig=` query (HMAC with `AUTH_SECRET`) works without a cookie, which is what `upload_url` / `result_url` store. Object keys and those URLs are saved on the `jobs` row (`upload_key`, `upload_url`, `upload_key_2`, `upload_url_2`, `result_key`, `result_url`). `result_url` stays null until the job is `ready`.
 
 Create accepts multipart fields `photo_0` / `photo_1` (or `photo`) and JSON `photos: ["data:image/jpeg;base64,..."]`. JPG, PNG, WebP, up to 8 MB each. A missing `MEDIA` binding does not fail the queue: the response is still `201` with `media.stored: false`, `media.r2_configured: false`, and `media.error: "r2_unbound"` when a photo was sent. `SITE.r2Configured` is the static build flag (`PUBLIC_R2_CONFIGURED=1`). Storage itself follows the binding, not that flag.
 
-Result ingest (not wired to fal or Kling):
+Bailian generation is separate from this manual ingest. Setup and the smoke command are in [`docs/bailian-animate.md`](docs/bailian-animate.md).
+
+Result ingest (still available if you already have an MP4):
 
 ```bash
 curl -X POST \
@@ -174,7 +178,7 @@ Same bucket from the CLI (needs Cloudflare credentials): `npx wrangler r2 bucket
 
 ### Known limits
 
-- No Waffo / fal / Kling. Google sign-in runs when the secrets in [`docs/google-oauth.md`](docs/google-oauth.md) are set. Generate does not mark a job ready and does not produce a clip. A finished file exists only after something calls the result ingest route with an MP4.
+- No Waffo checkout. Google sign-in runs when the secrets in [`docs/google-oauth.md`](docs/google-oauth.md) are set. Bailian `wan2.2-animate-move` runs only after `BAILIAN_API_KEY` is set and something calls `POST /api/jobs/process` ([`docs/bailian-animate.md`](docs/bailian-animate.md)). Inputs are uploaded to DashScope temporary storage (`oss://`). Do not pass `*.pages.dev` media URLs to Bailian. Aliyun cannot fetch them (`InvalidURL.ConnectionRefused`). Pages has no cron trigger, so jobs stay `queued` until that route runs. Credits are not deducted yet, and a failed job does not refund (there is nothing to refund until a deduction exists).
 - Top-up buttons do not start checkout. Ledger rows are written only when a top-up, deduction, or refund is posted (no starter grant).
 - Session cookie is **host-only** (not shared across brand hosts). The database is shared. The same Google account maps to the same `user_id` on every host after signing in there, so credits and jobs follow the person. `/t/{slug}/` on the apex is the same host and the same cookie.
 - Brand Account link needs a prior brand-page visit (cookie) or open Sign in with `?next=/t/{slug}/…`
@@ -198,6 +202,12 @@ Same bucket from the CLI (needs Cloudflare credentials): `npx wrangler r2 bucket
 | `PHOTO_RETENTION_DAYS` | Function env for object metadata. Default 7. Falls back to `PUBLIC_PHOTO_RETENTION_DAYS` |
 | `VIDEO_RETENTION_DAYS` | Function env for object metadata. Default 30 |
 | `RESULT_INGEST_SECRET` | Bearer token for `POST /api/jobs/{id}/result`. 16+ characters. Not a customer feature |
+| `BAILIAN_API_KEY` | Pages secret for DashScope. Beijing workspace key. Do not commit. `DASHSCOPE_API_KEY` is used only when this is unset |
+| `BAILIAN_DASHSCOPE_BASE_URL` | Optional text. Default `https://llm-g1ozpdi7y5eyp1mh.cn-beijing.maas.aliyuncs.com/api/v1`. Set `https://dashscope.aliyuncs.com/api/v1` to use the classic host |
+| `BAILIAN_MODE` | Optional text. `wan-std` (default, cheaper) or `wan-pro` |
+| `BAILIAN_MODEL` | Optional text. Default `wan2.2-animate-move` |
+| `BAILIAN_PUBLIC_MEDIA_BASE` | Optional https origin Aliyun can fetch. Leave unset. `*.pages.dev` is rejected. The worker still uploads `oss://` |
+| `JOB_PROCESS_SECRET` | Bearer token for `POST /api/jobs/process`. 16+ characters. Not the Bailian key |
 | `AUTH_SECRET` | HMAC for `vt_session`, the Google state cookie, and media download signatures (16+ chars). On `*.pages.dev` / localhost a public preview fallback is used if unset. Google sign-in refuses that fallback |
 | `AUTH_PREVIEW_LOGIN` | `1` force preview login on; `0` off; unset = on for preview hosts when Google OAuth is missing |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google web client. Both must be set. See [`docs/google-oauth.md`](docs/google-oauth.md). Do not commit them |
@@ -212,6 +222,8 @@ npm run build
 npm run test:account
 npm run test:auth
 npm run test:media
+npm run test:bailian
+npm run smoke:bailian
 npm run pages:dev
 npx wrangler pages deploy dist --project-name=viral-templates
 # or: npm run deploy

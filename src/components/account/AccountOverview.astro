@@ -52,8 +52,8 @@ const zh = lang === 'zh';
       <p>
         {
           zh
-            ? '登录后点生成，会在这里留下排队中的任务。目前不会出现可下载的成片。'
-            : 'Generate while signed in to queue a job here. Finished videos are not available yet, so nothing will be downloadable.'
+            ? '登录后点生成，任务会出现在这里。完成后可以播放成片。'
+            : 'Generate while signed in to queue a job here. The clip plays on this page when it is ready.'
         }
       </p>
       <a class="btn btn-primary btn-sm" data-empty-cta href={createHref}>{zh ? '去创作' : 'Start a creation'}</a>

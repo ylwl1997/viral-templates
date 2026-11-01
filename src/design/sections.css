@@ -937,6 +937,13 @@ video.media-poster {
 .account-filters { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 0 0 0.95rem; }
 .account-filters .is-on { color: var(--text); }
 .account-loading { margin: 0 0 0.8rem; color: var(--muted); }
+.creation-player {
+  display: block;
+  width: min(100%, 220px);
+  margin-top: 0.75rem;
+  border-radius: 12px;
+  background: #111;
+}
 .creation-download { margin-top: 0.65rem; }
 .account-alert[hidden],
 .account-loading[hidden],

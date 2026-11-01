@@ -7,13 +7,14 @@ import { mediaConfigured } from '../../_lib/r2-media.js';
 import { jsonNoStore } from '../../_lib/session.js';
 
 /**
- * Ops trigger for Bailian remake jobs. Not used by Create.
+ * Ops trigger for Bailian remake jobs.
  * Authorization: Bearer JOB_PROCESS_SECRET.
  * Does not accept the Bailian API key from the caller. That key is BAILIAN_API_KEY.
  *
- * One call submits queued jobs and polls running ones once.
- * Pass wait_ms to poll again inside this request (capped).
- * Generation takes minutes; repeat the call or run scripts/smoke-bailian.mjs.
+ * Create starts the same worker with waitUntil and does not send this secret.
+ * This route still drains every user's queued and running jobs. The drain
+ * Worker and scripts/smoke-bailian.mjs call it. One call submits queued jobs
+ * and polls running ones once. Pass wait_ms to poll again inside this request.
  */
 export async function onRequestPost(context) {
   const gate = bearerAuthorized(context.env, context.request, 'JOB_PROCESS_SECRET');

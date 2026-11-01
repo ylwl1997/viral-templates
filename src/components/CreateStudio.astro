@@ -252,6 +252,60 @@ const photoLabel = label('Your photo', '上传的照片');
       }
       location.href = url;
     }
+    var watchTimer = 0;
+    function watchJob(jobId, tries) {
+      if (watchTimer) window.clearTimeout(watchTimer);
+      watchTimer = 0;
+      if (!jobId || tries > 40) return;
+      watchTimer = window.setTimeout(function () {
+        watchTimer = 0;
+        fetch('/api/jobs/continue', { method: 'POST', credentials: 'same-origin' })
+          .catch(function () {})
+          .then(function () {
+            return fetch('/api/account/creations?limit=10', { credentials: 'same-origin' });
+          })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var jobs = (data && data.jobs) || [];
+            var found = null;
+            for (var i = 0; i < jobs.length; i += 1) {
+              if (jobs[i] && jobs[i].id === jobId) found = jobs[i];
+            }
+            if (!found || found.status === 'queued' || found.status === 'running') {
+              if (found) {
+                var runningNote = lang === 'zh' ? found.note_zh || found.note_en || '' : found.note_en || '';
+                if (runningNote) setStatus(runningNote, 'cfg');
+              }
+              watchJob(jobId, tries + 1);
+              return;
+            }
+            var doneNote = lang === 'zh' ? found.note_zh || found.note_en || '' : found.note_en || '';
+            if (found.status === 'failed') {
+              setStatus(doneNote || (lang === 'zh' ? '视频生成失败。' : 'Video generation failed.'), 'err');
+              return;
+            }
+            setStatus(doneNote || (lang === 'zh' ? '成片可以下载了。' : 'Your clip is ready.'), 'cfg');
+            var readyUrl = '';
+            if (found.result_url) {
+              try {
+                var readyParsed = new URL(found.result_url, location.origin);
+                if (readyParsed.protocol === 'https:' || readyParsed.protocol === 'http:') readyUrl = readyParsed.href;
+              } catch (e) {
+                readyUrl = '';
+              }
+            }
+            var readyDownload = root.querySelector('[data-job-download]');
+            if (readyDownload && readyUrl) {
+              readyDownload.href = readyUrl;
+              readyDownload.textContent = lang === 'zh' ? '下载' : 'Download';
+              readyDownload.hidden = false;
+            }
+          })
+          .catch(function () {
+            watchJob(jobId, tries + 1);
+          });
+      }, tries === 0 ? 1500 : 15000);
+    }
     function refreshBalance() {
       var bal = root.querySelector('[data-credits-balance]');
       fetch('/api/account/credits?ledger=0', { credentials: 'same-origin' })
@@ -370,7 +424,8 @@ const photoLabel = label('Your photo', '上传的照片');
               var miss = lang === 'zh' ? '照片暂时没有保存。' : 'The photo was not saved yet.';
               setStatus(miss + ' ' + (note || (lang === 'zh' ? '已加入队列。' : 'Queued.')), 'err');
             } else {
-              setStatus(note || (lang === 'zh' ? '已加入队列。' : 'Queued.'), 'cfg');
+              setStatus(note || (lang === 'zh' ? '已加入队列。即将开始生成。' : 'Queued. Generation is starting.'), 'cfg');
+              watchJob(job.id, 0);
             }
             if (follow) follow.hidden = false;
             var media = '';

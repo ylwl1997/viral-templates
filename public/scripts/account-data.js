@@ -228,11 +228,39 @@
       if (list) list.hidden = false;
     }
 
-    function load() {
-      hideAlert(panel);
-      setLoading(panel, true);
-      if (list) list.hidden = true;
-      if (empty) empty.hidden = true;
+    var followTimer = 0;
+    var followJobs = null;
+
+    function jobPending(job) {
+      return job && (job.status === 'queued' || job.status === 'running');
+    }
+
+    function scheduleFollow(jobs, delay) {
+      if (followTimer) window.clearTimeout(followTimer);
+      followTimer = 0;
+      if (!jobs || !jobs.some(jobPending)) return;
+      followTimer = window.setTimeout(function () {
+        followTimer = 0;
+        fetch('/api/jobs/continue', { method: 'POST', credentials: 'same-origin' })
+          .catch(function () {})
+          .then(function () {
+            load(true);
+          });
+      }, delay);
+    }
+
+    function load(quiet) {
+      if (followTimer) {
+        window.clearTimeout(followTimer);
+        followTimer = 0;
+      }
+      followJobs = null;
+      if (!quiet) {
+        hideAlert(panel);
+        setLoading(panel, true);
+        if (list) list.hidden = true;
+        if (empty) empty.hidden = true;
+      }
       var task;
       if (view === 'overview') {
         task = Promise.all([
@@ -245,6 +273,7 @@
           var count = panel.querySelector('[data-count]');
           if (balance) balance.textContent = String(credits.balance);
           if (count) count.textContent = String(creations.total);
+          followJobs = creations.jobs || [];
           if (!creations.jobs || !creations.jobs.length) showEmpty(false);
           else {
             renderJobs(list, creations.jobs, lang);
@@ -255,6 +284,7 @@
         var query = status ? '?status=' + encodeURIComponent(status) : '';
         task = getJson('/api/account/creations' + query).then(function (data) {
           paintFilters();
+          followJobs = data.jobs || [];
           if (!data.jobs || !data.jobs.length) showEmpty(!!status);
           else {
             renderJobs(list, data.jobs, lang);
@@ -277,12 +307,16 @@
       }
       task
         .catch(function (err) {
-          if (list) list.hidden = true;
-          if (empty) empty.hidden = true;
-          showAlert(panel, lang, err && err.code);
+          followJobs = null;
+          if (!quiet) {
+            if (list) list.hidden = true;
+            if (empty) empty.hidden = true;
+            showAlert(panel, lang, err && err.code);
+          }
         })
         .finally(function () {
-          setLoading(panel, false);
+          if (!quiet) setLoading(panel, false);
+          if (followJobs) scheduleFollow(followJobs, quiet ? 15000 : 400);
         });
     }
 

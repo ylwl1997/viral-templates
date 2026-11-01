@@ -30,6 +30,8 @@ migrations_dir = "migrations"
 # Bailian remake worker (values are NOT stored in this file):
 #   BAILIAN_API_KEY              Pages secret. Do not commit.
 #   JOB_PROCESS_SECRET           Pages secret for POST /api/jobs/process
+# Pages cannot run a cron. workers/job-drain is a separate Worker
+# (*/2 * * * *) that POSTs that route. Do not add [triggers] here.
 #   BAILIAN_DASHSCOPE_BASE_URL   optional text. Default is the workspace host in functions/_lib/bailian.js
 #   BAILIAN_MODE                 optional text: wan-std (default) or wan-pro
 #   BAILIAN_PUBLIC_MEDIA_BASE    leave unset. *.pages.dev is rejected (Aliyun cannot fetch it).

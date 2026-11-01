@@ -1,0 +1,14 @@
+# Separate Worker. Pages Functions cannot host a cron.
+# Do not put secrets in this file.
+#
+#   npx wrangler deploy --config workers/job-drain/wrangler.toml
+#   npx wrangler secret put JOB_PROCESS_SECRET --config workers/job-drain/wrangler.toml
+#
+# JOB_PROCESS_SECRET must match the Pages secret. Optional text var:
+#   PAGES_ORIGIN = "https://viral-templates.pages.dev"
+name = "viral-templates-job-drain"
+main = "index.js"
+compatibility_date = "2026-10-01"
+
+[triggers]
+crons = ["*/2 * * * *"]

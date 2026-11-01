@@ -4,6 +4,7 @@ import {
   googleRedirectUri,
   issueOauthStateCookie,
   oauthOrigin,
+  oauthResultDocument,
   randomToken,
   redirectNoStore,
   signInErrorLocation,
@@ -14,7 +15,11 @@ export async function onRequestGet(context) {
   const url = new URL(request.url);
   const next = url.searchParams.get('next') || '';
   const from = url.searchParams.get('from') || '';
-  const fail = (error) => redirectNoStore(signInErrorLocation(from, error, next));
+  const popup = url.searchParams.get('popup') === '1';
+  const fail = (error) =>
+    popup
+      ? oauthResultDocument({ ok: false, error, next })
+      : redirectNoStore(signInErrorLocation(from, error, next));
 
   const client = googleClient(env);
   const origin = oauthOrigin(request);
@@ -23,7 +28,7 @@ export async function onRequestGet(context) {
 
   const state = randomToken();
   const verifier = randomToken();
-  const cookie = await issueOauthStateCookie(request, env, { state, verifier, next, from });
+  const cookie = await issueOauthStateCookie(request, env, { state, verifier, next, from, popup });
   if (!cookie) return fail('google_unavailable');
 
   const location = await buildAuthorizeUrl({

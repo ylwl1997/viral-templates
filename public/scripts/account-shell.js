@@ -56,21 +56,25 @@
   }
 
   function boot() {
+    var sawSession = false;
+    document.addEventListener('vt:session', function (ev) {
+      sawSession = true;
+      apply(ev.detail && ev.detail.user);
+    });
     if (window.__VT_SESSION__ !== undefined) {
       apply(window.__VT_SESSION__);
       return;
     }
-    document.addEventListener('vt:session', function (ev) {
-      apply(ev.detail && ev.detail.user);
-    });
     fetch('/api/auth/session', { credentials: 'same-origin' })
       .then(function (r) {
         return r.json();
       })
       .then(function (data) {
+        if (sawSession) return;
         apply(data && data.user ? data.user : null);
       })
       .catch(function () {
+        if (sawSession) return;
         apply(null);
       });
   }

@@ -90,11 +90,20 @@
     document.addEventListener('click', function () {
       closeMenus();
     });
+    var sawSession = false;
+    document.addEventListener('vt:session', function (ev) {
+      sawSession = true;
+      var user = ev.detail && ev.detail.user ? ev.detail.user : null;
+      roots.forEach(function (root) {
+        render(root, user);
+      });
+    });
     fetch('/api/auth/session', { credentials: 'same-origin' })
       .then(function (r) {
         return r.json();
       })
       .then(function (data) {
+        if (sawSession) return;
         var user = data && data.user ? data.user : null;
         roots.forEach(function (root) {
           render(root, user);
@@ -103,6 +112,7 @@
         document.dispatchEvent(new CustomEvent('vt:session', { detail: { user: user } }));
       })
       .catch(function () {
+        if (sawSession) return;
         roots.forEach(function (root) {
           render(root, null);
         });

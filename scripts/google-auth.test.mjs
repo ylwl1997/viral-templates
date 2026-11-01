@@ -6,9 +6,18 @@ import {
   codeChallengeS256,
   googleRedirectUri,
   mapGoogleProfile,
+  oauthResultDocument,
   readOauthState,
   sessionUserFromGoogle,
 } from '../functions/_lib/google-oauth.js';
+import {
+  acceptAuthMessage,
+  googleStartUrl,
+  isSignInPath,
+  popupFeatures,
+  safeNext,
+  safeSignInPath,
+} from '../public/scripts/login-popup.js';
 import {
   authStatus,
   googleConfigured,
@@ -218,6 +227,7 @@ assert(!open.auth.searchParams.has('code_verifier'), 'verifier stayed off the au
 const savedOpen = await readOauthState(new Request(`${APEX}/api/auth/session`, { headers: { cookie: open.cookie } }), googleEnv);
 assert(savedOpen.next === '/account/', savedOpen.next);
 assert(savedOpen.from === '/account/sign-in/', savedOpen.from);
+assert(savedOpen.popup === false, 'full-page start is not a popup');
 assert(open.auth.searchParams.get('code_challenge') === (await codeChallengeS256(savedOpen.verifier)), 'pkce');
 assert(open.auth.searchParams.get('code_challenge_method') === 'S256', 's256');
 const oauthCookie = setCookie(open.res, 'vt_oauth');
@@ -364,5 +374,133 @@ assert(previewOn.status === 200, `preview login ${previewOn.status}`);
 const previewBody = await previewOn.json();
 assert(previewBody.user.providers[0] === 'preview', 'preview provider');
 assert(previewBody.next === '/account/', previewBody.next);
+
+assert(safeNext('https://evil.example', '/account/') === '/account/', 'client rejects absolute next');
+assert(safeNext('//evil.example', '/account/') === '/account/', 'client rejects protocol-relative');
+assert(safeNext('/account/</script>', '/account/') === '/account/', 'client rejects markup in next');
+assert(safeNext('/zh/t/bby-wow/create/?x=1#photo', '/account/') === '/zh/t/bby-wow/create/?x=1#photo', 'client keeps relative next');
+assert(safeSignInPath('/zh/t/bby-wow/account/sign-in') === '/zh/t/bby-wow/account/sign-in/', 'client sign-in path');
+assert(safeSignInPath('/create/') === '/account/sign-in/', 'client sign-in fallback');
+assert(isSignInPath('/t/bby-wow/account/sign-in/') === true, 'brand sign-in path');
+assert(isSignInPath('/account/') === false, 'account overview is not sign-in');
+assert(
+  googleStartUrl({ next: '/create/', from: '/t/bby-wow/account/sign-in/', popup: true }) ===
+    '/api/auth/google/start?next=%2Fcreate%2F&from=%2Ft%2Fbby-wow%2Faccount%2Fsign-in%2F&popup=1',
+  'popup start url',
+);
+assert(!googleStartUrl({ next: '/account/', from: '/account/sign-in/' }).includes('popup'), 'same-tab start omits popup');
+const features = popupFeatures({ x: 100, y: 40, outerWidth: 1200, outerHeight: 800 });
+assert(features === 'popup=yes,width=480,height=640,left=460,top=120', features);
+assert(!features.includes('noopener'), 'popup keeps opener');
+assert(
+  acceptAuthMessage({ origin: 'https://evil.example', data: { type: 'vt-auth', ok: true, next: '/account/' } }, APEX) ===
+    null,
+  'reject other origins',
+);
+assert(acceptAuthMessage({ origin: APEX, data: { type: 'other', ok: true } }, APEX) === null, 'reject other types');
+const accepted = acceptAuthMessage(
+  { origin: APEX, data: { type: 'vt-auth', ok: true, next: 'https://evil.example' } },
+  APEX,
+);
+assert(accepted.ok === true && accepted.next === '/account/', 'message next is sanitized');
+
+const popupStart = await startSignIn(
+  APEX,
+  googleEnv,
+  'next=/create/%3C/script%3E&from=/account/sign-in/&popup=1',
+);
+assert(popupStart.res.status === 302, 'popup start still redirects to Google');
+assert(popupStart.auth.origin === 'https://accounts.google.com', 'popup uses Google');
+assert(
+  popupStart.auth.searchParams.get('redirect_uri') === `${APEX}/api/auth/google/callback`,
+  'popup does not invent a redirect URI',
+);
+assert(!popupStart.location.includes('popup'), 'popup flag stays out of the authorize URL');
+const savedPopup = await readOauthState(
+  new Request(`${APEX}/api/auth/session`, { headers: { cookie: popupStart.cookie } }),
+  googleEnv,
+);
+assert(savedPopup.popup === true, 'popup flag stored');
+assert(savedPopup.next === '/account/', 'unsafe popup next dropped');
+
+const notPopup = await startSignIn(APEX, googleEnv, 'next=/account/&from=/account/sign-in/&popup=yes');
+const savedNotPopup = await readOauthState(
+  new Request(`${APEX}/api/auth/session`, { headers: { cookie: notPopup.cookie } }),
+  googleEnv,
+);
+assert(savedNotPopup.popup === false, 'only popup=1 enables the handshake');
+
+const popupFail = await onStart({
+  request: new Request(`${APEX}/api/auth/google/start?popup=1&next=/create/`),
+  env: { GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: CLIENT_SECRET },
+});
+assert(popupFail.status === 200, 'popup start failure is a handshake page');
+assert(!popupFail.headers.get('location'), 'popup failure does not redirect');
+const popupFailHtml = await popupFail.text();
+assert(popupFailHtml.includes('"error":"google_unavailable"'), popupFailHtml);
+assert(popupFailHtml.includes("postMessage(payload, target)"), 'posts to the page origin');
+assert(!popupFailHtml.includes("postMessage(payload, '*')"), 'does not use a wildcard target');
+assert(!popupFailHtml.includes(CLIENT_SECRET), 'secret stays out of the handshake');
+
+await withGoogle(profile(), async () => {
+  const started = await startSignIn(
+    APEX,
+    googleEnv,
+    'next=/account/?a=1%26b=2&from=/zh/account/sign-in/&popup=1',
+  );
+  const state = started.auth.searchParams.get('state');
+  const cb = await onCallback({
+    request: new Request(`${APEX}/api/auth/google/callback?code=4/popup&state=${encodeURIComponent(state)}`, {
+      headers: { cookie: started.cookie },
+    }),
+    env: googleEnv,
+  });
+  assert(cb.status === 200, `popup callback ${cb.status}`);
+  assert(!cb.headers.get('location'), 'popup callback does not navigate');
+  assert(cb.headers.get('content-type').includes('text/html'), cb.headers.get('content-type'));
+  const sessionLine = setCookie(cb, 'vt_session');
+  assert(sessionLine.includes('HttpOnly') && sessionLine.includes('Secure'), 'popup sets the session cookie');
+  assert(setCookie(cb, 'vt_oauth').includes('Max-Age=0'), 'popup clears the state cookie');
+  const html = await cb.text();
+  assert(html.includes('BroadcastChannel(\'vt-auth\')'), 'broadcast channel');
+  assert(html.includes('"type":"vt-auth"'), 'message type');
+  assert(html.includes('"ok":true'), 'success flag');
+  assert(html.includes('href="/account/?a=1&amp;b=2"'), html);
+  assert(!html.includes(CLIENT_SECRET), 'handshake has no client secret');
+  assert(!html.includes('accounts.google.com'), 'handshake is not another authorize redirect');
+  const user = await readSession(
+    new Request(`${APEX}/api/auth/session`, { headers: { cookie: cookieHeader(cb) } }),
+    googleEnv,
+  );
+  assert(user.user_id === sessionUser.user_id, 'popup session is the same user');
+});
+assert(sqlite.prepare('SELECT balance FROM credit_accounts').get().balance === 7, 'popup login did not change credits');
+
+await withGoogle(profile(), async (calls) => {
+  const started = await startSignIn(APEX, googleEnv, 'next=/account/&from=/account/sign-in/&popup=1');
+  calls.length = 0;
+  const state = started.auth.searchParams.get('state');
+  const cb = await onCallback({
+    request: new Request(`${APEX}/api/auth/google/callback?error=access_denied&state=${encodeURIComponent(state)}`, {
+      headers: { cookie: started.cookie },
+    }),
+    env: googleEnv,
+  });
+  assert(calls.length === 0, 'popup cancel did not call Google');
+  assert(cb.status === 200, 'popup cancel is HTML');
+  assert(!cb.headers.get('location'), 'popup cancel does not open the sign-in route');
+  assert(!setCookie(cb, 'vt_session'), 'popup cancel does not set a session');
+  const html = await cb.text();
+  assert(html.includes('"error":"google_denied"'), html);
+  assert(html.includes('"ok":false'), html);
+});
+
+const injected = oauthResultDocument({
+  ok: true,
+  next: '/account/</script><script>alert(1)</script>',
+});
+const injectedHtml = await injected.text();
+assert(!injectedHtml.includes('alert(1)'), 'callback HTML drops unsafe next');
+assert(injectedHtml.includes('href="/account/"'), injectedHtml);
 
 console.log('google auth tests passed');

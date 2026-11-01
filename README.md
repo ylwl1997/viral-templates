@@ -101,7 +101,7 @@ One D1 database (binding `DB`) is shared by the apex and every brand host. Rows 
 Auth + account APIs (Pages Functions):
 
 - `GET /api/auth/session`
-- `GET /api/auth/google/start` — Google sign-in (`next`, `from`). Callback is `GET /api/auth/google/callback`
+- `GET /api/auth/google/start` — Google sign-in (`next`, `from`, optional `popup=1`). Callback is `GET /api/auth/google/callback`
 - `POST /api/auth/preview` — preview login (HttpOnly `vt_session` cookie)
 - `POST /api/auth/logout`
 - `GET /api/account/creations`
@@ -110,7 +110,7 @@ Auth + account APIs (Pages Functions):
 - `POST /api/jobs/{id}/result` — ops-only. Stores a finished MP4 and sets `result_url`. Requires `RESULT_INGEST_SECRET`. Does not call a video provider.
 - `GET /api/media/jobs/{id}/{photo|photo-2|result}` — private download (owner session or signed `exp` + `sig`).
 
-**How to sign in:** with `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `AUTH_SECRET` set, open `/account/sign-in/` → **Continue with Google**. The first sign-in creates the D1 user at **0** credits. Without those Google secrets, `*.pages.dev` / localhost show **Preview sign-in** instead. Either way the person lands on `/account/` with the avatar in the header and an empty creations list. Generate (photo + consent, while signed in) adds a queued row and does not produce a video file. Unsigned Generate goes to sign-in with `next=`.
+**How to sign in:** with `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `AUTH_SECRET` set, **Sign in** opens a dialog on the current page → **Continue with Google** (popup). `/account/sign-in/` still works as a bookmark. The first sign-in creates the D1 user at **0** credits. Without those Google secrets, `*.pages.dev` / localhost show **Preview sign-in** instead. A popup sign-in stays on the page and refreshes the session; the sign-in route itself still lands on `next` (default `/account/`). Generate (photo + consent, while signed in) adds a queued row and does not produce a video file. Unsigned Generate opens the same dialog with `next=` set to the current page.
 
 Google Cloud origins, the exact redirect URI for `viral-templates.pages.dev`, and where to put the secrets are in [`docs/google-oauth.md`](docs/google-oauth.md).
 

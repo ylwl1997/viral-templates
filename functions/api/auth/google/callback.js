@@ -7,6 +7,7 @@ import {
   googleClient,
   googleRedirectUri,
   oauthOrigin,
+  oauthResultDocument,
   oauthStateMatches,
   readOauthState,
   redirectNoStore,
@@ -16,9 +17,13 @@ import {
 import { issueSessionCookie } from '../../../_lib/session.js';
 
 function fail(request, saved, error, next) {
+  const destNext = next || (saved && saved.next) || '';
+  const cookies = [clearOauthStateCookie(request)];
+  if (saved && saved.popup) {
+    return oauthResultDocument({ ok: false, error, next: destNext, setCookies: cookies });
+  }
   const from = saved && saved.from;
-  const dest = signInErrorLocation(from, error, next || (saved && saved.next) || '');
-  return redirectNoStore(dest, [clearOauthStateCookie(request)]);
+  return redirectNoStore(signInErrorLocation(from, error, destNext), cookies);
 }
 
 export async function onRequestGet(context) {
@@ -62,5 +67,7 @@ export async function onRequestGet(context) {
 
   const sessionCookie = await issueSessionCookie(request, env, user);
   if (!sessionCookie) return fail(request, saved, 'google_unavailable');
-  return redirectNoStore(saved.next, [sessionCookie, clearOauthStateCookie(request)]);
+  const cookies = [sessionCookie, clearOauthStateCookie(request)];
+  if (saved.popup) return oauthResultDocument({ ok: true, next: saved.next, setCookies: cookies });
+  return redirectNoStore(saved.next, cookies);
 }

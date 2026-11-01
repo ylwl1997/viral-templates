@@ -16,7 +16,7 @@ Leave `BAILIAN_PUBLIC_MEDIA_BASE` unset. It is an allowlist for an https origin 
 
 Subject image is the Create photo in R2 (`upload_key`, slot 0). Reference motion is that template’s demo MP4 (`/brand/templates/{slug}-demo.mp4` for `bby-wow`, `kiss-cam`, and `ceiling-fan`), read from `env.ASSETS` on the same deployment. The result URL from Bailian expires in about 24 hours. The worker downloads it and writes `results/{userId}/{jobId}.mp4`. The playable URL stored on the job is still this app’s signed `/api/media/...` link. That link is for the browser, not for Bailian.
 
-`wan2.2-animate-move` takes one image. Kiss Cam still stores a second photo. That second photo is not sent.
+`wan2.2-animate-move` takes one image. Kiss Cam still stores a second photo. That second photo is not sent. If Kiss Cam was queued with no saved photo, the job fails as `no_photo` and the account page shows that both photos are required.
 
 ## Secrets
 
@@ -72,9 +72,23 @@ If the column already exists, that `ALTER` reports a duplicate column. The index
 5. On `SUCCEEDED`, download the MP4 and store it in R2. The job becomes `ready`. `result_url` is `/api/media/jobs/{id}/result?exp=&sig=`. The account page plays that URL.
 6. On `FAILED`, `CANCELED`, or `UNKNOWN`, the job becomes `failed`.
 
-Pages Functions have no cron trigger. Jobs stay `queued` until something calls this route. A later Worker cron, or any scheduler, can POST it once a minute. This repo does not add that second deploy.
+Create (`POST /api/jobs`) queues the row, returns `201`, then `waitUntil` runs the same `processRemakeJobs` helper. That pass submits the Bailian task and polls it once. The browser does not send `JOB_PROCESS_SECRET`. The Pages env (`BAILIAN_API_KEY`, `MEDIA`, `DB`) is enough. The `201` body is still the queued job; generation keeps going after the response.
 
-Generation usually takes several minutes. One call submits or polls once. Repeat the call. `wait_ms` (max 90000) polls again inside that request. `limit` is 1–5 (default 1).
+Pages Functions still have no cron trigger. `[triggers]` in the Pages `wrangler.toml` does not run. Two other passes pick up a job if `waitUntil` dies:
+
+1. While Creations or the account overview is open, the page `POST`s `/api/jobs/continue` about every 15 seconds. That route is the signed-in user's own queued or running job (one per call). It does not accept `JOB_PROCESS_SECRET`.
+2. `workers/job-drain` is a separate Worker on `*/2 * * * *`. It `POST`s `/api/jobs/process` with the bearer secret and `{"limit":3}`. Deploy it once:
+
+```bash
+npx wrangler deploy --config workers/job-drain/wrangler.toml
+npx wrangler secret put JOB_PROCESS_SECRET --config workers/job-drain/wrangler.toml
+```
+
+Use the same `JOB_PROCESS_SECRET` as Pages. Optional text var `PAGES_ORIGIN` (default `https://viral-templates.pages.dev`).
+
+Ops can still call `POST /api/jobs/process` by hand. That remains the way to drain every user, not only the person who has the account page open.
+
+Generation usually takes several minutes. One process call submits or polls once. Repeat the call, or let the drain Worker do it. `wait_ms` (max 90000) polls again inside that request. `limit` is 1–5 (default 1).
 
 Body:
 
@@ -136,7 +150,7 @@ npm run smoke:bailian
 |---------|---------|
 | `job_process_unconfigured` | `JOB_PROCESS_SECRET` missing or shorter than 16 characters |
 | `bailian_unconfigured` | `BAILIAN_API_KEY` (and `DASHSCOPE_API_KEY`) missing |
-| `no_photo` | Job has no R2 photo (`r2_unbound` at create time) |
+| `no_photo` | Job has no R2 photo (`r2_unbound` at create time, or Create sent no photo). Kiss Cam's note says two photos are required. The account page shows `note_zh` / `note_en`. |
 | `no_reference_video` | Template has no demo MP4 (soon looks) |
 | `photo_too_large` | Photo is over 5 MB |
 | `bailian_*` | Provider code, such as `InvalidApiKey` or `InternalError` |

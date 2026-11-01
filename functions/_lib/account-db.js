@@ -358,20 +358,33 @@ export async function listRemakeCandidates(db, options = {}) {
   await ensureSchema(db);
   const jobId = options.jobId ? cleanId(options.jobId) : '';
   if (options.jobId && !jobId) throw fail('bad_job');
+  const userId = options.userId ? cleanId(options.userId) : '';
+  if (options.userId && !userId) throw fail('unauthorized');
   if (jobId) {
     const row = await db.prepare(`SELECT ${REMAKE_COLUMNS} FROM jobs WHERE id = ?`).bind(jobId).first();
-    return row ? [row] : [];
+    if (!row || (userId && row.user_id !== userId)) return [];
+    return [row];
   }
   const limit = clampLimit(options.limit ?? 1, 1);
-  const listed = await db
-    .prepare(
-      `SELECT ${REMAKE_COLUMNS} FROM jobs
-       WHERE status IN ('queued', 'running')
-       ORDER BY CASE status WHEN 'running' THEN 0 ELSE 1 END, created_at ASC, id ASC
-       LIMIT ?`,
-    )
-    .bind(limit)
-    .all();
+  const listed = userId
+    ? await db
+        .prepare(
+          `SELECT ${REMAKE_COLUMNS} FROM jobs
+           WHERE status IN ('queued', 'running') AND user_id = ?
+           ORDER BY CASE status WHEN 'running' THEN 0 ELSE 1 END, created_at ASC, id ASC
+           LIMIT ?`,
+        )
+        .bind(userId, limit)
+        .all()
+    : await db
+        .prepare(
+          `SELECT ${REMAKE_COLUMNS} FROM jobs
+           WHERE status IN ('queued', 'running')
+           ORDER BY CASE status WHEN 'running' THEN 0 ELSE 1 END, created_at ASC, id ASC
+           LIMIT ?`,
+        )
+        .bind(limit)
+        .all();
   return listed.results || [];
 }
 
@@ -472,7 +485,7 @@ export async function markJobFailed(db, jobId, fields = {}) {
  * Queue a job for a signed-in user. Does not call a video provider and does
  * not set status ready. Optional upload keys record a photo already stored
  * in R2. result_url stays empty until attachJobResult.
- * POST /api/jobs/process is what calls Bailian later.
+ * Create starts Bailian with waitUntil. Ops can still POST /api/jobs/process.
  */
 export async function createStubJob(db, user, templateSlug, options = {}) {
   const template = getTemplate(templateSlug);

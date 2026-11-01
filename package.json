@@ -16,6 +16,7 @@
     "test:media": "node --experimental-sqlite scripts/r2-media.test.mjs",
     "test:bailian": "node --experimental-sqlite scripts/bailian-worker.test.mjs",
     "smoke:bailian": "node scripts/smoke-bailian.mjs",
+    "job-drain:deploy": "wrangler deploy --config workers/job-drain/wrangler.toml",
     "d1:migrate:local": "wrangler d1 migrations apply viral-templates --local",
     "astro": "astro",
     "deploy": "astro build && wrangler pages deploy dist --project-name=viral-templates"

@@ -2,9 +2,11 @@
  * Process queued remake jobs through Bailian wan2.2-animate-move.
  *
  * One pass submits new tasks and polls tasks already running. Video generation
- * takes minutes, and Pages has no cron trigger, so the caller repeats
- * POST /api/jobs/process (see scripts/smoke-bailian.mjs). wait_ms can poll
- * inside one request for a short window.
+ * takes minutes. Create starts a pass with waitUntil. Pages Functions have
+ * no cron, so workers/job-drain posts /api/jobs/process every two minutes,
+ * and the signed-in account page can post /api/jobs/continue. Ops can still
+ * repeat POST /api/jobs/process (see scripts/smoke-bailian.mjs). wait_ms can
+ * poll inside one request for a short window.
  *
  * Subject image is R2 upload_key (slot 0). wan2.2-animate-move takes one image.
  * Kiss Cam's second photo stays in R2 and is not sent.
@@ -197,7 +199,15 @@ async function readSubject(bucket, row) {
 async function prepareQueued(ctx, row) {
   const template = getTemplate(row.template_slug);
   if (!template || !template.referenceVideo) return failJob(ctx.db, row, 'no_reference_video');
-  if (!row.upload_key) return failJob(ctx.db, row, 'no_photo');
+  if (!row.upload_key) {
+    if (template.photoCount === 2) {
+      return failJob(ctx.db, row, 'no_photo', {
+        note_en: `${template.name} needs two saved photos. This job has no photo, so a clip cannot be generated.`,
+        note_zh: `${template.nameZh} 需要两张已保存的照片。这个任务没有照片，无法生成短片。`,
+      });
+    }
+    return failJob(ctx.db, row, 'no_photo');
+  }
   let image;
   try {
     // Slot 0 only. wan2.2-animate-move takes one subject image.
@@ -318,7 +328,11 @@ async function processOnce(ctx) {
     ? (
         await Promise.all(ctx.onlyIds.map((id) => listRemakeCandidates(ctx.db, { jobId: id })))
       ).flat()
-    : await listRemakeCandidates(ctx.db, { limit: ctx.limit, jobId: ctx.jobId || undefined });
+    : await listRemakeCandidates(ctx.db, {
+        limit: ctx.limit,
+        jobId: ctx.jobId || undefined,
+        userId: ctx.userId || undefined,
+      });
   if (!ctx.onlyIds && ctx.jobId && rows.length === 0) throw fail('not_found');
   const processed = [];
   for (const row of rows) {
@@ -342,6 +356,7 @@ export async function processRemakeJobs({
   pollIntervalMs = 15_000,
   sleepImpl = sleep,
   nowMs = Date.now(),
+  userId = '',
 }) {
   if (!mediaConfigured(env)) throw fail('r2_unbound');
   const runtime = bailianRuntime(env);
@@ -360,6 +375,7 @@ export async function processRemakeJobs({
     nowMs,
     pollOnly: false,
     onlyIds: null,
+    userId: typeof userId === 'string' ? userId : '',
   };
   let processed = await processOnce(ctx);
   const watched = processed.map((row) => row.id);

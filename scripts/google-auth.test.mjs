@@ -19,6 +19,8 @@ import {
   safeSignInPath,
 } from '../public/scripts/login-popup.js';
 import {
+  allowedAuthEmails,
+  authEmailAllowed,
   authStatus,
   googleConfigured,
   previewLoginAllowed,
@@ -32,6 +34,7 @@ const CLIENT_SECRET = 'google-client-secret-value';
 const APEX = 'https://viral-templates.pages.dev';
 const BRAND = 'https://bby-wow.example.com';
 const SUB = '109876543210987654321';
+const OWNER_EMAIL = '1316805445@qq.com';
 
 function assert(cond, message) {
   if (!cond) throw new Error(message);
@@ -96,6 +99,13 @@ const googleEnv = {
   AUTH_SECRET,
   GOOGLE_CLIENT_ID: CLIENT_ID,
   GOOGLE_CLIENT_SECRET: CLIENT_SECRET,
+  AUTH_ALLOWED_EMAILS: ' Ada@Example.com ',
+  DB: db,
+};
+const closedEnv = {
+  AUTH_SECRET,
+  GOOGLE_CLIENT_ID: CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: CLIENT_SECRET,
   DB: db,
 };
 
@@ -148,7 +158,10 @@ async function startSignIn(origin, env, query = 'next=/account/creations/&from=/
 assert(googleConfigured({ GOOGLE_CLIENT_ID: ' id ', GOOGLE_CLIENT_SECRET: ' secret ' }) === true, 'trim');
 assert(googleConfigured({ GOOGLE_CLIENT_ID: '   ', GOOGLE_CLIENT_SECRET: 'secret' }) === false, 'blank id');
 assert(previewLoginAllowed({}, 'localhost') === true, 'local preview');
-assert(previewLoginAllowed({}, 'viral-templates.pages.dev') === true, 'pages preview');
+assert(previewLoginAllowed({}, '127.0.0.1') === true, 'ipv4 local preview');
+assert(previewLoginAllowed({}, '::1') === true, 'ipv6 local preview');
+assert(previewLoginAllowed({}, 'viral-templates.pages.dev') === false, 'pages.dev preview is closed');
+assert(previewLoginAllowed({}, 'abc.viral-templates.pages.dev') === false, 'branch preview host is closed');
 assert(previewLoginAllowed({}, 'example.com') === false, 'custom host without google');
 assert(
   previewLoginAllowed({ GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: CLIENT_SECRET }, 'localhost') === false,
@@ -158,10 +171,37 @@ assert(
   previewLoginAllowed(
     { GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: CLIENT_SECRET, AUTH_PREVIEW_LOGIN: '1' },
     'example.com',
-  ) === true,
-  'preview override',
+  ) === false,
+  'preview override does not open public hosts',
 );
+assert(
+  previewLoginAllowed(
+    { GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: CLIENT_SECRET, AUTH_PREVIEW_LOGIN: '1' },
+    'viral-templates.pages.dev',
+  ) === false,
+  'preview override does not open pages.dev',
+);
+assert(
+  previewLoginAllowed(
+    { GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: CLIENT_SECRET, AUTH_PREVIEW_LOGIN: '1' },
+    'localhost',
+  ) === true,
+  'preview override is localhost only',
+);
+assert(previewLoginAllowed({ AUTH_PREVIEW_LOGIN: '0' }, 'localhost') === false, 'preview force off');
 assert(previewLoginAllowed({ GOOGLE_CLIENT_ID: '  ', GOOGLE_CLIENT_SECRET: '  ' }, 'localhost') === true, 'blank is unset');
+assert(JSON.stringify(allowedAuthEmails({})) === JSON.stringify([OWNER_EMAIL]), 'unset allowlist is the owner fallback');
+assert(JSON.stringify(allowedAuthEmails({ AUTH_ALLOWED_EMAILS: '' })) === JSON.stringify([OWNER_EMAIL]), 'empty allowlist');
+assert(JSON.stringify(allowedAuthEmails({ AUTH_ALLOWED_EMAILS: '  ,  ' })) === JSON.stringify([OWNER_EMAIL]), 'blank allowlist');
+assert(
+  JSON.stringify(allowedAuthEmails({ AUTH_ALLOWED_EMAILS: ' A@B.co , C@D.co ' })) === JSON.stringify(['a@b.co', 'c@d.co']),
+  'allowlist trims and lowercases',
+);
+assert(authEmailAllowed({ AUTH_ALLOWED_EMAILS: 'A@B.co' }, 'a@b.co') === true, 'listed email');
+assert(authEmailAllowed({ AUTH_ALLOWED_EMAILS: 'A@B.co' }, 'other@b.co') === false, 'unlisted email');
+assert(authEmailAllowed({}, '1316805445@QQ.com') === true, 'fallback ignores case');
+assert(authEmailAllowed({}, 'ada@example.com') === false, 'fallback denies everyone else');
+assert(authEmailAllowed({}, '') === false, 'empty email is denied');
 
 const status = authStatus(new Request(`${APEX}/api/auth/session`), googleEnv);
 assert(status.google === true && status.auth_secret === true && status.preview === false, 'auth status');
@@ -368,12 +408,13 @@ const previewOn = await onPreview({
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ email: 'preview@viral-templates.local', name: 'Preview', next: 'https://evil.example' }),
   }),
-  env: {},
+  env: { AUTH_ALLOWED_EMAILS: 'preview@viral-templates.local' },
 });
 assert(previewOn.status === 200, `preview login ${previewOn.status}`);
 const previewBody = await previewOn.json();
 assert(previewBody.user.providers[0] === 'preview', 'preview provider');
 assert(previewBody.next === '/account/', previewBody.next);
+assert(setCookie(previewOn, 'vt_session').includes('HttpOnly'), 'preview session cookie');
 
 assert(safeNext('https://evil.example', '/account/') === '/account/', 'client rejects absolute next');
 assert(safeNext('//evil.example', '/account/') === '/account/', 'client rejects protocol-relative');
@@ -403,6 +444,11 @@ const accepted = acceptAuthMessage(
   APEX,
 );
 assert(accepted.ok === true && accepted.next === '/account/', 'message next is sanitized');
+const deniedMsg = acceptAuthMessage(
+  { origin: APEX, data: { type: 'vt-auth', ok: false, error: 'email_not_allowed', next: '/account/' } },
+  APEX,
+);
+assert(deniedMsg.ok === false && deniedMsg.error === 'email_not_allowed', 'popup error code survives');
 
 const popupStart = await startSignIn(
   APEX,
@@ -502,5 +548,149 @@ const injected = oauthResultDocument({
 const injectedHtml = await injected.text();
 assert(!injectedHtml.includes('alert(1)'), 'callback HTML drops unsafe next');
 assert(injectedHtml.includes('href="/account/"'), injectedHtml);
+
+function userCount() {
+  return sqlite.prepare('SELECT COUNT(*) AS n FROM users').get().n;
+}
+
+function throwingDb() {
+  return {
+    prepare() {
+      throw new Error('ensureUser must not run');
+    },
+  };
+}
+
+await withGoogle(profile({ sub: 'stranger-sub', email: 'Stranger@Example.com', name: 'Stranger' }), async () => {
+  const before = userCount();
+  const started = await startSignIn(APEX, closedEnv);
+  const state = started.auth.searchParams.get('state');
+  const cb = await onCallback({
+    request: new Request(`${APEX}/api/auth/google/callback?code=4/stranger&state=${encodeURIComponent(state)}`, {
+      headers: { cookie: started.cookie },
+    }),
+    env: { ...closedEnv, DB: throwingDb() },
+  });
+  assert((cb.headers.get('location') || '').includes('error=email_not_allowed'), cb.headers.get('location'));
+  assert(!(cb.headers.get('location') || '').includes('stranger@example.com'), 'deny URL does not echo the email');
+  assert(!setCookie(cb, 'vt_session'), 'denied Google login sets no session');
+  assert(setCookie(cb, 'vt_oauth').includes('Max-Age=0'), 'denied login still clears oauth state');
+  assert(userCount() === before, 'denied login did not insert a user');
+  const ada = sqlite.prepare('SELECT name FROM users WHERE email = ?').get('ada@example.com');
+  assert(ada.name === 'Ada Lovelace', `allowlist miss must not rewrite an existing user (${ada && ada.name})`);
+});
+
+await withGoogle(profile({ email_verified: false, email: OWNER_EMAIL }), async () => {
+  const started = await startSignIn(APEX, closedEnv);
+  const state = started.auth.searchParams.get('state');
+  const before = userCount();
+  const cb = await onCallback({
+    request: new Request(`${APEX}/api/auth/google/callback?code=4/unverified&state=${encodeURIComponent(state)}`, {
+      headers: { cookie: started.cookie },
+    }),
+    env: { ...closedEnv, DB: throwingDb() },
+  });
+  assert((cb.headers.get('location') || '').includes('error=email_not_allowed'), 'unverified email is not the allowlisted address');
+  assert(!setCookie(cb, 'vt_session'), 'unverified email sets no session');
+  assert(userCount() === before, 'unverified email did not insert a user');
+});
+
+await withGoogle(profile({ sub: 'owner-sub', email: '1316805445@QQ.com', name: 'Owner' }), async () => {
+  const before = userCount();
+  const started = await startSignIn(APEX, closedEnv, 'next=/account/&from=/account/sign-in/');
+  const state = started.auth.searchParams.get('state');
+  const cb = await onCallback({
+    request: new Request(`${APEX}/api/auth/google/callback?code=4/owner&state=${encodeURIComponent(state)}`, {
+      headers: { cookie: started.cookie },
+    }),
+    env: { ...closedEnv, AUTH_ALLOWED_EMAILS: '' },
+  });
+  assert(cb.status === 302, `owner fallback callback ${cb.status}`);
+  assert(cb.headers.get('location') === '/account/', cb.headers.get('location'));
+  const sessionLine = setCookie(cb, 'vt_session');
+  assert(sessionLine.includes('HttpOnly'), 'owner fallback sets a session');
+  const user = await readSession(
+    new Request(`${APEX}/api/auth/session`, { headers: { cookie: cookieHeader(cb) } }),
+    closedEnv,
+  );
+  assert(user.email === OWNER_EMAIL, user.email);
+  assert(userCount() === before + 1, 'owner fallback created one user');
+  const row = sqlite.prepare('SELECT email, name FROM users WHERE email = ?').get(OWNER_EMAIL);
+  assert(row.name === 'Owner' && row.email === OWNER_EMAIL, 'owner row stored lowercase');
+});
+
+await withGoogle(profile({ sub: 'other-sub', email: 'other@example.com', name: 'Other' }), async () => {
+  const before = userCount();
+  const started = await startSignIn(APEX, googleEnv, 'next=/account/&from=/account/sign-in/&popup=1');
+  const state = started.auth.searchParams.get('state');
+  const cb = await onCallback({
+    request: new Request(`${APEX}/api/auth/google/callback?code=4/popup-deny&state=${encodeURIComponent(state)}`, {
+      headers: { cookie: started.cookie },
+    }),
+    env: { ...googleEnv, AUTH_ALLOWED_EMAILS: ` ${OWNER_EMAIL.toUpperCase()} `, DB: throwingDb() },
+  });
+  assert(cb.status === 200, 'popup deny is HTML');
+  assert(!setCookie(cb, 'vt_session'), 'popup deny sets no session');
+  const html = await cb.text();
+  assert(html.includes('"error":"email_not_allowed"'), html);
+  assert(html.includes('"ok":false'), html);
+  assert(!html.includes('other@example.com'), 'popup deny does not echo the email');
+  assert(userCount() === before, 'popup deny did not insert a user');
+});
+
+await withGoogle(profile({ name: 'Should Not Stick' }), async () => {
+  const started = await startSignIn(APEX, googleEnv);
+  const state = started.auth.searchParams.get('state');
+  const cb = await onCallback({
+    request: new Request(`${APEX}/api/auth/google/callback?code=4/ada-denied&state=${encodeURIComponent(state)}`, {
+      headers: { cookie: started.cookie },
+    }),
+    env: { ...googleEnv, AUTH_ALLOWED_EMAILS: OWNER_EMAIL },
+  });
+  assert((cb.headers.get('location') || '').includes('error=email_not_allowed'), 'listed owner does not admit ada');
+  assert(!setCookie(cb, 'vt_session'), 'ada gets no session when unlisted');
+  const ada = sqlite.prepare('SELECT name FROM users WHERE email = ?').get('ada@example.com');
+  assert(ada.name === 'Ada Lovelace', `ensureUser did not run (${ada && ada.name})`);
+});
+
+const publicPreview = await onPreview({
+  request: new Request(`${APEX}/api/auth/preview`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: OWNER_EMAIL, name: 'Owner' }),
+  }),
+  env: { AUTH_SECRET, AUTH_PREVIEW_LOGIN: '1', AUTH_ALLOWED_EMAILS: OWNER_EMAIL },
+});
+assert(publicPreview.status === 403, `public preview ${publicPreview.status}`);
+const publicPreviewBody = await publicPreview.json();
+assert(publicPreviewBody.error === 'preview_disabled', publicPreviewBody.error);
+assert(!setCookie(publicPreview, 'vt_session'), 'public preview sets no session');
+assert(publicPreview.headers.getSetCookie().length === 0, 'public preview sets no cookies');
+
+const localStranger = await onPreview({
+  request: new Request('http://localhost:8788/api/auth/preview', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'stranger@example.com', name: 'Stranger' }),
+  }),
+  env: {},
+});
+assert(localStranger.status === 403, `local stranger preview ${localStranger.status}`);
+const localStrangerBody = await localStranger.json();
+assert(localStrangerBody.error === 'email_not_allowed', localStrangerBody.error);
+assert(!setCookie(localStranger, 'vt_session'), 'unlisted preview sets no session');
+
+const localOwner = await onPreview({
+  request: new Request('http://127.0.0.1:8788/api/auth/preview', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: '1316805445@QQ.com', name: 'Owner' }),
+  }),
+  env: { AUTH_ALLOWED_EMAILS: ' , ' },
+});
+assert(localOwner.status === 200, `local owner preview ${localOwner.status}`);
+const localOwnerBody = await localOwner.json();
+assert(localOwnerBody.user.email === OWNER_EMAIL, localOwnerBody.user.email);
+assert(setCookie(localOwner, 'vt_session').includes('HttpOnly'), 'allowlisted localhost preview sets a session');
 
 console.log('google auth tests passed');

@@ -13,7 +13,12 @@ import {
   resolveDashScopeBase,
 } from '../functions/_lib/bailian.js';
 import { onRequestPost } from '../functions/api/jobs/process.js';
+import { onRequestPost as onCreate } from '../functions/api/jobs/index.js';
+import { onRequestPost as onContinue } from '../functions/api/jobs/continue.js';
 import { queueJobWithMedia } from '../functions/_lib/job-media.js';
+import { kickRemakeJob } from '../functions/_lib/remake-kick.js';
+import { issueSessionCookie } from '../functions/_lib/session.js';
+import { drainRemakeJobs, processUrl } from '../workers/job-drain/index.js';
 import { JOB_PROVIDER_COLUMNS } from '../functions/_lib/schema.js';
 import { getTemplate } from '../functions/_lib/templates.js';
 
@@ -467,6 +472,134 @@ const hugeRes = await onRequestPost({
 });
 const hugeBody = await hugeRes.json();
 assert(hugeBody.processed[0].error === 'photo_too_large', JSON.stringify(hugeBody.processed[0]));
+
+const kissMissing = await queueJobWithMedia({
+  db,
+  env,
+  request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
+  user,
+  templateSlug: 'kiss-cam',
+  photos: [],
+});
+const kissFail = await kickRemakeJob({
+  db,
+  env,
+  request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
+  jobId: kissMissing.job.id,
+});
+assert(kissFail.processed[0].error === 'no_photo', JSON.stringify(kissFail));
+assert(kissFail.processed[0].status === 'failed', kissFail.processed[0].status);
+const kissNote = sqlite.prepare(`SELECT status, error_code, note_en, note_zh FROM jobs WHERE id = ?`).get(kissMissing.job.id);
+assert(kissNote.status === 'failed' && kissNote.error_code === 'no_photo', JSON.stringify(kissNote));
+assert(kissNote.note_en.includes('two saved photos'), kissNote.note_en);
+assert(kissNote.note_zh.includes('两张'), kissNote.note_zh);
+
+const { fetchImpl: providerFetch, calls: kickCalls } = installFetch();
+let releaseFetch;
+const fetchGate = new Promise((resolve) => {
+  releaseFetch = resolve;
+});
+globalThis.fetch = async (url, init) => {
+  await fetchGate;
+  return providerFetch(url, init);
+};
+const cookieLine = await issueSessionCookie(new Request(`${origin}/api/jobs`, { method: 'POST' }), env, user);
+const cookie = cookieLine.split(';')[0];
+const form = new FormData();
+form.set('template_slug', 'kiss-cam');
+form.set('photo_0', new File([jpeg], 'a.jpg', { type: 'image/jpeg' }));
+form.set('photo_1', new File([jpeg], 'b.jpg', { type: 'image/jpeg' }));
+const pending = [];
+const created = await Promise.race([
+  onCreate({
+    env: { ...env, JOB_PROCESS_SECRET: '' },
+    request: new Request(`${origin}/api/jobs`, { method: 'POST', headers: { cookie }, body: form }),
+    waitUntil(promise) {
+      pending.push(promise);
+    },
+  }),
+  new Promise((_, reject) => setTimeout(() => reject(new Error('create blocked on provider')), 500)),
+]);
+assert(created.status === 201, `create ${created.status}`);
+const createdBody = await created.json();
+assert(createdBody.ok === true && createdBody.job.status === 'queued', JSON.stringify(createdBody.job));
+assert(createdBody.media.photos === 2, `kiss-cam photos ${createdBody.media.photos}`);
+assert(pending.length === 1, 'create registered waitUntil');
+const stillQueued = sqlite.prepare(`SELECT status FROM jobs WHERE id = ?`).get(createdBody.job.id);
+assert(stillQueued.status === 'queued' || stillQueued.status === 'running', stillQueued.status);
+releaseFetch();
+await pending[0];
+const taskPolls = kickCalls.filter((call) => call.url.includes('/tasks/'));
+assert(taskPolls.length === 1, `create kick should poll once, saw ${taskPolls.length}`);
+assert(kickCalls.some((call) => call.url.includes('/video-synthesis')), 'create kick submitted');
+assert(!kickCalls.some((call) => String(call.init && call.init.headers && call.init.headers.authorization || '').includes('job-process')), 'kick did not send the process secret');
+const kicked = sqlite.prepare(`SELECT status, error_code FROM jobs WHERE id = ?`).get(createdBody.job.id);
+assert(kicked.status === 'ready', `kick finished as ${kicked.status}`);
+assert(!kicked.error_code, kicked.error_code);
+
+globalThis.fetch = providerFetch;
+const bob = { user_id: 'u_bob', email: 'bob@example.com', name: 'Bob' };
+const bobJob = await queueJobWithMedia({
+  db,
+  env,
+  request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
+  user: bob,
+  templateSlug: 'bby-wow',
+  photos: [{ bytes: jpeg, contentType: 'image/jpeg', ext: 'jpg' }],
+});
+const aliceNext = await queueJobWithMedia({
+  db,
+  env,
+  request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
+  user,
+  templateSlug: 'ceiling-fan',
+  photos: [{ bytes: jpeg, contentType: 'image/jpeg', ext: 'jpg' }],
+});
+const anon = await onContinue({
+  env,
+  request: new Request(`${origin}/api/jobs/continue`, { method: 'POST' }),
+});
+assert(anon.status === 401, `continue anon ${anon.status}`);
+const continued = await onContinue({
+  env: { ...env, JOB_PROCESS_SECRET: '' },
+  request: new Request(`${origin}/api/jobs/continue`, {
+    method: 'POST',
+    headers: { cookie, 'content-type': 'application/json' },
+    body: JSON.stringify({ job_id: bobJob.job.id, authorization: `Bearer ${PROCESS_SECRET}` }),
+  }),
+});
+assert(continued.status === 200, `continue ${continued.status}`);
+const continuedBody = await continued.json();
+assert(continuedBody.processed.length === 1, JSON.stringify(continuedBody));
+assert(continuedBody.processed[0].id === aliceNext.job.id, continuedBody.processed[0].id);
+assert(continuedBody.processed[0].status === 'running', continuedBody.processed[0].status);
+assert(!JSON.stringify(continuedBody).includes(API_KEY), 'continue leaked the api key');
+const bobRow = sqlite.prepare(`SELECT status FROM jobs WHERE id = ?`).get(bobJob.job.id);
+assert(bobRow.status === 'queued', `other user was processed (${bobRow.status})`);
+
+assert(processUrl({}) === 'https://viral-templates.pages.dev/api/jobs/process', processUrl({}));
+assert(
+  processUrl({ PAGES_ORIGIN: 'https://viral-templates.pages.dev/ignored' }) ===
+    'https://viral-templates.pages.dev/api/jobs/process',
+  'drain origin drops a path',
+);
+let drained = null;
+const drain = await drainRemakeJobs(
+  { JOB_PROCESS_SECRET: PROCESS_SECRET, BAILIAN_API_KEY: API_KEY, PAGES_ORIGIN: 'https://viral-templates.pages.dev' },
+  async (url, init) => {
+    drained = { url, init };
+    return new Response('{}', { status: 200 });
+  },
+);
+assert(drain.ok === true && drain.status === 200, JSON.stringify(drain));
+assert(drained.url.endsWith('/api/jobs/process'), drained.url);
+assert(drained.init.headers.authorization === `Bearer ${PROCESS_SECRET}`, 'drain bearer');
+assert(JSON.parse(drained.init.body).limit === 3, drained.init.body);
+assert(!JSON.stringify(drained.init).includes(API_KEY), 'drain sent the bailian key');
+const drainSkipped = await drainRemakeJobs({ JOB_PROCESS_SECRET: 'short', BAILIAN_API_KEY: API_KEY }, async () => {
+  throw new Error('unconfigured drain must not fetch');
+});
+assert(drainSkipped.error === 'job_process_unconfigured', drainSkipped.error);
 
 globalThis.fetch = previous;
 console.log('bailian-worker.test.mjs ok');

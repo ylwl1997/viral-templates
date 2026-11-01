@@ -31,7 +31,13 @@ export const OAUTH_STATE_COOKIE = 'vt_oauth';
 export const OAUTH_STATE_MAX_AGE = 60 * 10;
 
 const SIGN_IN_PATH = /^\/(?:zh\/)?(?:t\/[a-z0-9-]+\/)?account\/sign-in\/$/;
-const SIGN_IN_ERRORS = new Set(['google_denied', 'google_failed', 'google_state', 'google_unavailable']);
+const SIGN_IN_ERRORS = new Set([
+  'google_denied',
+  'google_failed',
+  'google_state',
+  'google_unavailable',
+  'email_not_allowed',
+]);
 const text = new TextEncoder();
 
 function bytesToB64url(bytes) {

@@ -14,7 +14,7 @@ import {
   sessionUserFromGoogle,
   signInErrorLocation,
 } from '../../../_lib/google-oauth.js';
-import { issueSessionCookie } from '../../../_lib/session.js';
+import { authEmailAllowed, issueSessionCookie } from '../../../_lib/session.js';
 
 function fail(request, saved, error, next) {
   const destNext = next || (saved && saved.next) || '';
@@ -55,6 +55,9 @@ export async function onRequestGet(context) {
   const profile = accessToken ? await fetchGoogleUserInfo(accessToken) : null;
   const user = profile ? await sessionUserFromGoogle(profile) : null;
   if (!user) return fail(request, saved, 'google_failed');
+  // Before ensureUser and before vt_session. A rejected Google account gets
+  // no user row and no session cookie.
+  if (!authEmailAllowed(env, user.email)) return fail(request, saved, 'email_not_allowed');
 
   const db = getDb(env);
   if (db) {

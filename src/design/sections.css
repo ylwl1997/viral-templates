@@ -1063,6 +1063,78 @@ video.media-poster {
   color: var(--secondary);
 }
 .sign-in-back { margin: 1rem 0 0; font-size: 0.9rem; }
+.sign-in-soon { margin: 0.65rem 0 0; color: var(--muted); font-size: 0.9rem; }
+.sign-in-soon[hidden] { display: none; }
+
+/* In-page sign-in. Same paper card as the account sign-in page. */
+html.login-open,
+html.login-open body { overflow: hidden; }
+.login-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+.login-modal[hidden] { display: none; }
+.login-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 25, 23, 0.46);
+}
+.login-modal-dialog {
+  position: relative;
+  width: min(26rem, 100%);
+  max-height: min(40rem, calc(100vh - 2.5rem));
+  overflow: auto;
+  margin: 0;
+  padding: 1.35rem 1.35rem 1.2rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+.login-modal-close {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.95rem;
+  z-index: 2;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 0.2rem;
+}
+.login-modal-close:hover { color: var(--text); }
+.login-modal-dialog .account-kicker { padding-right: 4.5rem; }
+.login-modal-dialog h2 {
+  margin: 0.15rem 0 0.45rem;
+  font-size: clamp(1.85rem, 4vw, 2.35rem);
+  letter-spacing: var(--letter-display);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-display);
+  line-height: 1.05;
+  color: var(--text);
+}
+.login-modal-dialog .lede {
+  color: var(--secondary);
+  margin: 0 0 1.15rem;
+  font-size: 1.02rem;
+}
+.login-modal-dialog .sign-in-error {
+  margin: 0 0 0.75rem;
+  color: var(--danger);
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-modal-dialog { scroll-behavior: auto; }
+}
 
 /* Final band — type and one ink button, no glow card */
 .final-cta {

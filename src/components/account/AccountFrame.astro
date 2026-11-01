@@ -55,7 +55,7 @@ const createHref = template
             '登录后可在此查看作品、积分与设置。'
           )}
         </p>
-        <a class="btn btn-primary" data-account-gate-signin href={accountHref(lang, 'sign-in')}>
+        <a class="btn btn-primary" data-account-gate-signin href={accountHref(lang, 'sign-in')} aria-haspopup="dialog">
           {label('Sign in', '登录')}
         </a>
       </div>

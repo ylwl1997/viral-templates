@@ -238,6 +238,10 @@ const photoLabel = label('Your photo', '上传的照片');
     if (consent) consent.addEventListener('change', syncGenerate);
     function goSignIn() {
       var next = location.pathname + location.search + location.hash;
+      if (typeof window.vtOpenLogin === 'function') {
+        window.vtOpenLogin({ next: next, lang: lang });
+        return;
+      }
       var url = '/account/sign-in/?next=' + encodeURIComponent(next);
       try {
         var u = new URL(signInBase || '/account/sign-in/', location.origin);
@@ -293,7 +297,7 @@ const photoLabel = label('Your photo', '上传的照片');
       requireUser(function (user) {
         if (!user) {
           setStatus(
-            lang === 'zh' ? '请先登录后再生成。正在跳转…' : 'Sign in required. Redirecting…',
+            lang === 'zh' ? '请先登录后再生成。' : 'Sign in to generate.',
             'err'
           );
           goSignIn();
@@ -335,7 +339,7 @@ const photoLabel = label('Your photo', '上传的照片');
             if (!res.ok || !data.ok) {
               if (data.error === 'unauthorized') {
                 setStatus(
-                  lang === 'zh' ? '请先登录后再生成。正在跳转…' : 'Sign in required. Redirecting…',
+                  lang === 'zh' ? '请先登录后再生成。' : 'Sign in to generate.',
                   'err'
                 );
                 goSignIn();

@@ -21,7 +21,7 @@ const account = accountHref(lang, '');
   data-sign-in={signIn}
   data-account={account}
 >
-  <a class="btn btn-ghost btn-sm header-auth-signin" data-auth-signin href={signIn}>
+  <a class="btn btn-ghost btn-sm header-auth-signin" data-auth-signin href={signIn} aria-haspopup="dialog">
     {label('Sign in', '登录')}
   </a>
   <div class="header-auth-user" data-auth-user hidden>

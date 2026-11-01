@@ -10,10 +10,16 @@ Preview email sign-in (`POST /api/auth/preview`) stays available on `localhost` 
 
 | Route | Role |
 | --- | --- |
-| `GET /api/auth/google/start?next=&from=` | Sends the browser to Google. `next` is where to land after sign-in. `from` is the sign-in page to return to if it fails. Both are relative paths only. |
+| `GET /api/auth/google/start?next=&from=&popup=` | Sends the browser to Google. `next` is where to land after sign-in. `from` is the sign-in page to return to if it fails. Both are relative paths only. `popup=1` stores a flag in the state cookie. |
 | `GET /api/auth/google/callback` | Google redirects here. Exchanges the code, reads the profile, creates the user, sets `vt_session`. |
 
 The session cookie is the same shape as preview login, with `providers: ['google']`. The profile stores email (only if Google says it is verified), name, and picture. Google access tokens are not stored.
+
+## Popup
+
+Header and account **Sign in** open a dialog on the current page. **Continue with Google** calls `window.open` on `/api/auth/google/start?popup=1`. The authorize `redirect_uri` is still exactly `https://<host>/api/auth/google/callback`. Do not register a second URI.
+
+When the state cookie says `popup`, the callback returns a small HTML page instead of redirecting to `next`. That page `postMessage`s `window.opener` (target origin is the page itself) and a same-origin `BroadcastChannel` named `vt-auth`, then closes. The opener refetches `GET /api/auth/session` and updates the header and account shell. If the browser blocks the popup, the button continues in the same tab without `popup=1`, and the callback redirects as before.
 
 ## Redirect URI
 

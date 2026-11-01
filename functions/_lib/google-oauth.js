@@ -4,6 +4,10 @@
  * Redirect URI is always the current host + /api/auth/google/callback.
  * Register that exact URI for each host (no wildcards). Path-style
  * /t/{slug}/ on the apex does not need its own URI.
+ *
+ * Popup sign-in uses the same redirect URI. `popup=1` on start is stored
+ * in the state cookie. The callback then returns a tiny HTML page that
+ * postMessages the opener and closes, instead of navigating to `next`.
  */
 
 import {
@@ -141,6 +145,7 @@ export async function issueOauthStateCookie(request, env, fields) {
       verifier: fields.verifier,
       next: safeNext(fields.next),
       from: safeSignInPath(fields.from),
+      popup: fields.popup === true,
       iat: now,
       exp: now + OAUTH_STATE_MAX_AGE,
     },
@@ -168,6 +173,7 @@ export async function readOauthState(request, env) {
     verifier: payload.verifier,
     next: safeNext(payload.next),
     from: safeSignInPath(payload.from),
+    popup: payload.popup === true,
   };
 }
 
@@ -305,6 +311,69 @@ export async function fetchGoogleUserInfo(accessToken, fetchImpl = globalThis.fe
   } catch {
     return null;
   }
+}
+
+function htmlAttr(value) {
+  return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+/**
+ * HTML document for a popup that has already hit the registered callback URI.
+ * Does not navigate the popup to a new OAuth redirect. The opener listens
+ * for postMessage (target origin = this page) and BroadcastChannel `vt-auth`.
+ */
+export function oauthResultDocument({ ok, error, next, setCookies = [] }) {
+  const success = ok === true;
+  const payload = {
+    type: 'vt-auth',
+    ok: success,
+    error: success ? '' : SIGN_IN_ERRORS.has(error) ? error : 'google_failed',
+    next: safeNext(typeof next === 'string' ? next : ''),
+  };
+  const json = JSON.stringify(payload)
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+  const title = success ? 'Signed in' : 'Sign-in';
+  const message = success ? 'Signed in. You can close this window.' : 'You can close this window.';
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>${title}</title>
+</head>
+<body>
+<p>${message}</p>
+<p><a href="${htmlAttr(payload.next)}">Continue</a></p>
+<script>
+(function () {
+  var payload = ${json};
+  var target = window.location.origin;
+  try {
+    if (window.opener && !window.opener.closed) window.opener.postMessage(payload, target);
+  } catch (e) {}
+  try {
+    var channel = new BroadcastChannel('vt-auth');
+    channel.postMessage(payload);
+    channel.close();
+  } catch (e) {}
+  try { window.close(); } catch (e) {}
+})();
+</script>
+</body>
+</html>`;
+  const headers = new Headers({
+    'content-type': 'text/html; charset=utf-8',
+    'cache-control': 'no-store',
+    'referrer-policy': 'no-referrer',
+    'content-security-policy': "default-src 'none'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
+    'x-content-type-options': 'nosniff',
+  });
+  for (const cookie of setCookies) headers.append('set-cookie', cookie);
+  return new Response(html, { status: 200, headers });
 }
 
 export function googleClient(env) {

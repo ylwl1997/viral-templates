@@ -30,6 +30,7 @@ export const SITE = {
     'YOUR_ADSTERRA_SOCIAL_BAR_ZONE_ID',
   falConfigured: false,
   waffoConfigured: false,
+  /** Google sign-in is decided per request (`GET /api/auth/session`), not at build time. */
   /** Static build flag. Set PUBLIC_R2_CONFIGURED=1 after the MEDIA bucket is bound. Runtime storage follows env.MEDIA even when this stays false. */
   r2Configured: (import.meta.env.PUBLIC_R2_CONFIGURED as string | undefined) === '1',
   photoRetentionDays,

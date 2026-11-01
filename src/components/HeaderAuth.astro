@@ -33,7 +33,10 @@ const account = accountHref(lang, '');
       aria-expanded="false"
       aria-label={label('Account menu', '账户菜单')}
     >
-      <span class="avatar-circle" data-auth-initials>U</span>
+      <span class="avatar-circle">
+        <img class="avatar-photo" data-auth-photo alt="" width="32" height="32" hidden />
+        <span data-auth-initials>U</span>
+      </span>
     </button>
     <div class="avatar-menu" data-auth-menu hidden role="menu">
       <div class="avatar-menu-meta">

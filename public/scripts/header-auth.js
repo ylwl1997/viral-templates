@@ -30,9 +30,33 @@
     var initialsEl = root.querySelector('[data-auth-initials]');
     var nameEl = root.querySelector('[data-auth-name]');
     var emailEl = root.querySelector('[data-auth-email]');
+    var photo = root.querySelector('[data-auth-photo]');
     if (initialsEl) initialsEl.textContent = initials(user.name, user.email);
     if (nameEl) nameEl.textContent = user.name || user.email || 'Account';
     if (emailEl) emailEl.textContent = user.email || '';
+    if (photo) {
+      var src = '';
+      try {
+        var parsed = new URL(String(user.avatar_url || ''));
+        if (parsed.protocol === 'https:') src = parsed.href;
+      } catch (e) {
+        src = '';
+      }
+      if (src) {
+        photo.hidden = false;
+        photo.src = src;
+        if (initialsEl) initialsEl.hidden = true;
+        photo.onerror = function () {
+          photo.hidden = true;
+          photo.removeAttribute('src');
+          if (initialsEl) initialsEl.hidden = false;
+        };
+      } else {
+        photo.hidden = true;
+        photo.removeAttribute('src');
+        if (initialsEl) initialsEl.hidden = false;
+      }
+    }
   }
 
   function bind(root) {

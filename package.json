@@ -14,6 +14,8 @@
     "test:account": "node --experimental-sqlite scripts/account-d1.test.mjs",
     "test:auth": "node --experimental-sqlite scripts/google-auth.test.mjs",
     "test:media": "node --experimental-sqlite scripts/r2-media.test.mjs",
+    "test:bailian": "node --experimental-sqlite scripts/bailian-worker.test.mjs",
+    "smoke:bailian": "node scripts/smoke-bailian.mjs",
     "d1:migrate:local": "wrangler d1 migrations apply viral-templates --local",
     "astro": "astro",
     "deploy": "astro build && wrangler pages deploy dist --project-name=viral-templates"

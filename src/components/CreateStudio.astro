@@ -162,12 +162,12 @@ const photoLabel = label('Your photo', '上传的照片');
         resultLabel={label('Result', '生成的视频')}
         note={sources.length > 1
           ? label(
-              'These photos are the people in the clip. Your uploads replace them. Generate saves a queued job — a finished clip is not available yet.',
-              '这两张照片就是成片里的人。上传后会换成你的照片。生成只会把任务排进账户，目前还没有成片。',
+              'These photos are the people in the clip. Your uploads replace them. Generate queues the job. The clip shows on your account when it is ready.',
+              '这两张照片就是成片里的人。上传后会换成你的照片。生成会把任务排进账户。完成后成片会出现在账户里。',
             )
           : label(
-              'The photo matches the person in the clip. Your upload replaces it. Generate saves a queued job — a finished clip is not available yet.',
-              '照片与成片是同一个人。上传后会换成你的照片。生成只会把任务排进账户，目前还没有成片。',
+              'The photo matches the person in the clip. Your upload replaces it. Generate queues the job. The clip shows on your account when it is ready.',
+              '照片与成片是同一个人。上传后会换成你的照片。生成会把任务排进账户。完成后成片会出现在账户里。',
             )}
         liveOriginal
       />

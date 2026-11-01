@@ -141,9 +141,9 @@ export const BBY_LIVE: LivePack = {
       qEn: 'What if generate fails? Is there a refund?',
       qZh: '生成失败会退款吗？',
       aEn:
-        'Checkout is not open, so this demo does not take payment. A generate that does not produce a clip is not a finished purchase. Today, signed-in Generate queues a job and uses one credit, and no video file comes back. When checkout exists, refund rules will be on the Terms page.',
+        'Checkout is not open, so this demo does not take payment. Signed-in Generate queues a job and uses one credit. The clip appears on your account when generation succeeds. If it fails, no clip is saved. When checkout exists, refund rules will be on the Terms page.',
       aZh:
-        '这个演示不收款。没有成片，就不是一次完成的购买。目前登录后生成会排队并扣 1 积分，但不会返回视频文件。真正收费后的退款规则，会写在服务条款里。',
+        '这个演示不收款。登录后生成会排队并扣 1 积分。生成成功后，成片会出现在你的账户里。失败则没有成片。真正收费后的退款规则，会写在服务条款里。',
     },
   ],
 };
@@ -290,9 +290,9 @@ export const KISS_LIVE: LivePack = {
       qEn: 'What if generate fails? Is there a refund?',
       qZh: '生成失败会退款吗？',
       aEn:
-        'Checkout is not open, so this demo does not charge a card. A generate that does not produce a clip is not a finished purchase. Today the job is queued and a credit is used, with no video file. Refund terms for real payments will be on the Terms page when checkout exists.',
+        'Checkout is not open, so this demo does not charge a card. The job is queued and a credit is used. The clip appears on your account when generation succeeds. If it fails, no clip is saved. Refund terms for real payments will be on the Terms page when checkout exists.',
       aZh:
-        '这个演示不扣银行卡。没有成片，就不是一次完成的购买。目前任务会排队并扣 1 积分，没有视频文件。真正付款后的退款规则会写在服务条款里。',
+        '这个演示不扣银行卡。任务会排队并扣 1 积分。生成成功后，成片会出现在你的账户里。失败则没有成片。真正付款后的退款规则会写在服务条款里。',
     },
   ],
 };
@@ -404,8 +404,8 @@ export const FAN_LIVE: LivePack = {
       qEn: 'How long is the video?',
       qZh: '视频有多长？',
       aEn:
-        'About 12–15 seconds. Generate queues a job and uses one credit. A finished file is not available on this demo yet.',
-      aZh: '大约 12–15 秒。生成会排队并扣 1 积分。这个演示目前还没有成片文件。',
+        'About 12–15 seconds. Generate queues a job and uses one credit. The file shows on your account when the job is ready.',
+      aZh: '大约 12–15 秒。生成会排队并扣 1 积分。任务完成后，成片会出现在你的账户里。',
     },
     {
       id: 'credits',
@@ -440,9 +440,9 @@ export const FAN_LIVE: LivePack = {
       qEn: 'What if generate fails? Is there a refund?',
       qZh: '生成失败会退款吗？',
       aEn:
-        'This demo does not take payment. If a generate does not produce a clip, that is not a finished result. Today, signed-in Generate queues a job and uses a credit, and no video file comes back. Paid refund rules will be on Terms when checkout opens.',
+        'This demo does not take payment. Signed-in Generate queues a job and uses a credit. The clip appears on your account when generation succeeds. If it fails, no clip is saved. Paid refund rules will be on Terms when checkout opens.',
       aZh:
-        '这个演示不收款。生成如果没有成片，就不是完成的结果。目前登录后会排队并扣 1 积分，没有视频文件。结账开放后，退款规则写在服务条款里。',
+        '这个演示不收款。登录后会排队并扣 1 积分。生成成功后，成片会出现在你的账户里。失败则没有成片。结账开放后，退款规则写在服务条款里。',
     },
   ],
 };

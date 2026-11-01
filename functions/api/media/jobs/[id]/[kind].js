@@ -38,7 +38,7 @@ export async function onRequestGet(context) {
       'content-type': contentType,
       'cache-control': 'private, no-store',
       'x-content-type-options': 'nosniff',
-      'content-disposition': kind === 'result' ? 'attachment; filename="clip.mp4"' : 'inline',
+      'content-disposition': kind === 'result' ? 'inline; filename="clip.mp4"' : 'inline',
     });
     if (typeof obj.size === 'number') headers.set('content-length', String(obj.size));
     return new Response(obj.body, { status: 200, headers });

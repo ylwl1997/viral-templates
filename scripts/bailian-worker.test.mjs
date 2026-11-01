@@ -1,0 +1,472 @@
+import fs from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+import { ensureMediaColumns, ensureSchema, getCredits } from '../functions/_lib/account-db.js';
+import {
+  CLASSIC_DASHSCOPE_BASE,
+  DEFAULT_MODE,
+  DEFAULT_MODEL,
+  WORKSPACE_DASHSCOPE_BASE,
+  assertDashScopeInputUrl,
+  bailianRuntime,
+  buildSynthesisRequest,
+  resolveBailianApiKey,
+  resolveDashScopeBase,
+} from '../functions/_lib/bailian.js';
+import { onRequestPost } from '../functions/api/jobs/process.js';
+import { queueJobWithMedia } from '../functions/_lib/job-media.js';
+import { JOB_PROVIDER_COLUMNS } from '../functions/_lib/schema.js';
+import { getTemplate } from '../functions/_lib/templates.js';
+
+function assert(cond, message) {
+  if (!cond) throw new Error(message || 'assertion failed');
+}
+
+function pad(bytes, length = 32) {
+  const out = new Uint8Array(length);
+  out.set(bytes);
+  return out;
+}
+
+const jpeg = pad(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]));
+const mp4 = pad(Uint8Array.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]));
+const API_KEY = 'sk-test-bailian-key';
+const PROCESS_SECRET = 'job-process-secret-1';
+const TASK_OK = '0385dc79-5ff8-4d82-bcb6-aaaaaa01';
+const TASK_BAD = '0385dc79-5ff8-4d82-bcb6-bbbbbb02';
+const WORKSPACE_HOST = 'llm-g1ozpdi7y5eyp1mh.cn-beijing.maas.aliyuncs.com';
+
+assert(resolveDashScopeBase({}) === WORKSPACE_DASHSCOPE_BASE, 'default base');
+assert(WORKSPACE_DASHSCOPE_BASE.includes(WORKSPACE_HOST), 'workspace host');
+assert(resolveDashScopeBase({ BAILIAN_DASHSCOPE_BASE_URL: CLASSIC_DASHSCOPE_BASE }) === CLASSIC_DASHSCOPE_BASE, 'classic override');
+assert(resolveBailianApiKey({ DASHSCOPE_API_KEY: 'legacy-key' }) === 'legacy-key', 'legacy key');
+assert(resolveBailianApiKey({ BAILIAN_API_KEY: 'primary', DASHSCOPE_API_KEY: 'legacy-key' }) === 'primary', 'primary key wins');
+assert(bailianRuntime({ BAILIAN_API_KEY: API_KEY }).model === DEFAULT_MODEL, 'model');
+assert(bailianRuntime({ BAILIAN_API_KEY: API_KEY }).mode === DEFAULT_MODE, 'mode');
+assert(bailianRuntime({ BAILIAN_API_KEY: API_KEY }).configured === true, 'configured');
+assert(bailianRuntime({}).configured === false, 'missing key');
+let badMode = false;
+try {
+  bailianRuntime({ BAILIAN_API_KEY: API_KEY, BAILIAN_MODE: 'wan-ultra' });
+} catch (err) {
+  badMode = err && err.code === 'bailian_bad_mode';
+}
+assert(badMode, 'bad mode');
+const pro = buildSynthesisRequest(
+  { ...bailianRuntime({ BAILIAN_API_KEY: API_KEY, BAILIAN_MODE: 'wan-pro' }), apiKey: API_KEY },
+  { imageUrl: 'oss://dashscope-instant/a/subject.jpg', videoUrl: 'oss://dashscope-instant/a/reference.mp4' },
+);
+assert(pro.body.model === 'wan2.2-animate-move', pro.body.model);
+assert(pro.body.parameters.mode === 'wan-pro', pro.body.parameters.mode);
+assert(pro.body.input.watermark === false, 'watermark default');
+assert(pro.headers['X-DashScope-Async'] === 'enable', 'async header');
+assert(pro.headers['X-DashScope-OssResourceResolve'] === 'enable', 'oss header');
+assert(pro.url.startsWith(`${WORKSPACE_DASHSCOPE_BASE}/services/aigc/image2video/video-synthesis`), pro.url);
+assert(assertDashScopeInputUrl('oss://dashscope-instant/test/subject.jpg') === 'oss://dashscope-instant/test/subject.jpg', 'oss input');
+for (const blockedUrl of [
+  'https://viral-templates.pages.dev/api/media/jobs/job_x/photo?exp=1&sig=ab',
+  'https://viral-templates.pages.dev/brand/templates/bby-wow-demo.mp4',
+  'https://foo.workers.dev/clip.mp4',
+  'https://pub-abc.r2.dev/clip.mp4',
+  'http://media.example.com/a.jpg',
+]) {
+  let blocked = false;
+  try {
+    buildSynthesisRequest(bailianRuntime({ BAILIAN_API_KEY: API_KEY }), {
+      imageUrl: blockedUrl,
+      videoUrl: 'oss://dashscope-instant/test/reference.mp4',
+    });
+  } catch (err) {
+    blocked = err && err.code === 'bailian_unreachable_input';
+  }
+  assert(blocked, `accepted unreachable input ${blockedUrl}`);
+}
+let pagesBase = false;
+try {
+  bailianRuntime({ BAILIAN_API_KEY: API_KEY, BAILIAN_PUBLIC_MEDIA_BASE: 'https://viral-templates.pages.dev' });
+} catch (err) {
+  pagesBase = err && err.code === 'bailian_bad_base';
+}
+assert(pagesBase, 'pages.dev public base refused');
+const mainland = bailianRuntime({
+  BAILIAN_API_KEY: API_KEY,
+  BAILIAN_PUBLIC_MEDIA_BASE: 'https://media.example.com/bucket',
+});
+const viaMainland = buildSynthesisRequest(mainland, {
+  imageUrl: 'https://media.example.com/uploads/subject.jpg',
+  videoUrl: 'https://media.example.com/templates/demo.mp4',
+});
+assert(viaMainland.body.input.image_url.startsWith('https://media.example.com/'), viaMainland.body.input.image_url);
+assert(!viaMainland.body.input.video_url.includes('pages.dev'), 'mainland url picked up pages.dev');
+
+for (const slug of ['bby-wow', 'kiss-cam', 'ceiling-fan']) {
+  const template = getTemplate(slug);
+  assert(template.referenceVideo && template.referenceVideo.endsWith('.mp4'), slug);
+  assert(fs.existsSync(new URL(`../public${template.referenceVideo}`, import.meta.url)), template.referenceVideo);
+}
+assert(getTemplate('bulin-47').referenceVideo == null, 'soon template has no reference');
+assert(getTemplate('kiss-cam').photoCount === 2, 'kiss cam still two photos');
+
+const workerSource = fs.readFileSync(new URL('../functions/_lib/bailian-worker.js', import.meta.url), 'utf8');
+const dbSource = fs.readFileSync(new URL('../functions/_lib/account-db.js', import.meta.url), 'utf8');
+assert(workerSource.includes('upload_key'), 'worker reads the subject photo');
+assert(!workerSource.includes('upload_key_2'), 'second photo is not sent');
+assert(!workerSource.includes('row.upload_url'), 'signed pages.dev url is not a Bailian input');
+assert(dbSource.includes('TODO(credits)'), 'refund todo');
+assert(dbSource.includes("kind 'refund'"), 'refund kind named');
+
+const baseline = fs.readFileSync(new URL('../migrations/0001_account.sql', import.meta.url), 'utf8');
+const mediaMigration = fs.readFileSync(new URL('../migrations/0002_r2_media.sql', import.meta.url), 'utf8');
+const upgradeSqlite = new DatabaseSync(':memory:');
+upgradeSqlite.exec(baseline);
+upgradeSqlite.exec(mediaMigration);
+const upgradeDb = wrap(upgradeSqlite);
+await ensureMediaColumns(upgradeDb);
+const upgraded = new Set(upgradeSqlite.prepare(`PRAGMA table_info(jobs)`).all().map((row) => row.name));
+for (const name of JOB_PROVIDER_COLUMNS) assert(upgraded.has(name), `upgrade missing ${name}`);
+
+function wrap(sqlite) {
+  function prepared(sql, params = []) {
+    return {
+      bind(...next) {
+        return prepared(sql, next);
+      },
+      async run() {
+        const info = sqlite.prepare(sql).run(...params);
+        return { meta: { changes: info.changes } };
+      },
+      async first() {
+        return sqlite.prepare(sql).get(...params) ?? null;
+      },
+      async all() {
+        return { results: sqlite.prepare(sql).all(...params) };
+      },
+    };
+  }
+  return {
+    prepare(sql) {
+      return prepared(sql);
+    },
+    async batch(statements) {
+      sqlite.exec('BEGIN');
+      try {
+        const out = [];
+        for (const stmt of statements) out.push(await stmt.run());
+        sqlite.exec('COMMIT');
+        return out;
+      } catch (err) {
+        sqlite.exec('ROLLBACK');
+        throw err;
+      }
+    },
+  };
+}
+
+function mockBucket() {
+  const objects = new Map();
+  return {
+    objects,
+    async put(key, value, opts) {
+      const bytes = value instanceof Uint8Array ? value : new Uint8Array(value);
+      objects.set(key, { bytes, opts });
+    },
+    async get(key) {
+      const row = objects.get(key);
+      if (!row) return null;
+      return {
+        key,
+        body: row.bytes,
+        size: row.bytes.byteLength,
+        httpMetadata: (row.opts && row.opts.httpMetadata) || {},
+        customMetadata: (row.opts && row.opts.customMetadata) || {},
+      };
+    },
+    async delete(key) {
+      objects.delete(key);
+    },
+  };
+}
+
+function jsonResponse(status, body) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+const policy = {
+  data: {
+    policy: 'policy',
+    signature: 'sig',
+    upload_dir: 'dashscope-instant/test/2026',
+    upload_host: 'https://dashscope-file-mgr.oss-cn-beijing.aliyuncs.com',
+    oss_access_key_id: 'LTAtest',
+    x_oss_object_acl: 'private',
+    x_oss_forbid_overwrite: 'true',
+  },
+};
+
+function resultTask(taskId) {
+  return {
+    output: {
+      task_id: taskId,
+      task_status: 'SUCCEEDED',
+      results: { video_url: 'http://dashscope-result-bj.oss-cn-beijing.aliyuncs.com/out.mp4?Expires=1' },
+    },
+    request_id: 'req_ok',
+  };
+}
+
+function installFetch() {
+  const calls = [];
+  async function fetchImpl(url, init = {}) {
+    const href = String(url);
+    calls.push({ url: href, init });
+    if (href.includes('/brand/templates/') && href.endsWith('.mp4')) {
+      return new Response(mp4, { status: 200, headers: { 'content-type': 'video/mp4' } });
+    }
+    if (href.includes('/uploads')) {
+      if (href.includes(WORKSPACE_HOST)) return jsonResponse(404, { code: 'NotFound', message: 'no uploads on workspace' });
+      assert(href.startsWith(CLASSIC_DASHSCOPE_BASE), href);
+      return jsonResponse(200, policy);
+    }
+    if (href.includes('dashscope-file-mgr.oss-cn-beijing.aliyuncs.com')) {
+      assert(init.body && typeof init.body.get === 'function', 'oss form');
+      const key = init.body.get('key');
+      assert(String(key).startsWith('dashscope-instant/test/2026/'), String(key));
+      return new Response(null, { status: 200 });
+    }
+    if (href.includes('/services/aigc/image2video/video-synthesis')) {
+      assert(href.startsWith(WORKSPACE_DASHSCOPE_BASE), href);
+      const headers = init.headers || {};
+      assert(headers.Authorization === `Bearer ${API_KEY}`, 'synthesis auth');
+      assert(headers['X-DashScope-Async'] === 'enable', 'synthesis async');
+      assert(headers['X-DashScope-OssResourceResolve'] === 'enable', 'synthesis oss');
+      const body = JSON.parse(init.body);
+      assert(body.model === DEFAULT_MODEL, body.model);
+      assert(body.parameters.mode === DEFAULT_MODE, body.parameters.mode);
+      assert(body.input.image_url === 'oss://dashscope-instant/test/2026/subject.jpg', body.input.image_url);
+      assert(body.input.video_url === 'oss://dashscope-instant/test/2026/reference.mp4', body.input.video_url);
+      assert(body.input.watermark === false, 'watermark sent');
+      return jsonResponse(200, { output: { task_id: TASK_OK, task_status: 'PENDING' }, request_id: 'req_submit' });
+    }
+    if (href.includes('/tasks/')) {
+      if (href.includes(TASK_BAD)) {
+        return jsonResponse(200, {
+          output: {
+            task_id: TASK_BAD,
+            task_status: 'FAILED',
+            code: 'InternalError',
+            message: `bad key ${API_KEY} leaked`,
+          },
+        });
+      }
+      return jsonResponse(200, resultTask(TASK_OK));
+    }
+    if (href.includes('dashscope-result-bj.oss-cn-beijing.aliyuncs.com')) {
+      return new Response(mp4, { status: 200, headers: { 'content-type': 'video/mp4', 'content-length': String(mp4.byteLength) } });
+    }
+    throw new Error(`unexpected fetch ${href}`);
+  }
+  return { fetchImpl, calls };
+}
+
+const sqlite = new DatabaseSync(':memory:');
+const db = wrap(sqlite);
+await ensureSchema(db);
+const freshCols = new Set(sqlite.prepare(`PRAGMA table_info(jobs)`).all().map((row) => row.name));
+assert(freshCols.has('provider_task_id'), 'fresh schema task id');
+
+const bucket = mockBucket();
+const user = { user_id: 'u_alice', email: 'alice@example.com', name: 'Alice' };
+const origin = 'https://viral-templates.pages.dev';
+const env = {
+  DB: db,
+  MEDIA: bucket,
+  ASSETS: {
+    async fetch(request) {
+      const href = String(request && request.url ? request.url : request);
+      if (href.includes('/brand/templates/') && href.endsWith('.mp4')) {
+        return new Response(mp4, { status: 200, headers: { 'content-type': 'video/mp4' } });
+      }
+      return new Response('missing', { status: 404 });
+    },
+  },
+  AUTH_SECRET: 'media-test-secret-1',
+  BAILIAN_API_KEY: API_KEY,
+  DASHSCOPE_API_KEY: 'should-not-win',
+  JOB_PROCESS_SECRET: PROCESS_SECRET,
+};
+const queued = await queueJobWithMedia({
+  db,
+  env,
+  request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
+  user,
+  templateSlug: 'bby-wow',
+  photos: [{ bytes: jpeg, contentType: 'image/jpeg', ext: 'jpg' }],
+});
+assert(queued.job.status === 'queued', 'queued');
+
+const bare = await queueJobWithMedia({
+  db,
+  env,
+  request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
+  user,
+  templateSlug: 'bulin-47',
+  photos: [],
+});
+
+const { fetchImpl, calls } = installFetch();
+const previous = globalThis.fetch;
+globalThis.fetch = fetchImpl;
+
+const unconfigured = await onRequestPost({
+  env: { ...env, JOB_PROCESS_SECRET: '' },
+  request: new Request(`${origin}/api/jobs/process`, { method: 'POST' }),
+});
+assert(unconfigured.status === 503, `unconfigured ${unconfigured.status}`);
+const unconfiguredBody = await unconfigured.json();
+assert(unconfiguredBody.error === 'job_process_unconfigured', unconfiguredBody.error);
+
+const denied = await onRequestPost({
+  env,
+  request: new Request(`${origin}/api/jobs/process`, {
+    method: 'POST',
+    headers: { authorization: 'Bearer nope-nope-nope-nope' },
+  }),
+});
+assert(denied.status === 401, `denied ${denied.status}`);
+
+const missingKey = await onRequestPost({
+  env: { ...env, BAILIAN_API_KEY: '   ', DASHSCOPE_API_KEY: '' },
+  request: new Request(`${origin}/api/jobs/process`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${PROCESS_SECRET}`, 'content-type': 'application/json' },
+    body: '{}',
+  }),
+});
+assert(missingKey.status === 503, `missing key ${missingKey.status}`);
+assert((await missingKey.json()).error === 'bailian_unconfigured', 'missing key code');
+assert(!calls.some((call) => call.url.includes('dashscope') || call.url.includes('aliyuncs')), 'unconfigured called provider');
+
+const response = await onRequestPost({
+  env,
+  request: new Request(`${origin}/api/jobs/process`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${PROCESS_SECRET}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ job_id: queued.job.id, limit: 1 }),
+  }),
+});
+const submitted = await response.json();
+assert(response.status === 200, JSON.stringify(submitted));
+assert(submitted.provider.base_host === WORKSPACE_HOST, submitted.provider.base_host);
+assert(submitted.processed[0].status === 'running', JSON.stringify(submitted.processed[0]));
+assert(submitted.processed[0].action === 'submitted', submitted.processed[0].action);
+assert(submitted.processed[0].task_id === TASK_OK, submitted.processed[0].task_id);
+
+const polled = await onRequestPost({
+  env,
+  request: new Request(`${origin}/api/jobs/process`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${PROCESS_SECRET}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ job_id: queued.job.id }),
+  }),
+});
+const body = await polled.json();
+assert(polled.status === 200, JSON.stringify(body));
+assert(body.provider.model === DEFAULT_MODEL, body.provider.model);
+assert(body.provider.mode === DEFAULT_MODE, body.provider.mode);
+assert(body.processed.length === 1, JSON.stringify(body.processed));
+assert(body.processed[0].status === 'ready', JSON.stringify(body.processed[0]));
+assert(body.processed[0].action === 'stored', body.processed[0].action);
+assert(String(body.processed[0].result_url).includes(`/api/media/jobs/${queued.job.id}/result`), body.processed[0].result_url);
+assert(!JSON.stringify(body).includes(API_KEY), 'api key leaked in response');
+
+const saved = sqlite.prepare(`SELECT status, result_key, result_url, provider_task_id, error_code FROM jobs WHERE id = ?`).get(queued.job.id);
+assert(saved.status === 'ready', saved.status);
+assert(saved.provider_task_id === TASK_OK, saved.provider_task_id);
+assert(saved.result_key === `results/u_alice/${queued.job.id}.mp4`, saved.result_key);
+assert(bucket.objects.has(saved.result_key), 'result object missing');
+assert(calls.some((call) => call.url.startsWith(`${CLASSIC_DASHSCOPE_BASE}/uploads`)), 'classic upload fallback');
+assert(calls.some((call) => call.url.startsWith(`${WORKSPACE_DASHSCOPE_BASE}/services/aigc/image2video/video-synthesis`)), 'workspace synthesis');
+assert(!calls.some((call) => call.url.startsWith(`${CLASSIC_DASHSCOPE_BASE}/services/`)), 'synthesis stayed off classic');
+assert(!calls.some((call) => call.url.includes('pages.dev') || call.url.includes('/brand/templates/')), 'worker did not ask Bailian to fetch pages.dev');
+const synthesis = calls.find((call) => call.url.includes('/video-synthesis'));
+const synthesisBody = JSON.parse(synthesis.init.body);
+assert(synthesisBody.input.image_url.startsWith('oss://'), synthesisBody.input.image_url);
+assert(synthesisBody.input.video_url.startsWith('oss://'), synthesisBody.input.video_url);
+assert(!JSON.stringify(synthesisBody).includes('pages.dev'), 'synthesis body contains pages.dev');
+
+const credits = await getCredits(db, user);
+assert(credits.balance === 0 && credits.ledger.length === 0, 'success did not charge');
+
+sqlite.prepare(
+  `UPDATE jobs SET status = 'running', provider_task_id = ?, error_code = NULL, result_url = NULL, result_key = NULL WHERE id = ?`,
+).run(TASK_BAD, bare.job.id);
+const failedRes = await onRequestPost({
+  env,
+  request: new Request(`${origin}/api/jobs/process`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${PROCESS_SECRET}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ job_id: bare.job.id }),
+  }),
+});
+const failedBody = await failedRes.json();
+assert(failedRes.status === 200, JSON.stringify(failedBody));
+assert(failedBody.processed[0].status === 'failed', JSON.stringify(failedBody.processed[0]));
+assert(failedBody.processed[0].error === 'bailian_InternalError', failedBody.processed[0].error);
+assert(!JSON.stringify(failedBody).includes(API_KEY), 'api key leaked on failure');
+assert(String(failedBody.processed[0].detail || '').includes('[redacted]'), failedBody.processed[0].detail);
+const failedRow = sqlite.prepare(`SELECT status, result_url, error_code, note_en FROM jobs WHERE id = ?`).get(bare.job.id);
+assert(failedRow.status === 'failed' && failedRow.result_url == null, 'failed row');
+assert(failedRow.error_code === 'bailian_InternalError', failedRow.error_code);
+assert(!String(failedRow.note_en).includes(API_KEY), 'note leaked key');
+const afterFail = await getCredits(db, user);
+assert(afterFail.balance === 0 && afterFail.ledger.length === 0, 'failure did not refund or charge');
+
+const noPhoto = await queueJobWithMedia({
+  db,
+  env,
+  request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
+  user,
+  templateSlug: 'bby-wow',
+  photos: [],
+});
+const noPhotoRes = await onRequestPost({
+  env,
+  request: new Request(`${origin}/api/jobs/process`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${PROCESS_SECRET}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ job_id: noPhoto.job.id }),
+  }),
+});
+const noPhotoBody = await noPhotoRes.json();
+assert(noPhotoBody.processed[0].error === 'no_photo', JSON.stringify(noPhotoBody));
+
+const huge = pad(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]), 5 * 1024 * 1024 + 16);
+const hugeJob = await queueJobWithMedia({
+  db,
+  env,
+  request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
+  user,
+  templateSlug: 'ceiling-fan',
+  photos: [{ bytes: huge, contentType: 'image/jpeg', ext: 'jpg' }],
+});
+const hugeRes = await onRequestPost({
+  env,
+  request: new Request(`${origin}/api/jobs/process`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${PROCESS_SECRET}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ job_id: hugeJob.job.id }),
+  }),
+});
+const hugeBody = await hugeRes.json();
+assert(hugeBody.processed[0].error === 'photo_too_large', JSON.stringify(hugeBody.processed[0]));
+
+globalThis.fetch = previous;
+console.log('bailian-worker.test.mjs ok');

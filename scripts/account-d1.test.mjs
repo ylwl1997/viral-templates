@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { JOB_MEDIA_COLUMNS, SCHEMA_SQL, schemaStatements } from '../functions/_lib/schema.js';
+import { JOB_MEDIA_COLUMNS, JOB_PROVIDER_COLUMNS, SCHEMA_SQL, schemaStatements } from '../functions/_lib/schema.js';
 import { appendLedger, createStubJob, getCredits, listJobs } from '../functions/_lib/account-db.js';
 
 const baseline = fs.readFileSync(new URL('../migrations/0001_account.sql', import.meta.url), 'utf8').trim();
@@ -19,6 +19,17 @@ for (const table of ['users', 'credit_accounts', 'credit_ledger', 'jobs']) {
 for (const name of JOB_MEDIA_COLUMNS) {
   if (!SCHEMA_SQL.includes(name) || !alter.includes(`ADD COLUMN ${name} TEXT`)) {
     console.error('media column missing from fresh schema or 0002: ' + name);
+    process.exit(1);
+  }
+}
+const taskMigration = fs.readFileSync(new URL('../migrations/0003_bailian_task.sql', import.meta.url), 'utf8');
+if (baseline.includes('provider_task_id')) {
+  console.error('0001 is already applied remotely; add provider_task_id in 0003, not 0001');
+  process.exit(1);
+}
+for (const name of JOB_PROVIDER_COLUMNS) {
+  if (!SCHEMA_SQL.includes(name) || !taskMigration.includes(`ADD COLUMN ${name}`)) {
+    console.error('provider column missing from fresh schema or 0003: ' + name);
     process.exit(1);
   }
 }

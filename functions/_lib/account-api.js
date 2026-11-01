@@ -11,7 +11,8 @@ export function accountError(err) {
     code === 'bad_photo' ||
     code === 'photo_too_large' ||
     code === 'bad_video' ||
-    code === 'video_too_large'
+    code === 'video_too_large' ||
+    code === 'bad_job'
   ) {
     return jsonNoStore({ ok: false, error: code }, 400);
   }

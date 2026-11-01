@@ -1,8 +1,9 @@
 /**
  * Store Create photos and finished MP4s.
  * Queueing a job does not call a video provider and does not mark it ready.
- * A clip is downloadable only after bytes are written to R2 and the job row
- * is updated (see POST /api/jobs/:id/result).
+ * POST /api/jobs/process does that (Bailian wan2.2-animate-move) and then
+ * writes the MP4 here. A clip is playable only after bytes are in R2 and the
+ * job row is ready (see also POST /api/jobs/:id/result for a manual ingest).
  */
 
 import { attachJobResult, createStubJob, ensureUser, fail, getJobMediaRecord, newId } from './account-db.js';
@@ -256,13 +257,18 @@ export async function storeJobResult(db, env, request, jobId, video) {
   return attachJobResult(db, record.id, { result_key: key, result_url });
 }
 
-export function ingestAuthorized(env, request) {
-  const secret = typeof env?.RESULT_INGEST_SECRET === 'string' ? env.RESULT_INGEST_SECRET.trim() : '';
+export function bearerAuthorized(env, request, name) {
+  const raw = env && env[name];
+  const secret = typeof raw === 'string' ? raw.trim() : '';
   if (secret.length < 16) return 'unconfigured';
   const header = request.headers.get('authorization') || '';
   const match = /^Bearer\s+(\S+)$/i.exec(header);
   if (!match || !safeEqualString(match[1], secret)) return 'unauthorized';
   return 'ok';
+}
+
+export function ingestAuthorized(env, request) {
+  return bearerAuthorized(env, request, 'RESULT_INGEST_SECRET');
 }
 
 function safeEqualString(a, b) {

@@ -76,4 +76,4 @@ Local `npx wrangler pages dev` keeps `MEDIA` on disk under `.wrangler/`. It does
 
 ## What this does not do
 
-Generate still only queues a job. fal and Kling are not called. Waffo checkout is not called. `POST /api/jobs/{id}/result` stores an MP4 you send; it does not create one.
+Generate queues a job. `POST /api/jobs/process` calls Bailian and writes `results/{userId}/{jobId}.mp4` ([`bailian-animate.md`](bailian-animate.md)). Waffo checkout is not called. `POST /api/jobs/{id}/result` still stores an MP4 you send; it does not create one.

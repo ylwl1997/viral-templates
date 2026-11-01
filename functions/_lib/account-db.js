@@ -1,12 +1,17 @@
-import { JOB_MEDIA_COLUMNS, SCHEMA_SQL, schemaStatements } from './schema.js';
+import { JOB_MEDIA_COLUMNS, JOB_PROVIDER_COLUMNS, SCHEMA_SQL, schemaStatements } from './schema.js';
 import { getTemplate } from './templates.js';
 
 const JOB_STATUSES = new Set(['queued', 'running', 'ready', 'failed']);
 const LEDGER_KINDS = new Set(['topup', 'deduction', 'refund']);
 
-const STUB_NOTE_EN =
-  'Queued. Video generation is not available yet, so this job stays queued and has no file to download.';
-const STUB_NOTE_ZH = '已排队。视频生成尚未开放，因此会保持排队，没有可下载的文件。';
+export const QUEUED_NOTE_EN = 'Queued. Generation starts shortly. The clip shows here when it is ready.';
+export const QUEUED_NOTE_ZH = '已排队。即将开始生成。完成后成片会出现在这里。';
+const STUB_NOTE_EN = QUEUED_NOTE_EN;
+const STUB_NOTE_ZH = QUEUED_NOTE_ZH;
+const START_NOTE_EN = 'Starting video generation.';
+const START_NOTE_ZH = '正在开始生成视频。';
+const RUNNING_NOTE_EN = 'Generating your clip.';
+const RUNNING_NOTE_ZH = '正在生成短片。';
 
 let schemaReady = false;
 
@@ -56,7 +61,7 @@ export async function ensureMediaColumns(db) {
   const info = await db.prepare(`PRAGMA table_info(jobs)`).all();
   const have = new Set((info.results || []).map((row) => String(row.name)));
   if (!have.has('id')) return;
-  for (const name of JOB_MEDIA_COLUMNS) {
+  for (const name of [...JOB_MEDIA_COLUMNS, ...JOB_PROVIDER_COLUMNS]) {
     if (have.has(name)) continue;
     if (!/^[a-z0-9_]+$/.test(name)) throw fail('storage_error');
     try {
@@ -330,10 +335,144 @@ export async function getJobMediaRecord(db, jobId) {
     .first();
 }
 
+function changesOf(result) {
+  const n = result && result.meta && result.meta.changes;
+  const value = Number(n);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function cleanTaskId(value) {
+  if (typeof value !== 'string') return '';
+  const text = value.trim();
+  if (!/^[A-Za-z0-9_-]{8,80}$/.test(text)) return '';
+  return text;
+}
+
+const REMAKE_COLUMNS = `id, user_id, template_slug, status, upload_key, provider_task_id, error_code, updated_at`;
+
+/**
+ * Oldest running jobs first, then oldest queued jobs.
+ * The worker claims these. Customer list APIs do not use this.
+ */
+export async function listRemakeCandidates(db, options = {}) {
+  await ensureSchema(db);
+  const jobId = options.jobId ? cleanId(options.jobId) : '';
+  if (options.jobId && !jobId) throw fail('bad_job');
+  if (jobId) {
+    const row = await db.prepare(`SELECT ${REMAKE_COLUMNS} FROM jobs WHERE id = ?`).bind(jobId).first();
+    return row ? [row] : [];
+  }
+  const limit = clampLimit(options.limit ?? 1, 1);
+  const listed = await db
+    .prepare(
+      `SELECT ${REMAKE_COLUMNS} FROM jobs
+       WHERE status IN ('queued', 'running')
+       ORDER BY CASE status WHEN 'running' THEN 0 ELSE 1 END, created_at ASC, id ASC
+       LIMIT ?`,
+    )
+    .bind(limit)
+    .all();
+  return listed.results || [];
+}
+
+/** Move queued → running so two workers cannot submit the same job. */
+export async function claimQueuedJob(db, jobId) {
+  const id = cleanId(jobId);
+  if (!id) return false;
+  await ensureSchema(db);
+  const now = new Date().toISOString();
+  const result = await db
+    .prepare(
+      `UPDATE jobs
+       SET status = 'running',
+           error_code = 'submitting',
+           note_en = ?,
+           note_zh = ?,
+           updated_at = ?
+       WHERE id = ? AND status = 'queued' AND provider_task_id IS NULL`,
+    )
+    .bind(START_NOTE_EN, START_NOTE_ZH, now, id)
+    .run();
+  return changesOf(result) === 1;
+}
+
+export async function saveProviderTask(db, jobId, taskId) {
+  const id = cleanId(jobId);
+  const task = cleanTaskId(taskId);
+  if (!id || !task) throw fail('storage_error');
+  await ensureSchema(db);
+  const now = new Date().toISOString();
+  const result = await db
+    .prepare(
+      `UPDATE jobs
+       SET provider_task_id = ?,
+           error_code = NULL,
+           note_en = ?,
+           note_zh = ?,
+           updated_at = ?
+       WHERE id = ? AND status = 'running' AND provider_task_id IS NULL`,
+    )
+    .bind(task, RUNNING_NOTE_EN, RUNNING_NOTE_ZH, now, id)
+    .run();
+  if (changesOf(result) !== 1) throw fail('storage_error');
+}
+
+/** Upload failed before a task existed. Safe to try again. */
+export async function revertQueuedJob(db, jobId) {
+  const id = cleanId(jobId);
+  if (!id) return false;
+  await ensureSchema(db);
+  const now = new Date().toISOString();
+  const result = await db
+    .prepare(
+      `UPDATE jobs
+       SET status = 'queued',
+           error_code = NULL,
+           note_en = ?,
+           note_zh = ?,
+           updated_at = ?
+       WHERE id = ? AND status = 'running' AND provider_task_id IS NULL`,
+    )
+    .bind(QUEUED_NOTE_EN, QUEUED_NOTE_ZH, now, id)
+    .run();
+  return changesOf(result) === 1;
+}
+
+/**
+ * Mark a queued or running job failed. result_url stays empty.
+ * TODO(credits): Generate does not deduct credits yet. appendLedger is not
+ * called from the queue path. When a deduction is added, refund that amount
+ * here with kind 'refund' and this job_id. Do not refund twice.
+ */
+export async function markJobFailed(db, jobId, fields = {}) {
+  const id = cleanId(jobId);
+  if (!id) throw fail('not_found');
+  await ensureSchema(db);
+  const errorCode = oneLine(fields.error_code || fields.errorCode, 80) || 'failed';
+  const noteEn = oneLine(fields.note_en || fields.noteEn, 400) || 'Video generation failed. Please try again from Create.';
+  const noteZh = oneLine(fields.note_zh || fields.noteZh, 400) || '视频生成失败。请在创作页再试一次。';
+  const now = new Date().toISOString();
+  const result = await db
+    .prepare(
+      `UPDATE jobs
+       SET status = 'failed',
+           result_url = NULL,
+           error_code = ?,
+           note_en = ?,
+           note_zh = ?,
+           updated_at = ?
+       WHERE id = ? AND status IN ('queued', 'running')`,
+    )
+    .bind(errorCode, noteEn, noteZh, now, id)
+    .run();
+  return changesOf(result) === 1;
+}
+
 /**
  * Queue a job for a signed-in user. Does not call a video provider and does
  * not set status ready. Optional upload keys record a photo already stored
  * in R2. result_url stays empty until attachJobResult.
+ * POST /api/jobs/process is what calls Bailian later.
  */
 export async function createStubJob(db, user, templateSlug, options = {}) {
   const template = getTemplate(templateSlug);

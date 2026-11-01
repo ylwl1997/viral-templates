@@ -2,9 +2,12 @@
  * Fresh-install schema. migrations/0001_account.sql is the applied baseline
  * (no media columns). migrations/0002_r2_media.sql adds the same columns on
  * databases that already ran 0001. ensureMediaColumns() does that alter too.
+ * migrations/0003_bailian_task.sql adds provider_task_id. ensureMediaColumns()
+ * adds that column as well.
  * Checked by scripts/account-d1.test.mjs and scripts/r2-media.test.mjs.
  */
 export const JOB_MEDIA_COLUMNS = ['upload_key', 'upload_key_2', 'upload_url', 'upload_url_2', 'result_key'];
+export const JOB_PROVIDER_COLUMNS = ['provider_task_id'];
 export const SCHEMA_SQL = `
 -- Shared account storage for the apex and every brand host.
 -- Keyed by the auth session user id. One database, not one per site.
@@ -52,6 +55,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   upload_url TEXT,
   upload_url_2 TEXT,
   result_key TEXT,
+  provider_task_id TEXT,
   error_code TEXT,
   note_en TEXT NOT NULL DEFAULT '',
   note_zh TEXT NOT NULL DEFAULT '',
@@ -66,6 +70,9 @@ CREATE INDEX IF NOT EXISTS idx_jobs_user_created
 
 CREATE INDEX IF NOT EXISTS idx_jobs_user_status
   ON jobs (user_id, status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_jobs_status_created
+  ON jobs (status, created_at);
 `.trim();
 
 /** Split schema into single statements. Statements must not contain semicolons. */

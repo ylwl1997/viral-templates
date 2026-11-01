@@ -16,7 +16,7 @@
       error: 'Could not load this yet.',
       retry: 'Try again',
       filterTitle: 'Nothing with this status',
-      filterBody: 'Try another filter. Finished videos are not available yet.',
+      filterBody: 'Try another filter.',
       reference: 'Reference',
       download: 'Download',
     },
@@ -25,7 +25,7 @@
       error: '暂时无法加载。',
       retry: '重试',
       filterTitle: '这个状态下没有记录',
-      filterBody: '可以换一个筛选。目前还没有成片。',
+      filterBody: '可以换一个筛选。',
       reference: '编号',
       download: '下载',
     },
@@ -113,6 +113,13 @@
       }
       var media = job.status === 'ready' ? safeMediaUrl(job.result_url) : '';
       if (media) {
+        var video = document.createElement('video');
+        video.className = 'creation-player';
+        video.controls = true;
+        video.playsInline = true;
+        video.preload = 'metadata';
+        video.src = media;
+        li.appendChild(video);
         var link = document.createElement('a');
         link.className = 'btn btn-ghost btn-sm creation-download';
         link.href = media;

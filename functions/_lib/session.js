@@ -121,13 +121,19 @@ export function resolveAuthSecret(env, hostname) {
   return { secret: null, previewFallback: false };
 }
 
+/** True when both Google OAuth client values are non-empty. Does not check AUTH_SECRET. */
+export function googleConfigured(env) {
+  const id = typeof env?.GOOGLE_CLIENT_ID === 'string' ? env.GOOGLE_CLIENT_ID.trim() : '';
+  const secret = typeof env?.GOOGLE_CLIENT_SECRET === 'string' ? env.GOOGLE_CLIENT_SECRET.trim() : '';
+  return Boolean(id && secret);
+}
+
 export function previewLoginAllowed(env, hostname) {
   if (env?.AUTH_PREVIEW_LOGIN === '0') return false;
   if (env?.AUTH_PREVIEW_LOGIN === '1') return true;
-  const google = Boolean(env?.GOOGLE_CLIENT_ID && env?.GOOGLE_CLIENT_SECRET);
   const preview =
     hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.pages.dev');
-  return preview && !google;
+  return preview && !googleConfigured(env);
 }
 
 export function jsonNoStore(body, status = 200, setCookies = []) {
@@ -206,7 +212,7 @@ export function clearSessionCookie(request) {
 export function authStatus(request, env) {
   const host = new URL(request.url).hostname;
   const secret = resolveAuthSecret(env, host);
-  const google = Boolean(env?.GOOGLE_CLIENT_ID && env?.GOOGLE_CLIENT_SECRET);
+  const google = googleConfigured(env);
   return {
     ok: true,
     google,

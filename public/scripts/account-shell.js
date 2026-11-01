@@ -1,4 +1,13 @@
 (function () {
+  function providerLabel(providers, lang) {
+    var list = Array.isArray(providers) ? providers : [];
+    var labels = [];
+    if (list.indexOf('google') >= 0) labels.push('Google');
+    if (list.indexOf('preview') >= 0) labels.push(lang === 'zh' ? '预览登录' : 'Preview');
+    if (!labels.length) return '—';
+    return labels.join(lang === 'zh' ? '、' : ', ');
+  }
+
   function pathWithNext(signInPath) {
     try {
       var u = new URL(signInPath, location.origin);
@@ -33,6 +42,9 @@
       });
       shell.querySelectorAll('[data-session-id]').forEach(function (el) {
         el.textContent = user.user_id || '—';
+      });
+      shell.querySelectorAll('[data-session-providers]').forEach(function (el) {
+        el.textContent = providerLabel(user.providers, shell.getAttribute('data-lang') || 'en');
       });
     } else {
       shell.classList.add('is-logged-out');

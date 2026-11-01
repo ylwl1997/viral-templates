@@ -94,13 +94,14 @@ Routes (EN + ZH, hub and `/t/{slug}/account/…` brand shells):
 - `/account/creations/` Jobs for the signed-in user (optional `?status=queued|running|ready|failed`)
 - `/account/credits/` Balance + ledger (top-up / deduction / refund). Buy button stays a checkout stub
 - `/account/settings/` Profile read-only from session
-- `/account/sign-in/` Google button placeholder + **preview login**
+- `/account/sign-in/` **Google sign-in**, plus preview login on demo hosts when Google is not configured
 
 One D1 database (binding `DB`) is shared by the apex and every brand host. Rows are keyed by the session `user_id`, not by subdomain.
 
 Auth + account APIs (Pages Functions):
 
 - `GET /api/auth/session`
+- `GET /api/auth/google/start` — Google sign-in (`next`, `from`). Callback is `GET /api/auth/google/callback`
 - `POST /api/auth/preview` — preview login (HttpOnly `vt_session` cookie)
 - `POST /api/auth/logout`
 - `GET /api/account/creations`
@@ -109,7 +110,9 @@ Auth + account APIs (Pages Functions):
 - `POST /api/jobs/{id}/result` — ops-only. Stores a finished MP4 and sets `result_url`. Requires `RESULT_INGEST_SECRET`. Does not call a video provider.
 - `GET /api/media/jobs/{id}/{photo|photo-2|result}` — private download (owner session or signed `exp` + `sig`).
 
-**How to preview-login:** open `/account/sign-in/` → **Preview sign-in** (shown on `*.pages.dev` / localhost when Google OAuth is not configured) → lands on `/account/` with avatar in the header. A new account starts at **0** credits and an empty creations list. Generate (photo + consent, while signed in) adds a queued row and does not produce a video file. Unsigned Generate goes to sign-in with `next=`.
+**How to sign in:** with `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `AUTH_SECRET` set, open `/account/sign-in/` → **Continue with Google**. The first sign-in creates the D1 user at **0** credits. Without those Google secrets, `*.pages.dev` / localhost show **Preview sign-in** instead. Either way the person lands on `/account/` with the avatar in the header and an empty creations list. Generate (photo + consent, while signed in) adds a queued row and does not produce a video file. Unsigned Generate goes to sign-in with `next=`.
+
+Google Cloud origins, the exact redirect URI for `viral-templates.pages.dev`, and where to put the secrets are in [`docs/google-oauth.md`](docs/google-oauth.md).
 
 Brand shells use **relative** `/account/` and `/account/sign-in/?next=` (same host, same `vt_session` / `/api/auth/*`). Middleware keeps that brand’s chrome when context is known (`vt_brand` cookie after visiting `/t/{slug}/`, safe `next=/t/{slug}/…`, or brand host).
 
@@ -119,6 +122,7 @@ Schema: `migrations/0001_account.sql` (`users`, `credit_accounts`, `credit_ledge
 
 ```bash
 npm run test:account
+npm run test:auth
 npm run test:media
 npm run build
 npx wrangler pages dev dist --port 8788
@@ -170,9 +174,9 @@ Same bucket from the CLI (needs Cloudflare credentials): `npx wrangler r2 bucket
 
 ### Known limits
 
-- No real Google OAuth / Waffo / fal / Kling. Generate does not mark a job ready and does not produce a clip. A finished file exists only after something calls the result ingest route with an MP4.
+- No Waffo / fal / Kling. Google sign-in runs when the secrets in [`docs/google-oauth.md`](docs/google-oauth.md) are set. Generate does not mark a job ready and does not produce a clip. A finished file exists only after something calls the result ingest route with an MP4.
 - Top-up buttons do not start checkout. Ledger rows are written only when a top-up, deduction, or refund is posted (no starter grant).
-- Session cookie is **host-only** (not shared across brand hosts). The database is shared: the same account email maps to the same `user_id` on each host after signing in there.
+- Session cookie is **host-only** (not shared across brand hosts). The database is shared. The same Google account maps to the same `user_id` on every host after signing in there, so credits and jobs follow the person. `/t/{slug}/` on the apex is the same host and the same cookie.
 - Brand Account link needs a prior brand-page visit (cookie) or open Sign in with `?next=/t/{slug}/…`
 - No delete-account / export
 
@@ -194,9 +198,9 @@ Same bucket from the CLI (needs Cloudflare credentials): `npx wrangler r2 bucket
 | `PHOTO_RETENTION_DAYS` | Function env for object metadata. Default 7. Falls back to `PUBLIC_PHOTO_RETENTION_DAYS` |
 | `VIDEO_RETENTION_DAYS` | Function env for object metadata. Default 30 |
 | `RESULT_INGEST_SECRET` | Bearer token for `POST /api/jobs/{id}/result`. 16+ characters. Not a customer feature |
-| `AUTH_SECRET` | HMAC for `vt_session` and for media download signatures (16+ chars). On `*.pages.dev` / localhost a public preview fallback is used if unset |
-| `AUTH_PREVIEW_LOGIN` | `1` force preview login on; `0` off; unset = on for preview hosts when Google OAuth missing |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Reserved for real Google OAuth (not wired in P0) |
+| `AUTH_SECRET` | HMAC for `vt_session`, the Google state cookie, and media download signatures (16+ chars). On `*.pages.dev` / localhost a public preview fallback is used if unset. Google sign-in refuses that fallback |
+| `AUTH_PREVIEW_LOGIN` | `1` force preview login on; `0` off; unset = on for preview hosts when Google OAuth is missing |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google web client. Both must be set. See [`docs/google-oauth.md`](docs/google-oauth.md). Do not commit them |
 
 No real domain purchase is required for this skeleton. R2 needs the bucket created in Cloudflare before media can be stored (see Media above). Do not commit secrets.
 
@@ -206,6 +210,7 @@ No real domain purchase is required for this skeleton. R2 needs the bucket creat
 npm run dev
 npm run build
 npm run test:account
+npm run test:auth
 npm run test:media
 npm run pages:dev
 npx wrangler pages deploy dist --project-name=viral-templates

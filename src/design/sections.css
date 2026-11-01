@@ -1029,10 +1029,24 @@ video.media-poster {
   gap: 0.75rem;
   margin: 1.1rem 0;
   color: var(--faint);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
 }
+.btn-google {
+  width: 100%;
+  background: #fff;
+  color: #1f1f1f;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  gap: 0.65rem;
+}
+.btn-google:hover {
+  background: var(--surface-2);
+  color: #1f1f1f;
+  border-color: var(--ink);
+}
+.btn-google svg { flex: none; }
+.sign-in-divider[hidden] { display: none; }
 .sign-in-divider::before,
 .sign-in-divider::after {
   content: "";

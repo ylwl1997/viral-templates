@@ -22,7 +22,7 @@ const lang = 'en' as const;
 >
   <header class="account-page-head">
     <h1>Settings</h1>
-    <p>Profile is read-only from your session in P0. Delete account / export are not available.</p>
+    <p>Your name and email come from the account you signed in with.</p>
   </header>
   <div class="card settings-card">
     <dl class="settings-dl">
@@ -39,8 +39,8 @@ const lang = 'en' as const;
         <dd><code data-session-id>—</code></dd>
       </div>
       <div>
-        <dt>Providers</dt>
-        <dd>Preview</dd>
+        <dt>Signed in with</dt>
+        <dd data-session-providers>—</dd>
       </div>
     </dl>
   </div>

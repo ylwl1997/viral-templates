@@ -1,4 +1,5 @@
 import {
+  authEmailAllowed,
   authStatus,
   cleanPreviewProfile,
   issueSessionCookie,
@@ -16,7 +17,7 @@ export async function onRequestPost(context) {
       {
         ok: false,
         error: 'preview_disabled',
-        message: 'Preview sign-in is off. Set AUTH_PREVIEW_LOGIN=1 or leave Google OAuth unconfigured on *.pages.dev.',
+        message: 'Preview sign-in is off on this host.',
       },
       403,
     );
@@ -40,6 +41,16 @@ export async function onRequestPost(context) {
   }
   const profile = cleanPreviewProfile(body);
   if (!profile) return jsonNoStore({ ok: false, error: 'email_required' }, 400);
+  if (!authEmailAllowed(context.env, profile.email)) {
+    return jsonNoStore(
+      {
+        ok: false,
+        error: 'email_not_allowed',
+        message: 'This account is not allowed to sign in.',
+      },
+      403,
+    );
+  }
 
   const user_id = await stableUserId('preview', profile.email);
   const user = {

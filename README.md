@@ -94,7 +94,7 @@ Routes (EN + ZH, hub and `/t/{slug}/account/…` brand shells):
 - `/account/creations/` Jobs for the signed-in user (optional `?status=queued|running|ready|failed`)
 - `/account/credits/` Balance + ledger (top-up / deduction / refund). Buy button stays a checkout stub
 - `/account/settings/` Profile read-only from session
-- `/account/sign-in/` **Google sign-in**, plus preview login on demo hosts when Google is not configured
+- `/account/sign-in/` **Google sign-in** for allowlisted emails. Preview login is localhost-only
 
 One D1 database (binding `DB`) is shared by the apex and every brand host. Rows are keyed by the session `user_id`, not by subdomain.
 
@@ -102,7 +102,7 @@ Auth + account APIs (Pages Functions):
 
 - `GET /api/auth/session`
 - `GET /api/auth/google/start` — Google sign-in (`next`, `from`, optional `popup=1`). Callback is `GET /api/auth/google/callback`
-- `POST /api/auth/preview` — preview login (HttpOnly `vt_session` cookie)
+- `POST /api/auth/preview` — localhost preview login (HttpOnly `vt_session`). Public hosts, including `*.pages.dev`, refuse it
 - `POST /api/auth/logout`
 - `GET /api/account/creations`
 - `GET /api/account/credits`
@@ -111,7 +111,7 @@ Auth + account APIs (Pages Functions):
 - `POST /api/jobs/{id}/result` — ops-only manual ingest. Stores a finished MP4 and sets `result_url`. Requires `RESULT_INGEST_SECRET`. Does not call Bailian.
 - `GET /api/media/jobs/{id}/{photo|photo-2|result}` — private download (owner session or signed `exp` + `sig`).
 
-**How to sign in:** with `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `AUTH_SECRET` set, **Sign in** opens a dialog on the current page → **Continue with Google** (popup). `/account/sign-in/` still works as a bookmark. The first sign-in creates the D1 user at **0** credits. Without those Google secrets, `*.pages.dev` / localhost show **Preview sign-in** instead. A popup sign-in stays on the page and refreshes the session; the sign-in route itself still lands on `next` (default `/account/`). Generate (photo + consent, while signed in) adds a queued row. A clip appears after `POST /api/jobs/process` runs Bailian and stores the MP4. Unsigned Generate opens the same dialog with `next=` set to the current page.
+**How to sign in:** with `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `AUTH_SECRET` set, **Sign in** opens a dialog on the current page → **Continue with Google** (popup). `/account/sign-in/` still works as a bookmark. The first allowlisted sign-in creates the D1 user at **0** credits. Any other Google account is rejected with `email_not_allowed` and does not get a session. Preview sign-in is localhost-only (same allowlist) and does not run on `*.pages.dev`. A popup sign-in stays on the page and refreshes the session; the sign-in route itself still lands on `next` (default `/account/`). Generate (photo + consent, while signed in) adds a queued row. A clip appears after `POST /api/jobs/process` runs Bailian and stores the MP4. Unsigned Generate opens the same dialog with `next=` set to the current page.
 
 Google Cloud origins, the exact redirect URI for `viral-templates.pages.dev`, and where to put the secrets are in [`docs/google-oauth.md`](docs/google-oauth.md).
 
@@ -209,7 +209,8 @@ Same bucket from the CLI (needs Cloudflare credentials): `npx wrangler r2 bucket
 | `BAILIAN_PUBLIC_MEDIA_BASE` | Optional https origin Aliyun can fetch. Leave unset. `*.pages.dev` is rejected. The worker still uploads `oss://` |
 | `JOB_PROCESS_SECRET` | Bearer token for `POST /api/jobs/process`. 16+ characters. Not the Bailian key |
 | `AUTH_SECRET` | HMAC for `vt_session`, the Google state cookie, and media download signatures (16+ chars). On `*.pages.dev` / localhost a public preview fallback is used if unset. Google sign-in refuses that fallback |
-| `AUTH_PREVIEW_LOGIN` | `1` force preview login on; `0` off; unset = on for preview hosts when Google OAuth is missing |
+| `AUTH_ALLOWED_EMAILS` | Comma-separated sign-in allowlist (trim, case-insensitive). Production: `1316805445@qq.com`. Unset or empty denies every address except that same one, so a public Pages URL stays closed before the variable is set. See [`docs/google-oauth.md`](docs/google-oauth.md) |
+| `AUTH_PREVIEW_LOGIN` | `0` off everywhere. `1` forces preview login on localhost only. Unset = localhost when Google OAuth is missing. Public hosts, including `*.pages.dev`, never accept preview login |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google web client. Both must be set. See [`docs/google-oauth.md`](docs/google-oauth.md). Do not commit them |
 
 No real domain purchase is required for this skeleton. R2 needs the bucket created in Cloudflare before media can be stored (see Media above). Do not commit secrets.

@@ -1,17 +1,17 @@
 # Google sign-in
 
-Overseas accounts use Google only. There is no GitHub, Apple, Microsoft, or email/password sign-in. The first successful Google sign-in creates the D1 user with a credit balance of 0. It does not add or spend credits.
+Overseas accounts use Google only. There is no GitHub, Apple, Microsoft, or email/password sign-in. The first successful Google sign-in creates the D1 user with a credit balance of 0. It does not add or spend credits. Only an allowlisted address gets that far. Any other Google account is rejected before `ensureUser` and before `vt_session`.
 
 The same Google account maps to the same `user_id` on every host (`stableUserId('google', sub)`). Credits, the ledger, and jobs are that row in the shared D1 database. Each host still has its own `vt_session` cookie. Signing in on the apex does not by itself sign the person in on a brand hostname. The account pages stay on the host they started on (`/account/…` or `/t/{slug}/account/…`).
 
-Preview email sign-in (`POST /api/auth/preview`) stays available on `localhost` and `*.pages.dev` when Google is not configured. Set `AUTH_PREVIEW_LOGIN=1` to force it on, or `AUTH_PREVIEW_LOGIN=0` to force it off.
+Preview email sign-in (`POST /api/auth/preview`) does not prove the address in the JSON body. It is off on every public host, including `viral-templates.pages.dev` and branch `*.pages.dev` URLs. `AUTH_PREVIEW_LOGIN=1` does not turn it back on there. On `localhost` it still runs when Google is not configured, or when `AUTH_PREVIEW_LOGIN=1`, and the posted email must be on the same allowlist. `AUTH_PREVIEW_LOGIN=0` turns it off everywhere.
 
 ## Routes
 
 | Route | Role |
 | --- | --- |
 | `GET /api/auth/google/start?next=&from=&popup=` | Sends the browser to Google. `next` is where to land after sign-in. `from` is the sign-in page to return to if it fails. Both are relative paths only. `popup=1` stores a flag in the state cookie. |
-| `GET /api/auth/google/callback` | Google redirects here. Exchanges the code, reads the profile, creates the user, sets `vt_session`. |
+| `GET /api/auth/google/callback` | Google redirects here. Exchanges the code, reads the profile, and, if that verified email is allowlisted, creates the user and sets `vt_session`. Otherwise it redirects (or the popup posts) `error=email_not_allowed` and sets no session cookie. |
 
 The session cookie is the same shape as preview login, with `providers: ['google']`. The profile stores email (only if Google says it is verified), name, and picture. Google access tokens are not stored.
 
@@ -94,7 +94,7 @@ https://bby-wow.example.com/api/auth/google/callback
 
 Do not register `https://*.example.com/api/auth/google/callback`. Google rejects wildcards.
 
-Branch preview hostnames (`<deployment>.viral-templates.pages.dev`) change every deploy. Leave Google secrets off the Preview environment unless that exact hostname is listed above. Preview can keep using the email form.
+Branch preview hostnames (`<deployment>.viral-templates.pages.dev`) change every deploy. Leave Google secrets off the Preview environment unless that exact hostname is listed above. The email preview form is off on those hosts too.
 
 ## Cloudflare secrets
 
@@ -105,8 +105,9 @@ Set these on **Production** for the `viral-templates` Pages project. Do not comm
 | `AUTH_SECRET` | 16+ random characters. Signs `vt_session` and the short-lived OAuth state cookie. Required for Google. The public localhost / `*.pages.dev` fallback is not used for Google sign-in. |
 | `GOOGLE_CLIENT_ID` | Web client id from Google. |
 | `GOOGLE_CLIENT_SECRET` | Web client secret from Google. |
+| `AUTH_ALLOWED_EMAILS` | Comma-separated allowlist. Production value: `1316805445@qq.com`. Plaintext is fine. See below. |
 
-Dashboard: **Workers & Pages → viral-templates → Settings → Variables and Secrets → Add**. Type **Secret** (not plain text). Environment **Production**. Add each name.
+Dashboard: **Workers & Pages → viral-templates → Settings → Variables and Secrets → Add**. Type **Secret** (not plain text) for `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET`. Environment **Production**. Add each name. `AUTH_ALLOWED_EMAILS` is the plaintext allowlist in the next section.
 
 CLI (the command prompts for the value; do not put the secret in the command line). Choose Production when asked:
 
@@ -120,11 +121,43 @@ Redeploy or wait for the next deployment so the Functions see the new secrets.
 
 If Google credentials are set but `AUTH_SECRET` is missing, the sign-in page does not offer Google or preview login on that host.
 
+## Who can sign in
+
+`AUTH_ALLOWED_EMAILS` is a comma-separated list. Each entry is trimmed and compared case-insensitively. When the variable is set and not empty, only those addresses may create a session.
+
+When it is unset or empty, sign-in stays closed. The function allows only `1316805445@qq.com`. That fallback is there so a public `*.pages.dev` deploy does not lock the owner out before the variable exists. It is not open registration. Set the variable in production to the same address so the list is explicit in Cloudflare. There is no value that means "anyone with a Google account."
+
+Google must report the address as verified (`email_verified`). An unverified profile is not that address, so it is rejected with the same error.
+
+A rejected sign-in uses `email_not_allowed`. The sign-in page and the popup show "This account is not allowed to sign in." / "这个账号不在允许登录的名单里。" The callback does not call `ensureUser` and does not set `vt_session`.
+
+### Set it on Cloudflare Pages
+
+Dashboard: **Workers & Pages → viral-templates → Settings → Variables and Secrets → Add**.
+
+| Name | Value | Type | Environment |
+| --- | --- | --- | --- |
+| `AUTH_ALLOWED_EMAILS` | `1316805445@qq.com` | Plaintext | Production |
+
+Add the same variable on Preview if that environment has Google credentials. Do not put the value in `wrangler.toml`.
+
+To allow another person later, use a comma: `1316805445@qq.com, other@example.com`.
+
+CLI (the command prompts for the value):
+
+```bash
+npx wrangler pages secret put AUTH_ALLOWED_EMAILS --project-name viral-templates
+```
+
+Plaintext in the dashboard is enough. The address is an allowlist, not a credential. Redeploy so Functions see it.
+
+Publishing the Google app (Audience: External) does not open this site. The allowlist still rejects every other account.
+
 ## Google Cloud setup
 
 1. Create or select a Cloud project.
 2. Google Auth Platform → Branding. App name **Viral Templates**. Add a support email. Leave the scopes at `openid`, `email`, and `profile`. Do not add extra sensitive scopes.
-3. Audience: External. While the app is in Testing, only Google accounts you list as test users can sign in. Publish the app when any Google account should be able to sign in. These three scopes do not need a sensitive-scope review.
+3. Audience: External. While the app is in Testing, only Google accounts you list as test users can sign in. Publish the app so Google will offer the consent screen to the allowlisted account. These three scopes do not need a sensitive-scope review. Publishing does not let other Google accounts create a session on this site.
 4. Clients → Create client → **Web application**. Paste the origins and redirect URIs above.
 5. Copy the client id and secret into the Pages secrets.
 

@@ -42,6 +42,7 @@ import {
       google_failed: 'Google sign-in did not work. Try again.',
       google_state: 'That sign-in link expired. Start again.',
       google_unavailable: 'Google sign-in is not available on this site yet.',
+      email_not_allowed: 'This account is not allowed to sign in.',
     },
     zh: {
       kicker: '账户',
@@ -70,6 +71,7 @@ import {
       google_failed: 'Google 登录没有成功，请再试一次。',
       google_state: '登录链接已过期，请重新开始。',
       google_unavailable: '这个站点暂时还不能用 Google 登录。',
+      email_not_allowed: '这个账号不在允许登录的名单里。',
     },
   };
 
@@ -178,9 +180,14 @@ import {
     ui.status.textContent = message || '';
   }
 
+  function authErrorCopy(lang, code) {
+    if (!code || !COPY.en[code]) return '';
+    if (code.indexOf('google_') === 0 || code === 'email_not_allowed') return text(lang, code);
+    return '';
+  }
+
   function errorText(lang, code) {
-    if (code && COPY.en[code]) return text(lang, code);
-    return text(lang, 'google_failed');
+    return authErrorCopy(lang, code) || text(lang, 'google_failed');
   }
 
   function clearPendingTimer() {
@@ -429,7 +436,11 @@ import {
         })
         .then(function (res) {
           if (!res.ok || !res.j || !res.j.ok) {
-            showUiError(ui, (res.j && (res.j.message || res.j.error)) || text(ui.lang, 'previewFail'));
+            var code = res.j && res.j.error;
+            showUiError(
+              ui,
+              authErrorCopy(ui.lang, code) || (res.j && res.j.message) || text(ui.lang, 'previewFail'),
+            );
             if (btn) btn.disabled = false;
             return;
           }
@@ -473,7 +484,8 @@ import {
     };
     pageUi = ui;
     var errorKey = params.get('error') || '';
-    if (COPY.en[errorKey] && errorKey.indexOf('google_') === 0) showUiError(ui, text(lang, errorKey));
+    var errorCopy = authErrorCopy(lang, errorKey);
+    if (errorCopy) showUiError(ui, errorCopy);
     wirePreview(ui);
     loadAvailability(ui);
   }

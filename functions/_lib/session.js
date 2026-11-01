@@ -128,12 +128,48 @@ export function googleConfigured(env) {
   return Boolean(id && secret);
 }
 
+/**
+ * Addresses that may create a session.
+ *
+ * AUTH_ALLOWED_EMAILS is comma-separated. Entries are trimmed and lowercased.
+ * A set, non-empty list allows only those addresses.
+ *
+ * Unset or empty is default-deny, not open registration. The fallback below
+ * is the only address that can sign in until the variable is set, so a public
+ * *.pages.dev deploy does not lock the owner out and does not let anyone else
+ * in. Production should set AUTH_ALLOWED_EMAILS=1316805445@qq.com (see
+ * docs/google-oauth.md). There is no value that means "any Google account."
+ */
+export const FALLBACK_ALLOWED_EMAIL = '1316805445@qq.com';
+
+export function allowedAuthEmails(env) {
+  const raw = typeof env?.AUTH_ALLOWED_EMAILS === 'string' ? env.AUTH_ALLOWED_EMAILS : '';
+  const listed = raw
+    .split(',')
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean);
+  if (listed.length > 0) return listed;
+  return [FALLBACK_ALLOWED_EMAIL];
+}
+
+export function authEmailAllowed(env, email) {
+  const normalized = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  if (!normalized) return false;
+  return allowedAuthEmails(env).includes(normalized);
+}
+
+function isLocalAuthHost(hostname) {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+}
+
 export function previewLoginAllowed(env, hostname) {
   if (env?.AUTH_PREVIEW_LOGIN === '0') return false;
+  // The preview body is whatever email the browser sends. It is not proof
+  // of that address, so public hosts (including *.pages.dev) never run it.
+  // AUTH_PREVIEW_LOGIN=1 does not reopen those hosts.
+  if (!isLocalAuthHost(hostname)) return false;
   if (env?.AUTH_PREVIEW_LOGIN === '1') return true;
-  const preview =
-    hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.pages.dev');
-  return preview && !googleConfigured(env);
+  return !googleConfigured(env);
 }
 
 export function jsonNoStore(body, status = 200, setCookies = []) {

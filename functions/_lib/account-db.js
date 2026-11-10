@@ -205,7 +205,8 @@ export function clampLimit(raw, fallback) {
 
 /**
  * Append a top-up, deduction, or refund and move the stored balance with it.
- * No request path calls this until payments or a real generate charge exist.
+ * Generate charges and failure refunds call this. A duplicate id is the same
+ * entry again: the balance is not moved twice.
  */
 export async function appendLedger(db, user, entry) {
   const row = await ensureUser(db, user);
@@ -229,23 +230,58 @@ export async function appendLedger(db, user, entry) {
   const beforeRow = await db.prepare(`SELECT balance FROM credit_accounts WHERE user_id = ?`).bind(row.user_id).first();
   const before = Number(beforeRow && beforeRow.balance != null ? beforeRow.balance : 0);
 
-  await db.batch([
-    db
-      .prepare(
-        `INSERT INTO credit_ledger (id, user_id, delta, kind, label_en, label_zh, job_id, created_at)
-         SELECT ?, user_id, ?, ?, ?, ?, ?, ?
-         FROM credit_accounts
-         WHERE user_id = ? AND balance + ? >= 0`,
-      )
-      .bind(id, delta, kind, labelEn, labelZh, jobId, now, row.user_id, delta),
-    db
-      .prepare(
-        `UPDATE credit_accounts
-         SET balance = balance + ?, updated_at = ?
-         WHERE user_id = ? AND EXISTS (SELECT 1 FROM credit_ledger WHERE id = ?)`,
-      )
-      .bind(delta, now, row.user_id, id),
-  ]);
+  const duplicate = await db.prepare(`SELECT id, delta, kind FROM credit_ledger WHERE id = ?`).bind(id).first();
+  if (duplicate) {
+    if (Number(duplicate.delta) !== delta || duplicate.kind !== kind) throw fail('storage_error');
+    return {
+      id,
+      delta,
+      kind,
+      label_en: labelEn,
+      label_zh: labelZh,
+      job_id: jobId,
+      created_at: now,
+      balance: before,
+      already: true,
+    };
+  }
+
+  try {
+    await db.batch([
+      db
+        .prepare(
+          `INSERT INTO credit_ledger (id, user_id, delta, kind, label_en, label_zh, job_id, created_at)
+           SELECT ?, user_id, ?, ?, ?, ?, ?, ?
+           FROM credit_accounts
+           WHERE user_id = ? AND balance + ? >= 0`,
+        )
+        .bind(id, delta, kind, labelEn, labelZh, jobId, now, row.user_id, delta),
+      db
+        .prepare(
+          `UPDATE credit_accounts
+           SET balance = balance + ?, updated_at = ?
+           WHERE user_id = ? AND EXISTS (SELECT 1 FROM credit_ledger WHERE id = ?)`,
+        )
+        .bind(delta, now, row.user_id, id),
+    ]);
+  } catch (err) {
+    const message = String(err && err.message ? err.message : err);
+    if (!/unique/i.test(message)) throw err;
+    const raced = await db.prepare(`SELECT id FROM credit_ledger WHERE id = ? AND user_id = ?`).bind(id, row.user_id).first();
+    if (!raced) throw err;
+    const racedBalance = await db.prepare(`SELECT balance FROM credit_accounts WHERE user_id = ?`).bind(row.user_id).first();
+    return {
+      id,
+      delta,
+      kind,
+      label_en: labelEn,
+      label_zh: labelZh,
+      job_id: jobId,
+      created_at: now,
+      balance: Number(racedBalance && racedBalance.balance != null ? racedBalance.balance : before),
+      already: true,
+    };
+  }
 
   const ledgerRow = await db
     .prepare(`SELECT id FROM credit_ledger WHERE id = ? AND user_id = ?`)
@@ -451,11 +487,94 @@ export async function revertQueuedJob(db, jobId) {
   return changesOf(result) === 1;
 }
 
+export function templateCreditCost(template) {
+  const cost = template && template.creditCost;
+  if (!Number.isInteger(cost) || cost < 1 || cost > 120) return 0;
+  return cost;
+}
+
+/** Deduct the look's credit cost once. The ledger id is fixed to the job id. */
+export async function chargeJobCredits(db, user, jobId, template) {
+  const id = cleanId(jobId);
+  if (!id) throw fail('bad_job');
+  const cost = templateCreditCost(template);
+  if (!cost) throw fail('bad_template');
+  const ledgerId = `deduct_${id}`;
+  try {
+    return await appendLedger(db, user, {
+      id: ledgerId,
+      delta: -cost,
+      kind: 'deduction',
+      label_en: `Clip · ${template.name}`,
+      label_zh: `短片 · ${template.nameZh}`,
+      job_id: id,
+    });
+  } catch (err) {
+    if (!err || err.code !== 'insufficient_credits') throw err;
+    const row = assertUser(user);
+    const account = await db.prepare(`SELECT balance FROM credit_accounts WHERE user_id = ?`).bind(row.user_id).first();
+    const wrapped = fail('insufficient_credits');
+    wrapped.needed = cost;
+    wrapped.balance = Number(account && account.balance != null ? account.balance : 0);
+    throw wrapped;
+  }
+}
+
+/** Return a deduction once. Safe when the job was never charged. */
+export async function refundChargeById(db, jobId) {
+  const id = cleanId(jobId);
+  if (!id) return null;
+  await ensureSchema(db);
+  const refundId = `refund_${id}`;
+  const existing = await db.prepare(`SELECT id FROM credit_ledger WHERE id = ?`).bind(refundId).first();
+  if (existing) return { id: refundId, already: true };
+  const deduction = await db
+    .prepare(`SELECT user_id, delta FROM credit_ledger WHERE id = ? AND kind = 'deduction'`)
+    .bind(`deduct_${id}`)
+    .first();
+  if (!deduction) return null;
+  const amount = -Number(deduction.delta);
+  if (!Number.isInteger(amount) || amount <= 0) return null;
+  const person = await db
+    .prepare(`SELECT user_id, email, name FROM users WHERE user_id = ?`)
+    .bind(deduction.user_id)
+    .first();
+  if (!person) return null;
+  return appendLedger(db, person, {
+    id: refundId,
+    delta: amount,
+    kind: 'refund',
+    label_en: 'Returned credits for a clip that did not finish',
+    label_zh: '短片未完成，积分已退回',
+    job_id: id,
+  });
+}
+
+/** Failed jobs that were charged and never refunded. The drain calls this. */
+export async function refundOutstandingFailures(db, limit = 20) {
+  await ensureSchema(db);
+  const listed = await db
+    .prepare(
+      `SELECT j.id AS id
+       FROM jobs j
+       JOIN credit_ledger d ON d.id = ('deduct_' || j.id) AND d.kind = 'deduction'
+       LEFT JOIN credit_ledger r ON r.id = ('refund_' || j.id)
+       WHERE j.status = 'failed' AND r.id IS NULL
+       LIMIT ?`,
+    )
+    .bind(clampLimit(limit, 20))
+    .all();
+  let count = 0;
+  for (const row of listed.results || []) {
+    await refundChargeById(db, row.id);
+    count += 1;
+  }
+  return count;
+}
+
 /**
  * Mark a queued or running job failed. result_url stays empty.
- * TODO(credits): Generate does not deduct credits yet. appendLedger is not
- * called from the queue path. When a deduction is added, refund that amount
- * here with kind 'refund' and this job_id. Do not refund twice.
+ * A charged job is refunded once, including when this is called again.
  */
 export async function markJobFailed(db, jobId, fields = {}) {
   const id = cleanId(jobId);
@@ -478,6 +597,8 @@ export async function markJobFailed(db, jobId, fields = {}) {
     )
     .bind(errorCode, noteEn, noteZh, now, id)
     .run();
+  const saved = await db.prepare(`SELECT status FROM jobs WHERE id = ?`).bind(id).first();
+  if (saved && saved.status === 'failed') await refundChargeById(db, id);
   return changesOf(result) === 1;
 }
 

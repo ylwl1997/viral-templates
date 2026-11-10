@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { JOB_MEDIA_COLUMNS, JOB_PROVIDER_COLUMNS, SCHEMA_SQL, schemaStatements } from '../functions/_lib/schema.js';
-import { appendLedger, createStubJob, getCredits, listJobs } from '../functions/_lib/account-db.js';
+import { appendLedger, chargeJobCredits, createStubJob, getCredits, listJobs, markJobFailed } from '../functions/_lib/account-db.js';
+import { getTemplate } from '../functions/_lib/templates.js';
 
 const baseline = fs.readFileSync(new URL('../migrations/0001_account.sql', import.meta.url), 'utf8').trim();
 const alter = fs.readFileSync(new URL('../migrations/0002_r2_media.sql', import.meta.url), 'utf8');
@@ -210,5 +211,24 @@ const readyRows = await listJobs(db, userA, { status: 'ready' });
 assert(readyRows.jobs.length === 1 && readyRows.jobs[0].result_url === 'https://example.com/real.mp4', 'ready url hidden');
 const queuedRows = await listJobs(db, userA, { status: 'queued' });
 assert(queuedRows.jobs.every((row) => row.result_url == null), 'queued url leaked');
+
+const priced = await createStubJob(db, userA, 'bby-wow');
+const charge = await chargeJobCredits(db, userA, priced.id, getTemplate('bby-wow'));
+assert(charge.balance === 5 && charge.delta === -10, `charge ${charge.balance}`);
+const again = await chargeJobCredits(db, userA, priced.id, getTemplate('bby-wow'));
+assert(again.already === true && again.balance === 5, 'second charge moved the balance');
+await expectCode(
+  () => chargeJobCredits(db, userB, 'job_bobcharge01', getTemplate('bby-wow')),
+  'insufficient_credits',
+);
+assert((await getCredits(db, userB, { includeLedger: false })).balance === 0, 'bob was charged');
+const failed = await markJobFailed(db, priced.id, { error_code: 'failed' });
+assert(failed === true, 'priced job did not fail');
+const restored = await getCredits(db, userA);
+assert(restored.balance === 15, `refund balance ${restored.balance}`);
+assert(restored.ledger.filter((row) => row.job_id === priced.id).map((row) => row.kind).sort().join() === 'deduction,refund', 'charge pair');
+const secondFail = await markJobFailed(db, priced.id, { error_code: 'failed' });
+assert(secondFail === false, 'second fail changed the row');
+assert((await getCredits(db, userA, { includeLedger: false })).balance === 15, 'refunded twice');
 
 console.log('account d1 tests passed');

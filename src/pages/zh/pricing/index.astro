@@ -3,23 +3,27 @@ import Layout from '../../../layouts/Layout.astro';
 import { SITE } from '../../../lib/site';
 import PricingGrid from '../../../design/components/PricingGrid.astro';
 
-const { packs, oneShotUsd, kissCamOneShotUsd } = SITE.pricing;
+const { packs } = SITE.pricing;
 ---
 <Layout
   title="价格"
-  description="Viral Templates AI 视频产品演示价格。"
+  description="竖屏短片的积分。1 积分大约 1 秒。"
   canonicalPath="/pricing/"
   lang="zh"
 >
-  <div class="page-head wrap"><h1>价格</h1><p>演示价格 — 支付开放后可结账。</p></div>
+  <div class="page-head wrap">
+    <h1>价格</h1>
+    <p>1 积分大约是短片的 1 秒。结账开放后才显示套餐价格。本页不会扣银行卡。</p>
+  </div>
   <section class="section wrap">
     <PricingGrid
-      oneShotLabel="单次"
-      oneShotUsd={oneShotUsd}
-      oneShotMeta={`Kiss Cam 起 $${kissCamOneShotUsd} · 演示`}
+      oneShotLabel="一条短片"
+      oneShotAmount="10–15"
+      oneShotMeta="积分，视效果而定"
       packs={packs}
+      packMeta="积分 · 结账开放后显示价格"
       popularLabel="热门"
-      note="登录后生成会把任务排进账户并扣积分。购买积分尚未开通。"
+      note="Bby Wow 10 积分，Kiss Cam 12 积分，Ceiling Fan 15 积分。短片没完成会退回这些积分。结账开放后，在账户里购买。"
     />
   </section>
 </Layout>

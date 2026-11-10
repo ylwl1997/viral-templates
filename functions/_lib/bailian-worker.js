@@ -23,6 +23,7 @@ import {
   fail,
   listRemakeCandidates,
   markJobFailed,
+  refundOutstandingFailures,
   revertQueuedJob,
   saveProviderTask,
 } from './account-db.js';
@@ -35,6 +36,7 @@ import {
   submitAnimateMove,
   uploadTempFile,
 } from './bailian.js';
+import { mp4HasAudio, muxStyleAudio } from './mp4-finish.js';
 import { getTemplate } from './templates.js';
 import { storeJobResult } from './job-media.js';
 import { getMedia, mediaConfigured, requestOrigin, sniffImage, sniffMp4, VIDEO_MAX_BYTES } from './r2-media.js';
@@ -61,6 +63,10 @@ const NOTES = {
   failed: {
     en: 'Video generation failed. Please try again from Create.',
     zh: '视频生成失败。请在创作页再试一次。',
+  },
+  audio_mux: {
+    en: 'The clip could not be finished with sound. Please try again from Create.',
+    zh: '这条短片没能配上声音。请在创作页再试一次。',
   },
 };
 
@@ -290,6 +296,18 @@ async function storeSuccess(ctx, row, output) {
     return failJob(ctx.db, row, err && err.code ? err.code : 'failed');
   }
   if (!sniffMp4(bytes)) return failJob(ctx.db, row, 'bad_video');
+  const finished = await decorateResult(ctx, row, bytes);
+  if (finished.retry) {
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'retry_download',
+      error: 'reference_fetch',
+    };
+  }
+  if (finished.fail) return failJob(ctx.db, row, finished.fail);
+  bytes = finished.bytes;
+  if (!sniffMp4(bytes)) return failJob(ctx.db, row, 'bad_video');
   try {
     const stored = await storeJobResult(ctx.db, ctx.env, ctx.request, row.id, {
       bytes,
@@ -308,6 +326,27 @@ async function storeSuccess(ctx, row, output) {
       return failJob(ctx.db, row, err.code);
     }
     return { id: row.id, status: 'running', action: 'retry_store', error: 'storage_error' };
+  }
+}
+
+async function decorateResult(ctx, row, bytes) {
+  const template = getTemplate(row.template_slug);
+  let music = null;
+  if (template && template.referenceVideo) {
+    try {
+      music = await loadReferenceVideo(ctx.env, ctx.origin, template.referenceVideo, ctx.fetchImpl);
+    } catch (err) {
+      if (err && err.code === 'reference_fetch') return { retry: true };
+      return { fail: 'no_reference_video' };
+    }
+  }
+  if (!music || !mp4HasAudio(music) || mp4HasAudio(bytes)) return { bytes };
+  try {
+    return { bytes: muxStyleAudio(bytes, music) };
+  } catch (err) {
+    if (err && err.code === 'no_music') return { bytes };
+    console.error('audio_mux', row.id, err && err.code ? err.code : 'error');
+    return { fail: 'audio_mux' };
   }
 }
 
@@ -359,6 +398,11 @@ export async function processRemakeJobs({
   userId = '',
 }) {
   if (!mediaConfigured(env)) throw fail('r2_unbound');
+  try {
+    await refundOutstandingFailures(db);
+  } catch (err) {
+    console.error('credit_refund', err && err.code ? err.code : 'error');
+  }
   const runtime = bailianRuntime(env);
   if (!runtime.configured) throw fail('bailian_unconfigured');
   const bucket = env.MEDIA;

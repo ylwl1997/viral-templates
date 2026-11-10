@@ -4,18 +4,21 @@ export const TEMPLATE_CATALOG = {
     name: 'Bby Wow AI',
     nameZh: 'Bby Wow AI',
     photoCount: 1,
+    creditCost: 10,
     referenceVideo: '/brand/templates/bby-wow-demo.mp4',
   },
   'kiss-cam': {
     name: 'Coldplay Kiss Cam AI',
     nameZh: 'Coldplay Kiss Cam AI',
     photoCount: 2,
+    creditCost: 12,
     referenceVideo: '/brand/templates/kiss-cam-demo.mp4',
   },
   'ceiling-fan': {
     name: 'Ceiling Fan Transition AI',
     nameZh: 'Ceiling Fan Transition AI',
     photoCount: 1,
+    creditCost: 15,
     referenceVideo: '/brand/templates/ceiling-fan-demo.mp4',
   },
   'bulin-47': { name: 'Bulin 47', nameZh: 'Bulin 47', photoCount: 1 },
@@ -40,6 +43,7 @@ export function getTemplate(slug) {
     name: row.name,
     nameZh: row.nameZh,
     photoCount: row.photoCount === 2 ? 2 : 1,
+    creditCost: Number.isInteger(row.creditCost) ? row.creditCost : 0,
     referenceVideo,
   };
 }

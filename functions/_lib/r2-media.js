@@ -4,6 +4,7 @@
  * Keys:
  *   uploads/{userId}/{jobId}/0.jpg|png|webp   face photo (slot 1 is /1.ext)
  *   results/{userId}/{jobId}.mp4              finished clip
+ *   handoff/{userId}/{token}.jpg|png|webp     phone upload, private, short-lived
  *   templates/                                reserved; this module does not write it
  *
  * The bucket stays private (no r2.dev public URL). Downloads are app URLs:
@@ -98,7 +99,8 @@ export function assertObjectKey(key) {
   }
   const photo = /^uploads\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/[01]\.(jpg|png|webp)$/;
   const video = /^results\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\.mp4$/;
-  if (!photo.test(key) && !video.test(key)) throw fail('storage_error');
+  const handoff = /^handoff\/[A-Za-z0-9_-]+\/[a-f0-9]{32}\.(jpg|png|webp)$/;
+  if (!photo.test(key) && !video.test(key) && !handoff.test(key)) throw fail('storage_error');
   return key;
 }
 

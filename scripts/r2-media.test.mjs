@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { attachJobResult, ensureMediaColumns, ensureSchema, listJobs } from '../functions/_lib/account-db.js';
+import { appendLedger, attachJobResult, ensureMediaColumns, ensureSchema, getCredits, listJobs } from '../functions/_lib/account-db.js';
+import { probeImage } from '../functions/_lib/image-precheck.js';
 import {
   authorizeMediaRequest,
   ingestAuthorized,
@@ -50,9 +51,9 @@ function pad(bytes) {
   return out;
 }
 
-const jpeg = pad(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]));
-const png = pad(Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
-const webp = pad(Uint8Array.from([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]));
+const jpeg = probeImage('jpeg', 720, 1280);
+const png = probeImage('png', 800, 1000);
+const webp = probeImage('webp', 640, 960);
 const mp4 = pad(Uint8Array.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]));
 const html = pad(Uint8Array.from([0x3c, 0x68, 0x74, 0x6d, 0x6c, 0x3e]));
 
@@ -222,6 +223,50 @@ await expectCode(
       env,
       request,
       user,
+      templateSlug: 'bby-wow',
+      photos: [{ bytes: probeImage('jpeg', 200, 400), contentType: 'image/jpeg', ext: 'jpg' }],
+    }),
+  'photo_too_small',
+);
+await expectCode(
+  () =>
+    queueJobWithMedia({
+      db,
+      env,
+      request,
+      user,
+      templateSlug: 'bby-wow',
+      photos: [{ bytes: probeImage('jpeg', 2000, 400), contentType: 'image/jpeg', ext: 'jpg' }],
+    }),
+  'photo_aspect',
+);
+const broke = await queueJobWithMedia({
+  db,
+  env,
+  request,
+  user,
+  templateSlug: 'bby-wow',
+  photos: [{ bytes: jpeg, contentType: 'image/jpeg', ext: 'jpg' }],
+}).then(
+  () => null,
+  (err) => err,
+);
+assert(broke && broke.code === 'insufficient_credits', `expected insufficient_credits, got ${broke && broke.code}`);
+assert(broke.needed === 10 && broke.balance === 0, 'credit error details');
+await appendLedger(db, user, {
+  delta: 100,
+  kind: 'topup',
+  label_en: 'Test pack',
+  label_zh: '测试包',
+});
+
+await expectCode(
+  () =>
+    queueJobWithMedia({
+      db,
+      env,
+      request,
+      user,
       templateSlug: 'kiss-cam',
       photos: [{ bytes: jpeg, contentType: 'image/jpeg', ext: 'jpg' }],
     }),
@@ -251,6 +296,9 @@ const queued = await queueJobWithMedia({
 });
 assert(queued.job.status === 'queued' && queued.job.result_url == null, 'stored job still queued');
 assert(queued.media.stored === true && queued.media.photos === 1 && queued.media.r2_configured === true, 'stored flag');
+assert(queued.media.credits === 10, 'bby cost');
+const afterCharge = await getCredits(db, user, { includeLedger: false });
+assert(afterCharge.balance === 90, `charged balance ${afterCharge.balance}`);
 assert(!('upload_key' in queued.job), 'key leaked on job json');
 const storedRow = sqlite.prepare(`SELECT upload_key, upload_url, upload_key_2, status, result_url FROM jobs WHERE id = ?`).get(queued.job.id);
 assert(storedRow.status === 'queued' && storedRow.result_url == null, 'db status');
@@ -273,6 +321,8 @@ const pair = await queueJobWithMedia({
 const pairRow = sqlite.prepare(`SELECT upload_key, upload_key_2 FROM jobs WHERE id = ?`).get(pair.job.id);
 assert(pairRow.upload_key.endsWith('/0.jpg') && pairRow.upload_key_2.endsWith('/1.png'), 'two keys');
 assert(pair.job.status === 'queued', 'kiss cam queued');
+const afterPair = await getCredits(db, user, { includeLedger: false });
+assert(afterPair.balance === 78, `kiss balance ${afterPair.balance}`);
 
 let puts = 0;
 const flakyObjects = new Map();
@@ -312,6 +362,7 @@ assert(!/fal|kling|waffo/i.test(ready.job.note_en), ready.job.note_en);
 const savedVideo = bucket.objects.get(ready.record.result_key);
 assert(savedVideo.opts.customMetadata.retention_days === '30', 'video retention');
 assert(savedVideo.opts.httpMetadata.contentType === 'video/mp4', 'mp4 type');
+assert(new TextDecoder().decode(savedVideo.bytes).includes('trainedAlgorithmicMedia'), 'result missing AI label');
 
 const listed = await listJobs(db, user, { status: 'ready', signResult: resultUrlSigner(env, request) });
 assert(listed.jobs.length === 1, `ready list ${listed.jobs.length}`);

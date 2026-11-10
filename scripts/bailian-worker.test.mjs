@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { ensureMediaColumns, ensureSchema, getCredits } from '../functions/_lib/account-db.js';
+import { appendLedger, ensureMediaColumns, ensureSchema, getCredits } from '../functions/_lib/account-db.js';
+import { probeImage } from '../functions/_lib/image-precheck.js';
 import {
   CLASSIC_DASHSCOPE_BASE,
   DEFAULT_MODE,
@@ -32,7 +33,7 @@ function pad(bytes, length = 32) {
   return out;
 }
 
-const jpeg = pad(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]));
+const jpeg = probeImage('jpeg', 720, 1280);
 const mp4 = pad(Uint8Array.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]));
 const API_KEY = 'sk-test-bailian-key';
 const PROCESS_SECRET = 'job-process-secret-1';
@@ -116,8 +117,8 @@ const dbSource = fs.readFileSync(new URL('../functions/_lib/account-db.js', impo
 assert(workerSource.includes('upload_key'), 'worker reads the subject photo');
 assert(!workerSource.includes('upload_key_2'), 'second photo is not sent');
 assert(!workerSource.includes('row.upload_url'), 'signed pages.dev url is not a Bailian input');
-assert(dbSource.includes('TODO(credits)'), 'refund todo');
-assert(dbSource.includes("kind 'refund'"), 'refund kind named');
+assert(dbSource.includes('refundChargeById'), 'failed jobs refund');
+assert(dbSource.includes("kind: 'refund'"), 'refund kind named');
 
 const baseline = fs.readFileSync(new URL('../migrations/0001_account.sql', import.meta.url), 'utf8');
 const mediaMigration = fs.readFileSync(new URL('../migrations/0002_r2_media.sql', import.meta.url), 'utf8');
@@ -301,6 +302,12 @@ const env = {
   DASHSCOPE_API_KEY: 'should-not-win',
   JOB_PROCESS_SECRET: PROCESS_SECRET,
 };
+await appendLedger(db, user, {
+  delta: 500,
+  kind: 'topup',
+  label_en: 'Test pack',
+  label_zh: '测试包',
+});
 const queued = await queueJobWithMedia({
   db,
   env,
@@ -397,6 +404,10 @@ assert(saved.status === 'ready', saved.status);
 assert(saved.provider_task_id === TASK_OK, saved.provider_task_id);
 assert(saved.result_key === `results/u_alice/${queued.job.id}.mp4`, saved.result_key);
 assert(bucket.objects.has(saved.result_key), 'result object missing');
+assert(
+  new TextDecoder().decode(bucket.objects.get(saved.result_key).bytes).includes('trainedAlgorithmicMedia'),
+  'stored clip missing AI label',
+);
 assert(calls.some((call) => call.url.startsWith(`${CLASSIC_DASHSCOPE_BASE}/uploads`)), 'classic upload fallback');
 assert(calls.some((call) => call.url.startsWith(`${WORKSPACE_DASHSCOPE_BASE}/services/aigc/image2video/video-synthesis`)), 'workspace synthesis');
 assert(!calls.some((call) => call.url.startsWith(`${CLASSIC_DASHSCOPE_BASE}/services/`)), 'synthesis stayed off classic');
@@ -408,7 +419,8 @@ assert(synthesisBody.input.video_url.startsWith('oss://'), synthesisBody.input.v
 assert(!JSON.stringify(synthesisBody).includes('pages.dev'), 'synthesis body contains pages.dev');
 
 const credits = await getCredits(db, user);
-assert(credits.balance === 0 && credits.ledger.length === 0, 'success did not charge');
+assert(credits.balance === 490, `success kept the charge (${credits.balance})`);
+assert(credits.ledger.some((row) => row.kind === 'deduction' && row.job_id === queued.job.id && row.delta === -10), 'bby deduction');
 
 sqlite.prepare(
   `UPDATE jobs SET status = 'running', provider_task_id = ?, error_code = NULL, result_url = NULL, result_key = NULL WHERE id = ?`,
@@ -432,7 +444,8 @@ assert(failedRow.status === 'failed' && failedRow.result_url == null, 'failed ro
 assert(failedRow.error_code === 'bailian_InternalError', failedRow.error_code);
 assert(!String(failedRow.note_en).includes(API_KEY), 'note leaked key');
 const afterFail = await getCredits(db, user);
-assert(afterFail.balance === 0 && afterFail.ledger.length === 0, 'failure did not refund or charge');
+assert(afterFail.balance === 490, `unbilled failure moved credits (${afterFail.balance})`);
+assert(!afterFail.ledger.some((row) => row.job_id === bare.job.id), 'unbilled job wrote a ledger row');
 
 const noPhoto = await queueJobWithMedia({
   db,
@@ -453,7 +466,7 @@ const noPhotoRes = await onRequestPost({
 const noPhotoBody = await noPhotoRes.json();
 assert(noPhotoBody.processed[0].error === 'no_photo', JSON.stringify(noPhotoBody));
 
-const huge = pad(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]), 5 * 1024 * 1024 + 16);
+const huge = probeImage('jpeg', 720, 1280, 5 * 1024 * 1024 + 16);
 const hugeJob = await queueJobWithMedia({
   db,
   env,
@@ -472,6 +485,9 @@ const hugeRes = await onRequestPost({
 });
 const hugeBody = await hugeRes.json();
 assert(hugeBody.processed[0].error === 'photo_too_large', JSON.stringify(hugeBody.processed[0]));
+const afterHuge = await getCredits(db, user);
+assert(afterHuge.balance === 490, `huge refund balance ${afterHuge.balance}`);
+assert(afterHuge.ledger.some((row) => row.kind === 'refund' && row.job_id === hugeJob.job.id && row.delta === 15), 'fan refund');
 
 const kissMissing = await queueJobWithMedia({
   db,
@@ -539,6 +555,12 @@ assert(!kicked.error_code, kicked.error_code);
 
 globalThis.fetch = providerFetch;
 const bob = { user_id: 'u_bob', email: 'bob@example.com', name: 'Bob' };
+await appendLedger(db, bob, {
+  delta: 100,
+  kind: 'topup',
+  label_en: 'Test pack',
+  label_zh: '测试包',
+});
 const bobJob = await queueJobWithMedia({
   db,
   env,

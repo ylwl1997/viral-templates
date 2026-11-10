@@ -16,8 +16,8 @@ interface Props {
 const { template: t, lang, howLede, faqLede } = Astro.props;
 const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
 const createHref = keywordPath(lang, t.slug, 'create');
-const { packs, oneShotUsd, kissCamOneShotUsd } = SITE.pricing;
-const oneShot = t.photoCount === 2 ? kissCamOneShotUsd : oneShotUsd;
+const { packs } = SITE.pricing;
+const oneShot = t.creditCost || 0;
 const steps = (lang === 'zh' ? t.howZh : t.howEn).map((step, i) => ({
   title: L(`Step ${i + 1}`, `步骤 ${i + 1}`),
   body: step,
@@ -32,19 +32,17 @@ const name = lang === 'zh' ? t.displayNameZh : t.displayName;
 
 <section class="section wrap" id="pricing">
   <h2>{L('Pricing', '价格')}</h2>
-  <p class="sub">{L('Demo prices. Checkout opens when payments are ready.', '演示价格。支付开放后可结账。')}</p>
+  <p class="sub">{L('One credit is about one second. Pack prices show when checkout is open.', '1 积分大约 1 秒。结账开放后才显示套餐价格。')}</p>
   <PricingGrid
-    oneShotLabel={L('One-shot', '单次')}
-    oneShotUsd={oneShot}
-    oneShotMeta={L(
-      `${SITE.pricing.creditPerGenerate} credit / generate · Demo`,
-      `每次生成 ${SITE.pricing.creditPerGenerate} 积分 · 演示`,
-    )}
+    oneShotLabel={L('This look', '这个效果')}
+    oneShotAmount={String(oneShot)}
+    oneShotMeta={L('credits · about one per second', '积分 · 大约每秒 1 积分')}
     packs={packs}
+    packMeta={L('credits · price when checkout is open', '积分 · 结账开放后显示价格')}
     popularLabel={L('Popular', '热门')}
     note={L(
-      'Signed-in Generate queues a job and uses a credit. Buying credits is not open yet.',
-      '登录后生成会把任务排进账户并扣积分。购买积分尚未开通。',
+      'Signed-in Generate uses these credits. If the clip does not finish, they return. Buying credits does not charge you until checkout is open.',
+      '登录后生成会扣这些积分。短片没完成会退回。结账未开放时，购买不会扣款。',
     )}
   />
 </section>

@@ -7,7 +7,9 @@
  * job row is ready (see also POST /api/jobs/:id/result for a manual ingest).
  */
 
-import { attachJobResult, createStubJob, ensureUser, fail, getJobMediaRecord, newId } from './account-db.js';
+import { attachJobResult, chargeJobCredits, createStubJob, ensureUser, fail, getJobMediaRecord, newId, refundChargeById, templateCreditCost } from './account-db.js';
+import { assertReferenceImage } from './image-precheck.js';
+import { stampAiGenerated } from './mp4-finish.js';
 import {
   RESULT_LINK_TTL_SEC,
   deleteMedia,
@@ -126,8 +128,7 @@ export async function queueJobWithMedia({ db, env, request, user, templateSlug, 
   if (incoming.length > 2) throw fail('bad_photo');
   if (incoming.length && incoming.length !== template.photoCount) throw fail('bad_photo');
   const prepared = incoming.map((photo) => {
-    const sniffed = sniffImage(photo.bytes);
-    if (!sniffed) throw fail('bad_photo');
+    const sniffed = assertReferenceImage(photo.bytes);
     return { bytes: photo.bytes, contentType: sniffed.contentType, ext: sniffed.ext };
   });
 
@@ -144,6 +145,7 @@ export async function queueJobWithMedia({ db, env, request, user, templateSlug, 
   const days = retentionDays(env).photo;
   const ttl = days * 86400;
   const keys = [];
+  let charged = false;
   try {
     const stored = [];
     for (let slot = 0; slot < prepared.length; slot += 1) {
@@ -157,6 +159,10 @@ export async function queueJobWithMedia({ db, env, request, user, templateSlug, 
       const kind = slot === 0 ? 'photo' : 'photo-2';
       stored.push({ key, url: await signedDownloadUrl(env, request, id, kind, ttl) });
     }
+    if (templateCreditCost(template) > 0) {
+      await chargeJobCredits(db, owner, id, template);
+      charged = true;
+    }
     const job = await createStubJob(db, owner, template.slug, {
       id,
       upload_key: stored[0].key,
@@ -166,10 +172,22 @@ export async function queueJobWithMedia({ db, env, request, user, templateSlug, 
     });
     return {
       job,
-      media: { stored: true, r2_configured: true, photos: stored.length },
+      media: {
+        stored: true,
+        r2_configured: true,
+        photos: stored.length,
+        credits: templateCreditCost(template),
+      },
     };
   } catch (err) {
     await discard(bucket, keys);
+    if (charged) {
+      try {
+        await refundChargeById(db, id);
+      } catch (refundErr) {
+        console.error('credit_refund', err && err.code ? err.code : 'error');
+      }
+    }
     if (err && err.code) throw err;
     throw fail('storage_error');
   }
@@ -238,12 +256,14 @@ export async function storeJobResult(db, env, request, jobId, video) {
   if (!bucket) throw fail('r2_unbound');
   const sniffed = sniffMp4(video && video.bytes);
   if (!sniffed) throw fail('bad_video');
+  const labeled = stampAiGenerated(video.bytes);
+  if (!sniffMp4(labeled)) throw fail('bad_video');
   const record = await getJobMediaRecord(db, jobId);
   if (!record) throw fail('not_found');
   if (record.status === 'failed') throw fail('bad_status');
   const key = resultObjectKey(record.user_id, record.id);
   const days = retentionDays(env).video;
-  await putMedia(bucket, key, video.bytes, {
+  await putMedia(bucket, key, labeled, {
     contentType: sniffed.contentType,
     customMetadata: {
       kind: 'result',

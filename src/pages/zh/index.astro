@@ -24,7 +24,7 @@ const lang = 'zh' as const;
       <p class="eyebrow">模板</p>
       <h1>用已有的照片，做一条竖屏短片。</h1>
       <p class="lede">
-        选一个风格，上传照片，画面保持竖屏。需成人同意。
+        一间安静的工作室。选一个风格，上传已有的照片，画面保持竖屏。需成人同意。
       </p>
       <div class="hero-cta">
         <a class="btn btn-primary" href={pathFor(lang, '/create/')}>开始制作</a>
@@ -72,7 +72,7 @@ const lang = 'zh' as const;
       steps={[
         { title: '选择风格', body: '浏览模板并打开创作。' },
         { title: '上传与授权', body: '仅限成人同意照片。禁止未成年人。' },
-        { title: '生成', body: '登录后生成会把任务排进你的账户，并扣一次积分。完成后成片会出现在账户里。' },
+        { title: '生成', body: '登录后生成会排队，并扣这个效果所需的积分。完成后成片会出现在账户里。没完成则积分退回。' },
       ]}
     />
   </section>

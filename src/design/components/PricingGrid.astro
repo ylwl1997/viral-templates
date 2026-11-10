@@ -1,40 +1,68 @@
 ---
 interface Pack {
+  id?: string;
   label: string;
   credits: number;
-  usd: number;
+  usd?: number;
   popular?: boolean;
 }
 
 interface Props {
   oneShotLabel: string;
-  oneShotUsd: number;
+  oneShotAmount: string;
   oneShotMeta: string;
   packs: readonly Pack[];
+  packMeta: string;
   note?: string;
   /** @deprecated use note */
   stubNote?: string;
   popularLabel?: string;
 }
 
-const { oneShotLabel, oneShotUsd, oneShotMeta, packs, note, stubNote, popularLabel = 'Popular' } = Astro.props;
+const { oneShotLabel, oneShotAmount, oneShotMeta, packs, packMeta, note, stubNote, popularLabel = 'Popular' } = Astro.props;
 const footerNote = note || stubNote;
 ---
-<div class="pricing-grid">
+<div class="pricing-grid" data-pricing-grid>
   <div class="price-card">
     <h3>{oneShotLabel}</h3>
-    <p class="amount">${oneShotUsd}</p>
+    <p class="amount">{oneShotAmount}</p>
     <p class="meta">{oneShotMeta}</p>
   </div>
   {packs.map((p) => (
-    <div class:list={['price-card', p.popular && 'popular']}>
+    <div class:list={['price-card', p.popular && 'popular']} data-pack={p.id}>
       <h3>
         {p.label}
         {p.popular && <span class="popular-tag">{popularLabel}</span>}
       </h3>
-      <p class="amount">${p.usd}</p>
-      <p class="meta">{p.credits} credits · Demo</p>
+      <p class="amount" data-pack-amount>{p.credits}</p>
+      <p class="meta" data-pack-meta>{packMeta}</p>
     </div>
   ))}
 </div>
-{footerNote && <p style="margin-top:1rem;color:var(--muted);font-size:0.9rem;">{footerNote}</p>}
+{footerNote && <p class="pricing-note" data-pricing-note>{footerNote}</p>}
+<script is:inline>
+  (function () {
+    var grid = document.currentScript && document.currentScript.previousElementSibling;
+    while (grid && !grid.hasAttribute('data-pricing-grid')) grid = grid.previousElementSibling;
+    if (!grid || grid.dataset.priced === '1') return;
+    grid.dataset.priced = '1';
+    var debug = '';
+    try { if (new URLSearchParams(location.search).get('debug') === '1') debug = '?debug=1'; } catch (e) {}
+    fetch('/api/payments/status' + debug, { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || !data.available || !data.packs) return;
+        var byId = {};
+        data.packs.forEach(function (pack) { byId[pack.id] = pack; });
+        grid.querySelectorAll('[data-pack]').forEach(function (card) {
+          var pack = byId[card.getAttribute('data-pack')];
+          if (!pack || !pack.usd) return;
+          var amount = card.querySelector('[data-pack-amount]');
+          var meta = card.querySelector('[data-pack-meta]');
+          if (amount) amount.textContent = '$' + pack.usd;
+          if (meta) meta.textContent = pack.credits + (document.documentElement.lang === 'zh-CN' ? ' 积分' : ' credits');
+        });
+      })
+      .catch(function () {});
+  })();
+</script>

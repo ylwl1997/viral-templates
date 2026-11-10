@@ -101,7 +101,7 @@ Acceptance: three brand homes side-by-side are obviously different sites, not lo
 3. **Zero customer-facing engineering jargon:** ban stub / fal / Waffo / Wire / env / Cloudflare (only `?debug=1` may show eng hints). Use **Coming soon** / **Demo** (ZH: **即将开放** / **演示**).
 4. **Live templates require a 9:16 media slot** (still or loop poster). Gradient+icon alone is not enough for Live.
 5. **One ink primary CTA per viewport.** Secondary actions are text. Disabled controls stay quiet — never a filled primary.
-6. Generate without a video provider still requires consent and a photo. Signed-in Generate queues a saved job (queued, no finished clip). The photo is stored only when media storage is connected. Unsigned Generate opens the sign-in dialog on the current page (`next=` is the current path; same-tab sign-in remains the fallback). Do not mark that job ready or attach a download from the Generate button. Pay stays **Coming soon** until checkout exists.
+6. Signed-in Generate queues a job and spends the look’s credits when the photo is stored. A failed job returns those credits. Unsigned Generate opens the sign-in dialog on the current page. Buy credits stays quiet until checkout can run, and it never pretends a payment succeeded. One ink primary per view.
 7. Unsigned account: centered Sign-in card only — do not expose Creations/Credits/Settings shell. Sign-in: no fake Google button if OAuth unwired; Preview only when available. Header and account **Sign in** open that card in a dialog on the current page. `/account/sign-in/` stays a working bookmark.
 8. EN + ZH for all chrome strings.
 9. Do not fork ShrimpReel / switch frameworks; visual bar only (RicoFast / PowerAI density).

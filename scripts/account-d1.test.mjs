@@ -34,6 +34,19 @@ for (const name of JOB_PROVIDER_COLUMNS) {
     process.exit(1);
   }
 }
+const uniqueMigration = fs.readFileSync(new URL('../migrations/0005_provider_task_unique.sql', import.meta.url), 'utf8');
+if (!/CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_provider_task_id\s+ON jobs \(provider_task_id\)/.test(uniqueMigration)) {
+  console.error('0005 must add a unique index on provider_task_id');
+  process.exit(1);
+}
+if (/UPDATE\s+jobs/i.test(uniqueMigration) || /DELETE\s+FROM\s+jobs/i.test(uniqueMigration)) {
+  console.error('0005 must not rewrite job rows');
+  process.exit(1);
+}
+if (!SCHEMA_SQL.includes('idx_jobs_provider_task_id')) {
+  console.error('fresh schema missing provider task unique index');
+  process.exit(1);
+}
 if (schemaStatements().length < 7) {
   console.error('schema splitter dropped statements');
   process.exit(1);

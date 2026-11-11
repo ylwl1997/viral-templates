@@ -174,6 +174,8 @@ const db = wrap(sqlite);
 await ensureSchema(db);
 const cols = new Set(sqlite.prepare(`PRAGMA table_info(jobs)`).all().map((row) => row.name));
 for (const name of JOB_MEDIA_COLUMNS) assert(cols.has(name), `upgrade missing ${name}`);
+const taskIndex = sqlite.prepare(`PRAGMA index_list(jobs)`).all().find((row) => row.name === 'idx_jobs_provider_task_id');
+assert(taskIndex && Number(taskIndex.unique) === 1, 'upgrade missed the unique task index');
 await ensureMediaColumns(db);
 
 const user = { user_id: 'u_alice', email: 'alice@example.com', name: 'Alice' };

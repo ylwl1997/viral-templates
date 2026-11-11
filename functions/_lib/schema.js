@@ -3,7 +3,9 @@
  * (no media columns). migrations/0002_r2_media.sql adds the same columns on
  * databases that already ran 0001. ensureMediaColumns() does that alter too.
  * migrations/0003_bailian_task.sql adds provider_task_id. ensureMediaColumns()
- * adds that column as well.
+ * adds that column as well. migrations/0005_provider_task_unique.sql adds a
+ * unique index on that column. SQLite unique allows many NULLs. ensureSchema()
+ * creates the index after the column exists. The migration does not rewrite rows.
  * Checked by scripts/account-d1.test.mjs and scripts/r2-media.test.mjs.
  */
 export const JOB_MEDIA_COLUMNS = ['upload_key', 'upload_key_2', 'upload_url', 'upload_url_2', 'result_key'];
@@ -73,6 +75,10 @@ CREATE INDEX IF NOT EXISTS idx_jobs_user_status
 
 CREATE INDEX IF NOT EXISTS idx_jobs_status_created
   ON jobs (status, created_at);
+
+-- One DashScope task id per job. Many NULLs stay allowed.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_provider_task_id
+  ON jobs (provider_task_id);
 
 CREATE TABLE IF NOT EXISTS payment_orders (
   id TEXT PRIMARY KEY,

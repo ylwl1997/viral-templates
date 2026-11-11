@@ -41,7 +41,12 @@ import { getTemplate } from './templates.js';
 import { storeJobResult } from './job-media.js';
 import { getMedia, mediaConfigured, requestOrigin, sniffImage, sniffMp4, VIDEO_MAX_BYTES } from './r2-media.js';
 
-const SUBMIT_STALE_MS = 2 * 60 * 1000;
+// The stale clock starts at claim. After that the job is `running` with no
+// task id while two temp uploads (60s each) and synthesis (30s) run.
+// Reference fetch (60s) sits in front of claim. Those timeouts stack past
+// three minutes. Eight minutes leaves margin so a live Create waitUntil is
+// not treated as stale by /api/jobs/continue or the two-minute job drain.
+export const SUBMIT_STALE_MS = 8 * 60 * 1000;
 
 const NOTES = {
   photo_too_large: {
@@ -56,9 +61,9 @@ const NOTES = {
     en: 'This look has no reference clip yet, so a video cannot be generated.',
     zh: '这个风格还没有参考视频，无法生成。',
   },
-  submit_interrupted: {
-    en: 'Video generation did not start. Please try again from Create.',
-    zh: '视频生成没有开始。请在创作页再试一次。',
+  provider_task_taken: {
+    en: 'This clip could not be started. Please try again from Create.',
+    zh: '这条短片没能开始生成。请在创作页再试一次。',
   },
   failed: {
     en: 'Video generation failed. Please try again from Create.',
@@ -182,6 +187,16 @@ async function submitClaimed(ctx, row, prepared) {
     await saveProviderTask(db, row.id, submitted.taskId);
     return { id: row.id, status: 'running', action: 'submitted', task_id: submitted.taskId };
   } catch (err) {
+    if (err && err.code === 'provider_task_taken') {
+      console.error('provider_task_taken', row.id);
+      return failJob(db, row, 'provider_task_taken');
+    }
+    if (err && err.code === 'storage_error') {
+      // The row was no longer claimable (requeued, failed, or another id won).
+      // Failing here would refund a job that may already hold a task id.
+      console.error('bailian_synthesis', row.id, 'task_not_saved');
+      return { id: row.id, status: 'running', action: 'submit_unsaved', error: 'storage_error' };
+    }
     const code = err && err.providerCode ? `bailian_${err.providerCode}` : 'bailian_submit_uncertain';
     console.error('bailian_synthesis', row.id, code);
     return failJob(db, row, code, {
@@ -243,7 +258,15 @@ async function pollRunning(ctx, row) {
     if (ageMs(row.updated_at, ctx.nowMs) < SUBMIT_STALE_MS) {
       return { id: row.id, status: 'running', action: 'busy' };
     }
-    return failJob(db, row, 'submit_interrupted');
+    // A Bailian task might already exist even though this row never saved
+    // its id. Requeue only while that id is still empty so a later drain
+    // can submit again. Do not assume the task is absent. The unique
+    // provider_task_id guard and SUBMIT_STALE_MS are the main protections.
+    const reverted = await revertQueuedJob(db, row.id);
+    if (reverted) {
+      return { id: row.id, status: 'queued', action: 'retry', error: 'submit_stale' };
+    }
+    return { id: row.id, status: 'running', action: 'busy' };
   }
   let task;
   try {

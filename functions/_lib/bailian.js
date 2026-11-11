@@ -19,6 +19,12 @@ import { fail } from './account-db.js';
 
 export const DEFAULT_MODEL = 'wan2.2-animate-mix';
 export const DEFAULT_MODE = 'wan-std';
+/**
+ * Official wan2.2-animate-mix input.image_url is one string.
+ * There is no second reference-image field.
+ * https://help.aliyun.com/zh/model-studio/wan-animate-mix-api (checked 2026-11-11).
+ */
+export const BAILIAN_MAX_REFERENCE_IMAGES = 1;
 export const WORKSPACE_DASHSCOPE_BASE =
   'https://llm-g1ozpdi7y5eyp1mh.cn-beijing.maas.aliyuncs.com/api/v1';
 export const CLASSIC_DASHSCOPE_BASE = 'https://dashscope.aliyuncs.com/api/v1';

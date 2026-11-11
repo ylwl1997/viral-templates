@@ -47,6 +47,8 @@ theme: {
 
 Also required (outside `theme`): `logo`, EN+ZH names/taglines/hero/how/SEO/disclaimer, `photoCount`, `status`.
 
+`photoCount` is an intake check, not a label. It must equal the number of reference images the primary path sends. A two-photo look also needs `photoSlots` (label plus who in the clip that photo replaces) on the server catalog. Create copy has to say that both people in the clip are replaced. If a path cannot use N photos, do not ship a template that asks for N. `npm run test:agnes` fails the build when those disagree. Customer pages never name the video provider.
+
 `KeywordLayout` stamps these onto `<body>` as `data-theme`, `data-hero`, `data-voice`, `data-card`, `data-cover`, `data-ambience`. CSS in `src/design/themes.css` + `sections.css` consumes them.
 
 ---

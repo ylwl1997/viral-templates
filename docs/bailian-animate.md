@@ -1,6 +1,6 @@
 # Bailian animate-mix (ops)
 
-Customer pages do not mention DashScope. This is the fallback when Agnes is unset, switched off, or the clip cannot be split into 4–12s pieces. A long template is not sent here just because it is over 12s. See [`agnes-video.md`](agnes-video.md). `VIDEO_PROVIDER=bailian` forces this path for every look.
+Customer pages do not mention DashScope. This is the fallback when Agnes is unset, switched off, or the clip cannot be split into 4–12s pieces. A long template is not sent here just because it is over 12s. A two-photo look is not sent here either: mix cannot take the second photo, so that job fails and the charge is returned. See [`agnes-video.md`](agnes-video.md). `VIDEO_PROVIDER=bailian` forces this path for one-photo looks.
 
 Model: `wan2.2-animate-mix`. It replaces the person in the template video and keeps that video’s scene, motion, lighting, and outfits. Mode: `wan-std` (cheaper). Override the mode with `BAILIAN_MODE=wan-pro`. Override the model with `BAILIAN_MODEL`.
 
@@ -14,9 +14,9 @@ The worker reads the subject photo from the private R2 binding and the template 
 
 Leave `BAILIAN_PUBLIC_MEDIA_BASE` unset. It is an allowlist for an https origin that mainland Aliyun can already fetch (not Cloudflare Pages). Setting it to `*.pages.dev` is rejected. This worker still uploads `oss://` and does not rewrite inputs onto that host.
 
-Subject image is the Create photo in R2 (`upload_key`, slot 0). The template video is that look’s demo MP4 (`/brand/templates/{slug}-demo.mp4` for `bby-wow`, `kiss-cam`, and `ceiling-fan`), read from `env.ASSETS` on the same deployment. The photo replaces the character in that video. The scene, motion, lighting, and outfits stay with the template. The result URL from Bailian expires in about 24 hours. The worker downloads it and writes `results/{userId}/{jobId}.mp4`. The playable URL stored on the job is still this app’s signed `/api/media/...` link. That link is for the browser, not for Bailian.
+Subject image for a one-photo look is the Create photo in R2 (`upload_key`, slot 0). The template video is that look’s demo MP4 (`/brand/templates/{slug}-demo.mp4` for `bby-wow`, `kiss-cam`, and `ceiling-fan`), read from `env.ASSETS` on the same deployment. The photo replaces the character in that video. The scene, motion, lighting, and outfits stay with the template. The result URL from Bailian expires in about 24 hours. The worker downloads it and writes `results/{userId}/{jobId}.mp4`. The playable URL stored on the job is still this app’s signed `/api/media/...` link. That link is for the browser, not for Bailian.
 
-`wan2.2-animate-mix` takes one image. Kiss Cam still stores a second photo. That second photo is not sent. If Kiss Cam was queued with no saved photo, the job fails as `no_photo` and the account page shows that both photos are required.
+`wan2.2-animate-mix` takes one `image_url`. The official request has no second image field. A template with `photoCount` greater than 1 does not run on this path, including when `VIDEO_PROVIDER=bailian` forces mix for every other look. The job fails as `reference_photos`. The account note says the clip was not generated and the charge was returned. The single credit charge is refunded once. The worker does not upload only the first photo and continue. If Kiss Cam was queued with no saved photo, the job fails as `no_photo` and the account page shows that both photos are required. Create still asks for two photos because the primary reference path sends both. See [`agnes-video.md`](agnes-video.md).
 
 ## Secrets
 

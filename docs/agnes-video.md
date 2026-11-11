@@ -2,9 +2,9 @@
 
 Customer pages do not mention Agnes, Bailian, DashScope, or Waffo. This is the server path that turns a queued remake into an MP4.
 
-Primary model: `agnes-video-2.5`, `mode=reference`. One photo plus the template demo. The person in the photo replaces the person in the template. The template keeps its scene, motion, camera, timing, and outfits. Output is `720P` and `9:16`.
+Primary model: `agnes-video-2.5`, `mode=reference`. The stored photos plus the template demo. Each photo replaces one person in the template. A one-photo look sends `<Image 1>`. A two-photo look sends `<Image 1>` and `<Image 2>`, and the prompt names which slot replaces which person. The template keeps its scene, motion, camera, timing, and outfits. Output is `720P` and `9:16`.
 
-`wan2.2-animate-mix` stays the automatic fallback. See [`bailian-animate.md`](bailian-animate.md).
+`wan2.2-animate-mix` stays the automatic fallback for a one-photo look. It cannot take a second image. A look with `photoCount` greater than 1 does not fall through to mix. See [`bailian-animate.md`](bailian-animate.md).
 
 ## Switch
 
@@ -36,12 +36,24 @@ Mix runs only when a split cannot fix the problem:
 - no keyframe (or other cut) keeps every piece inside 4–12s
 - `AGNES_API_KEY` is unset, or `VIDEO_PROVIDER=bailian`
 - `PUBLIC_SITE_APEX` is unset or is a `pages.dev`, `workers.dev`, or `r2.dev` host
-- the photo is outside 256–5760 px or over 15 MB
-- Agnes refuses or cannot be reached on the first piece, before a `video_id` exists
+- the photo is outside 256–5760 px or over 15 MB, or the photos in one request are 50 MB or more together
+- Agnes refuses or cannot be reached on the first piece, before a `video_id` exists, and the look only needs one photo
 
 A 429 waits and retries that piece. It does not also start mix. After any piece has a `video_id`, a failed piece fails the job and refunds once. It does not start a second full generation, and it does not fall through to mix for a poll or join failure. Joining stays in this worker. Hypit is not part of this change.
 
-Kiss Cam still stores two photos. Only the first is sent.
+## Two photos
+
+Official reference mode takes `images` as a list of up to 8 public image URLs. Placeholders are 1-based inside that list, so the second photo is `<Image 2>`. The first five images are included in the video price. Checked against https://wiki.agnes-ai.cn/zh-Hans/docs/agnes-video-25 on 2026-11-11.
+
+Kiss Cam (`photoCount` 2) stores `upload_key` (`photo`, Photo A, the person on the left) and `upload_key_2` (`photo-2`, Photo B, the person on the right). The create body `images` array is those two signed custom-domain URLs, in that order. The prompt tells the model to replace both people and not keep either face from the template video. The template video is still one `<Video 1>`.
+
+`wan2.2-animate-mix` has a single `image_url`. If the selected path cannot send every stored photo, the job fails with `error_code` `reference_photos`, the account note says the clip was not generated, and the one credit charge is refunded once. The worker does not submit a shorter image list. That includes an explicit `VIDEO_PROVIDER=bailian` switch, a missing Agnes key, a `pages.dev` apex, and an Agnes refusal before a `video_id` exists.
+
+## Template intake
+
+A new template cannot ship if `photoCount` and the images actually sent on the primary reference path disagree. `npm run test:agnes` walks `TEMPLATE_CATALOG`. For each row it fails unless the Agnes path would sign one image per photo, the prompt names `<Image 1>` through `<Image N>`, and a two-photo row is not the one-person prompt. Create asks for two photos only when the catalog slot list has length 2. A path that cannot use N photos must not be given a template that collects N photos.
+
+The model can still keep a template face on a tight kissing close-up even when both URLs and the prompt are present. That is a generation-quality risk, not a dropped upload. Do not confirm it with a paid provider job from this repo's tests.
 
 ## Credits
 
@@ -53,7 +65,7 @@ Provider list prices are not shown to customers.
 
 Agnes cannot be given a private R2 object or a `*.pages.dev` / `*.workers.dev` / `*.r2.dev` URL.
 
-The photo URL is `https://{PUBLIC_SITE_APEX}/api/media/jobs/{id}/photo?exp=&sig=`, signed for 24 hours with `AUTH_SECRET`. The signature is the same media HMAC the account page uses. Agnes fetches it without a session cookie. The template URL is `https://{PUBLIC_SITE_APEX}/brand/templates/{slug}-demo.mp4`. Keyword hosts such as `bby-wow.swaystill.com` serve the same paths. The worker builds the apex URL so a drain call that hits `pages.dev` does not leak that host into the Agnes body.
+The photo URLs are `https://{PUBLIC_SITE_APEX}/api/media/jobs/{id}/photo?exp=&sig=` and, when the look takes a second photo, `.../photo-2?exp=&sig=`. Each is signed for 24 hours with `AUTH_SECRET`. The signature is the same media HMAC the account page uses. Agnes fetches them without a session cookie. The template URL is `https://{PUBLIC_SITE_APEX}/brand/templates/{slug}-demo.mp4`. Keyword hosts such as `bby-wow.swaystill.com` serve the same paths. The worker builds the apex URL so a drain call that hits `pages.dev` does not leak that host into the Agnes body.
 
 `PUBLIC_SITE_APEX` itself is unchanged. For Agnes to run, it must already be the custom domain (`swaystill.com`). If it is still `viral-templates.pages.dev`, every job uses mix.
 
@@ -100,6 +112,6 @@ JOB_PROCESS_SECRET=at-least-16-characters
 AUTH_SECRET=at-least-16-characters
 ```
 
-`npm run test:agnes` does not call Agnes. It checks provider selection, the duration fallback, and the request body.
+`npm run test:agnes` does not call Agnes. It checks provider selection, the duration fallback, the request body, and that every catalog `photoCount` matches the images the primary path would send.
 
 Do not deploy or set production secrets from a patch. Set them in the dashboard after review.

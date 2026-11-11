@@ -172,8 +172,8 @@ export const KISS_LIVE: LivePack = {
       sources: [`${photo}/kiss-cam-source-a.jpg`, `${photo}/kiss-cam-source-b.jpg`],
       resultPoster: `${photo}/kiss-cam-poster.jpg`,
       resultVideo: `${photo}/kiss-cam-demo.mp4`,
-      noteEn: 'On Create, these two stills are replaced by your photos.',
-      noteZh: '在创作页，这两张静帧会换成你的照片。',
+      noteEn: 'On Create, your two photos replace both people in the clip.',
+      noteZh: '在创作页，你的两张照片会替换成片里的两个人。',
     },
   ],
   story: {

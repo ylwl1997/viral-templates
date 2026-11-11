@@ -1,17 +1,21 @@
 /**
- * Start Bailian for one job the create request just queued.
- * Uses env BAILIAN_* / MEDIA / DB. Does not read JOB_PROCESS_SECRET and
+ * Start generation for one job the create request just queued.
+ * Uses env provider keys / MEDIA / DB. Does not read JOB_PROCESS_SECRET and
  * does not use the caller's Authorization header.
  *
- * Submits the task, then polls that task once. Generation still takes
- * minutes; a later pass (account continue, the drain worker, or
- * POST /api/jobs/process) finishes it.
+ * Submits the task, then polls that task inside this isolate for up to
+ * REMAKE_FOLLOW_MS. The interval stays at least 6s and honors provider backoff.
+ * A later drain pass finishes anything still running. The browser does not
+ * call the provider.
  */
 
 import { getDb } from './account-db.js';
 import { processRemakeJobs } from './bailian-worker.js';
 import { mediaConfigured } from './r2-media.js';
 import { providerConfigured, videoBackends } from './video-provider.js';
+
+export const REMAKE_FOLLOW_MS = 45_000;
+export const REMAKE_POLL_INTERVAL_MS = 6_000;
 
 const QUIET = new Set(['bailian_unconfigured', 'r2_unbound', 'not_found']);
 
@@ -44,7 +48,8 @@ export async function kickRemakeJob({ env, request, db, jobId }) {
     request,
     limit: 1,
     jobId: id,
-    waitMs: 0,
+    waitMs: REMAKE_FOLLOW_MS,
+    pollIntervalMs: REMAKE_POLL_INTERVAL_MS,
   });
   return polled;
 }

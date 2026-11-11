@@ -432,7 +432,9 @@ function changesOf(result) {
 function cleanTaskId(value) {
   if (typeof value !== 'string') return '';
   const text = value.trim();
-  if (!/^[A-Za-z0-9_-]{8,80}$/.test(text)) return '';
+  // Single provider ids fit in 80. A parallel split packs every piece into one
+  // value (`m2_…`), which is longer and still matches this alphabet.
+  if (!/^[A-Za-z0-9_-]{8,640}$/.test(text)) return '';
   return text;
 }
 
@@ -611,6 +613,64 @@ export async function noteRunningBackoff(db, jobId, errorCode) {
     .bind(code, now, id)
     .run();
   return changesOf(result) === 1;
+}
+
+/**
+ * One in-flight provider poll for this job. The compare-and-swap on updated_at
+ * drops a second caller so the browser and the drain cannot stampede.
+ * The lease is the same retry_later_N code polls already honor.
+ */
+export async function claimProviderPoll(db, jobId, observedUpdatedAt, leaseMs) {
+  const id = cleanId(jobId);
+  const observed = typeof observedUpdatedAt === 'string' ? observedUpdatedAt : '';
+  const lease = Number(leaseMs);
+  if (!id || !observed || !Number.isInteger(lease) || lease < 1000 || lease > 60000) return false;
+  const code = `retry_later_${lease}`;
+  await ensureSchema(db);
+  const now = new Date().toISOString();
+  const result = await db
+    .prepare(
+      `UPDATE jobs
+       SET error_code = ?,
+           updated_at = ?
+       WHERE id = ?
+         AND status = 'running'
+         AND provider_task_id IS NOT NULL
+         AND updated_at = ?
+         AND (error_code IS NULL OR error_code = 'submitting' OR error_code LIKE 'retry_later_%')`,
+    )
+    .bind(code, now, id, observed)
+    .run();
+  return changesOf(result) === 1;
+}
+
+/** Replace a packed split id after another piece is created. The row stays running. */
+export async function replaceProviderTask(db, jobId, fromTask, toTask) {
+  const id = cleanId(jobId);
+  const from = cleanTaskId(fromTask);
+  const to = cleanTaskId(toTask);
+  if (!id || !from || !to || from === to) return false;
+  await ensureSchema(db);
+  if (await otherTaskOwner(db, to, id)) throw fail('provider_task_taken');
+  const now = new Date().toISOString();
+  let result;
+  try {
+    result = await db
+      .prepare(
+        `UPDATE jobs
+         SET provider_task_id = ?,
+             updated_at = ?
+         WHERE id = ? AND status = 'running' AND provider_task_id = ?`,
+      )
+      .bind(to, now, id, from)
+      .run();
+  } catch (err) {
+    if (uniqueTaskConstraint(err)) throw fail('provider_task_taken');
+    throw err;
+  }
+  if (changesOf(result) === 1) return true;
+  if (await otherTaskOwner(db, to, id)) throw fail('provider_task_taken');
+  return false;
 }
 
 /** A later split piece was rate-limited. The finished pieces stay stored. */

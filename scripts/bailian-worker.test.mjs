@@ -20,7 +20,7 @@ import { queueJobWithMedia } from '../functions/_lib/job-media.js';
 import { kickRemakeJob } from '../functions/_lib/remake-kick.js';
 import { issueSessionCookie } from '../functions/_lib/session.js';
 import { processRemakeJobs, SUBMIT_STALE_MS } from '../functions/_lib/bailian-worker.js';
-import { drainRemakeJobs, processUrl } from '../workers/job-drain/index.js';
+import { DRAIN_LIMIT, DRAIN_POLL_INTERVAL_MS, DRAIN_WAIT_MS, drainRemakeJobs, processUrl } from '../workers/job-drain/index.js';
 import { JOB_PROVIDER_COLUMNS } from '../functions/_lib/schema.js';
 import { getTemplate } from '../functions/_lib/templates.js';
 
@@ -593,6 +593,7 @@ const anon = await onContinue({
   request: new Request(`${origin}/api/jobs/continue`, { method: 'POST' }),
 });
 assert(anon.status === 401, `continue anon ${anon.status}`);
+const callsBeforeContinue = kickCalls.length;
 const continued = await onContinue({
   env: { ...env, JOB_PROCESS_SECRET: '' },
   request: new Request(`${origin}/api/jobs/continue`, {
@@ -603,10 +604,11 @@ const continued = await onContinue({
 });
 assert(continued.status === 200, `continue ${continued.status}`);
 const continuedBody = await continued.json();
-assert(continuedBody.processed.length === 1, JSON.stringify(continuedBody));
-assert(continuedBody.processed[0].id === aliceNext.job.id, continuedBody.processed[0].id);
-assert(continuedBody.processed[0].status === 'running', continuedBody.processed[0].status);
+assert(kickCalls.length === callsBeforeContinue, 'continue called the provider');
+assert(continuedBody.processed.some((row) => row.id === aliceNext.job.id && row.status === 'queued'), JSON.stringify(continuedBody));
 assert(!JSON.stringify(continuedBody).includes(API_KEY), 'continue leaked the api key');
+const aliceStill = sqlite.prepare(`SELECT status FROM jobs WHERE id = ?`).get(aliceNext.job.id);
+assert(aliceStill.status === 'queued', `continue started the job (${aliceStill.status})`);
 const bobRow = sqlite.prepare(`SELECT status FROM jobs WHERE id = ?`).get(bobJob.job.id);
 assert(bobRow.status === 'queued', `other user was processed (${bobRow.status})`);
 
@@ -627,7 +629,9 @@ const drain = await drainRemakeJobs(
 assert(drain.ok === true && drain.status === 200, JSON.stringify(drain));
 assert(drained.url.endsWith('/api/jobs/process'), drained.url);
 assert(drained.init.headers.authorization === `Bearer ${PROCESS_SECRET}`, 'drain bearer');
-assert(JSON.parse(drained.init.body).limit === 3, drained.init.body);
+const drainBody = JSON.parse(drained.init.body);
+assert(drainBody.limit === DRAIN_LIMIT, drained.init.body);
+assert(drainBody.wait_ms === DRAIN_WAIT_MS && drainBody.poll_interval_ms === DRAIN_POLL_INTERVAL_MS, drained.init.body);
 assert(!JSON.stringify(drained.init).includes(API_KEY), 'drain sent the bailian key');
 const drainSkipped = await drainRemakeJobs({ JOB_PROCESS_SECRET: 'short', BAILIAN_API_KEY: API_KEY }, async () => {
   throw new Error('unconfigured drain must not fetch');

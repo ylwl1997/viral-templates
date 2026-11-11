@@ -284,11 +284,7 @@
       if (!jobs || !jobs.some(jobPending)) return;
       followTimer = window.setTimeout(function () {
         followTimer = 0;
-        fetch('/api/jobs/continue', { method: 'POST', credentials: 'same-origin' })
-          .catch(function () {})
-          .then(function () {
-            load(true);
-          });
+        load(true);
       }, delay);
     }
 

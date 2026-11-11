@@ -421,17 +421,15 @@ const photoLabel = label('Your photo', '上传的照片');
       location.href = url;
     }
     var watchTimer = 0;
-    function watchJob(jobId, tries) {
+    var WATCH_MS = 30 * 60 * 1000;
+    function watchJob(jobId, startedAt) {
       if (watchTimer) window.clearTimeout(watchTimer);
       watchTimer = 0;
-      if (!jobId || tries > 40) return;
+      if (!jobId || !startedAt || Date.now() - startedAt > WATCH_MS) return;
+      var delay = Date.now() - startedAt < 2000 ? 1500 : 15000;
       watchTimer = window.setTimeout(function () {
         watchTimer = 0;
-        fetch('/api/jobs/continue', { method: 'POST', credentials: 'same-origin' })
-          .catch(function () {})
-          .then(function () {
-            return fetch('/api/account/creations?limit=10', { credentials: 'same-origin' });
-          })
+        fetch('/api/account/creations?limit=10', { credentials: 'same-origin' })
           .then(function (r) { return r.json(); })
           .then(function (data) {
             var jobs = (data && data.jobs) || [];
@@ -444,7 +442,7 @@ const photoLabel = label('Your photo', '上传的照片');
                 var runningNote = lang === 'zh' ? found.note_zh || found.note_en || '' : found.note_en || '';
                 if (runningNote) setStatus(runningNote, 'cfg');
               }
-              watchJob(jobId, tries + 1);
+              watchJob(jobId, startedAt);
               return;
             }
             var doneNote = lang === 'zh' ? found.note_zh || found.note_en || '' : found.note_en || '';
@@ -470,9 +468,9 @@ const photoLabel = label('Your photo', '上传的照片');
             }
           })
           .catch(function () {
-            watchJob(jobId, tries + 1);
+            watchJob(jobId, startedAt);
           });
-      }, tries === 0 ? 1500 : 15000);
+      }, delay);
     }
     function refreshBalance() {
       var bal = root.querySelector('[data-credits-balance]');
@@ -606,7 +604,7 @@ const photoLabel = label('Your photo', '上传的照片');
               setStatus(miss + ' ' + (note || (lang === 'zh' ? '已加入队列。' : 'Queued.')), 'err');
             } else {
               setStatus(note || (lang === 'zh' ? '已加入队列。即将开始生成。' : 'Queued. Generation is starting.'), 'cfg');
-              watchJob(job.id, 0);
+              watchJob(job.id, Date.now());
             }
             try { localStorage.removeItem(draftKey); } catch (e) {}
             if (follow) follow.hidden = false;

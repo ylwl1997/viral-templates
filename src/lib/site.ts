@@ -60,7 +60,7 @@ export function formatUsd(usd: number): string {
 export function packPriceList(lang: Lang): string {
   const parts = SITE.pricing.packs.map((p) =>
     lang === 'zh'
-      ? `${p.label} ${formatUsd(p.usd)}（${p.credits} 积分）`
+      ? `${p.labelZh} ${formatUsd(p.usd)}（${p.credits} 积分）`
       : `${p.label} ${formatUsd(p.usd)} (${p.credits} credits)`,
   );
   if (lang === 'zh' || parts.length < 2) return parts.join(lang === 'zh' ? '，' : ', ');

@@ -185,7 +185,7 @@ Publishing the Google app (Audience: External) does not open this site. The allo
 ## Google Cloud setup
 
 1. Create or select a Cloud project.
-2. Google Auth Platform → Branding. App name **Viral Templates**. Add a support email. Leave the scopes at `openid`, `email`, and `profile`. Do not add extra sensitive scopes.
+2. Google Auth Platform → Branding. App name **Swaystill** (visitors see this on the Google screen; keep the Latin wordmark, including on the Chinese UI). Add a support email. Leave the scopes at `openid`, `email`, and `profile`. Do not add extra sensitive scopes.
 3. Audience: External. While the app is in Testing, only Google accounts you list as test users can sign in. Publish the app so Google will offer the consent screen to the allowlisted account. These three scopes do not need a sensitive-scope review. Publishing does not let other Google accounts create a session on this site.
 4. Clients → Create client → **Web application**. Paste the origins and redirect URIs above.
 5. Copy the client id and secret into the Pages secrets.

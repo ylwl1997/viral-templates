@@ -1,6 +1,6 @@
 # Design kit (`src/design`)
 
-Shared UI kit for Viral Templates hub + every keyword brand site.
+Shared UI kit for the Swaystill hub + every keyword brand site. The repo’s working name is still Viral Templates.
 
 - **CSS**: `tokens.css` → `base.css` → `primitives.css` → `sections.css` → `themes.css`
 - **Components**: `components/*.astro` (Header/Footer/Hero/Gallery/Steps/Pricing/…)

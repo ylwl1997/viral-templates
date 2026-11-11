@@ -32,17 +32,18 @@ const name = lang === 'zh' ? t.displayNameZh : t.displayName;
 
 <section class="section wrap" id="pricing">
   <h2>{L('Pricing', '价格')}</h2>
-  <p class="sub">{L('One credit is about one second. Pack prices show when checkout is open.', '1 积分大约 1 秒。结账开放后才显示套餐价格。')}</p>
+  <p class="sub">{L('One credit is about one second. Pack prices are listed below.', '1 积分大约 1 秒。套餐价格列在下面。')}</p>
   <PricingGrid
     oneShotLabel={L('This look', '这个效果')}
     oneShotAmount={String(oneShot)}
     oneShotMeta={L('credits · about one per second', '积分 · 大约每秒 1 积分')}
     packs={packs}
-    packMeta={L('credits · price when checkout is open', '积分 · 结账开放后显示价格')}
+    packMeta={L('credits', '积分')}
+    creditUnit={L('credits', '积分')}
     popularLabel={L('Popular', '热门')}
     note={L(
-      'Signed-in Generate uses these credits. If the clip does not finish, they return. Buying credits does not charge you until checkout is open.',
-      '登录后生成会扣这些积分。短片没完成会退回。结账未开放时，购买不会扣款。',
+      'Signed-in Generate uses these credits. If the clip does not finish, they return. Buy a pack from your account.',
+      '登录后生成会扣这些积分。短片没完成会退回。在账户里购买套餐。',
     )}
   />
 </section>

@@ -1,17 +1,18 @@
-import { SITE } from './site';
+import { SITE, packPriceList } from './site';
 import type { FaqEntry } from './templates';
 
-const packLine = SITE.pricing.packs.map((p) => p.credits).join(' / ');
+const packsEn = packPriceList('en');
+const packsZh = packPriceList('zh');
 
 /** Hub-level questions. Brand pages keep their own keyword sets. */
 export const HUB_FAQ: readonly FaqEntry[] = [
   {
     id: 'what',
-    qEn: 'What is Viral Templates?',
-    qZh: 'Viral Templates 是什么？',
+    qEn: 'What is Swaystill?',
+    qZh: 'Swaystill 是什么？',
     aEn:
-      'Viral Templates makes short vertical clips from photos you already have. Pick a look, upload an adult-consent photo (two for the kiss-cam look), and generate. Each look has its own page.',
-    aZh: 'Viral Templates 用你已经有的照片做竖屏短片。选一个效果，上传成人同意的照片（kiss cam 要两张），然后生成。每个效果有自己的页面。',
+      'Swaystill makes a short vertical clip from a photo you already have. Pick a look, upload an adult-consent photo (two for the kiss-cam look), and generate. Each look has its own page.',
+    aZh: 'Swaystill 用你已经有的照片做一条竖屏短片。选一个效果，上传成人同意的照片（kiss cam 要两张），然后生成。每个效果有自己的页面。',
   },
   {
     id: 'looks',
@@ -82,16 +83,15 @@ export const HUB_FAQ: readonly FaqEntry[] = [
     id: 'credits',
     qEn: 'How do credits work?',
     qZh: '积分怎么计算？',
-    aEn: `One credit is about one second. Bby Wow uses 10, Kiss Cam 12, and Ceiling Fan 15. Packs are ${packLine} credits. Prices show when checkout is open. A new account starts at 0 credits.`,
-    aZh: `1 积分大约 1 秒。Bby Wow 扣 10，Kiss Cam 扣 12，Ceiling Fan 扣 15。积分包为 ${packLine}。结账开放后才显示价格。新账户从 0 积分开始。`,
+    aEn: `One credit is about one second. Bby Wow uses 10, Kiss Cam 12, and Ceiling Fan 15. Packs are ${packsEn}. A new account starts at 0 credits.`,
+    aZh: `1 积分大约 1 秒。Bby Wow 扣 10，Kiss Cam 扣 12，Ceiling Fan 扣 15。套餐为 ${packsZh}。新账户从 0 积分开始。`,
   },
   {
     id: 'free',
-    qEn: 'Is Viral Templates free?',
-    qZh: 'Viral Templates 免费吗？',
-    aEn:
-      'No. A clip uses credits. You can buy a pack only when checkout is open on this site. Until then, nothing here charges a card.',
-    aZh: '不免费。一条短片要消耗积分。只有本站结账开放时才能购买积分包。在那之前，这里不会扣银行卡。',
+    qEn: 'Is Swaystill free?',
+    qZh: 'Swaystill 免费吗？',
+    aEn: `No. A clip uses credits. Packs are ${packsEn}. Buying a pack charges a card.`,
+    aZh: `不免费。一条短片要消耗积分。套餐为 ${packsZh}。购买套餐会扣银行卡。`,
   },
   {
     id: 'kids',
@@ -112,9 +112,8 @@ export const HUB_FAQ: readonly FaqEntry[] = [
     qEn: 'What if generate fails? Is there a refund?',
     qZh: '生成失败会退款吗？',
     aEn:
-      'The credits for that job return to your account. No clip is saved. A card is charged only after a completed pack purchase. If checkout is not open, buying does not charge you.',
-    aZh:
-      '这次任务的积分会退回账户。不会留下成片。只有积分包真正付款完成后才会扣银行卡。结账未开放时，购买不会扣款。',
+      'The credits for that job return to your account. No clip is saved. A card is charged only after a completed pack purchase.',
+    aZh: '这次任务的积分会退回账户。不会留下成片。只有积分包付款完成后才会扣银行卡。',
   },
   {
     id: 'retention',

@@ -15,16 +15,16 @@ const lang = 'zh' as const;
 ---
 <Layout
   title={`${SITE.name} — 用已有照片做竖屏短片`}
-  description="选一个风格，上传照片，做成竖屏短片。需成人同意。"
+  description="选一个风格，上传已有的照片，画面保持竖屏。需成人同意。"
   canonicalPath="/"
   lang={lang}
 >
   <section class="hero wrap hero-hub">
     <div class="hero-copy">
-      <p class="eyebrow">模板</p>
+      <p class="eyebrow">静帧</p>
       <h1>用已有的照片，做一条竖屏短片。</h1>
       <p class="lede">
-        一间安静的工作室。选一个风格，上传已有的照片，画面保持竖屏。需成人同意。
+        选一个风格，上传已有的照片，画面保持竖屏。需成人同意。
       </p>
       <div class="hero-cta">
         <a class="btn btn-primary" href={pathFor(lang, '/create/')}>开始制作</a>
@@ -66,7 +66,7 @@ const lang = 'zh' as const;
   <section class="section wrap" id="how">
     <div class="section-head">
       <h2>如何使用</h2>
-      <p class="sub">主站和每个风格页面用的是同一套工作室。</p>
+      <p class="sub">主页和每个风格的页面，是同一间房间。</p>
     </div>
     <StepsHow
       steps={[
@@ -80,13 +80,13 @@ const lang = 'zh' as const;
   <FaqSplit
     id="faq"
     title="常见问题"
-    lede="照片、授权，以及这个演示里生成会返回什么。"
+    lede="照片、授权，以及完成后会得到什么。"
     cta={{ href: pathFor(lang, '/faq/'), label: '全部问题' }}
     items={localizeFaq(HUB_FAQ_COMPACT, lang)}
   />
 
   <FinalCta
-    title="准备好了再开始。"
+    title="从已有的照片开始。"
     lede="打开工作室，或从喜欢的风格进入。"
     primary={{ href: pathFor(lang, '/create/'), label: '开始制作' }}
     secondary={{ href: pathFor(lang, '/pricing/'), label: '价格' }}

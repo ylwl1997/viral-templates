@@ -1,5 +1,5 @@
 ---
-import { SITE, type Lang } from '../../lib/site';
+import { SITE, packPriceList, type Lang } from '../../lib/site';
 
 interface Props {
   lang?: Lang;
@@ -7,7 +7,7 @@ interface Props {
 
 const { lang = 'en' } = Astro.props;
 const zh = lang === 'zh';
-const packLine = SITE.pricing.packs.map((p) => `${zh ? p.labelZh : p.label} ${p.credits}`).join(' · ');
+const packLine = packPriceList(lang);
 ---
 
 <div data-account-panel="credits" data-lang={lang}>
@@ -46,8 +46,8 @@ const packLine = SITE.pricing.packs.map((p) => `${zh ? p.labelZh : p.label} ${p.
       <p>
         {
           zh
-            ? '充值、扣费和退还会列在这里。结账未开放时，本页不会扣款。'
-            : 'Top-ups, deductions, and refunds are listed here. Nothing is charged while checkout is closed.'
+            ? '充值、扣费和退还会列在这里。'
+            : 'Top-ups, deductions, and refunds are listed here.'
         }
       </p>
     </div>
@@ -63,8 +63,8 @@ const packLine = SITE.pricing.packs.map((p) => `${zh ? p.labelZh : p.label} ${p.
       {' '}
       {
         zh
-          ? `套餐积分：${packLine}。价格会在可以付款时显示。现在不会扣款。`
-          : `Packs: ${packLine} credits. Prices appear when a purchase can actually start. Nothing is charged now.`
+          ? `套餐：${packLine}。现在不会扣款。`
+          : `Packs: ${packLine}. Nothing is charged now.`
       }
     </div>
     <div class="pack-row">

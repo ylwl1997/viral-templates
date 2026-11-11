@@ -1,6 +1,6 @@
 # Multi-site UI Kit
 
-Shared design system for **Viral Templates** hub + every keyword brand site.
+Shared design system for the **Swaystill** hub + every keyword brand site. The repo’s working name is still Viral Templates.
 
 **Path:** `src/design/` (CSS) + `src/design/components/` (Astro sections)  
 **Entry:** `src/styles/global.css` → `@import '../design/index.css'`
@@ -67,7 +67,7 @@ Acceptance: three brand homes side-by-side are obviously different sites, not lo
 
 | Surface | Shell | Look |
 |---------|-------|------|
-| Apex `/` | `Layout` (`data-shell="hub"`) | Cream paper hub — serif headlines, ink CTA, 9:16 reel |
+| Apex `/` | `Layout` (`data-shell="hub"`) | Cream rag-paper gallery — split Swaystill wordmark, sentence-case serif labels, ink CTA, 9:16 stills in hairline frames |
 | `/t/{slug}/*` | `KeywordLayout` (`data-shell="brand"`) | Independent brand site via full theme |
 | Account | Same shell as current surface | Relative `/account/*` — **never** jump brand → apex absolute |
 

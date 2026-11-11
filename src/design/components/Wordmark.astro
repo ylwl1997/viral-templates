@@ -1,0 +1,12 @@
+---
+/** Sway + still: italic motion, a hairline pause, roman frame. Latin on every locale. */
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+---
+<span class:list={['wordmark', className]}>
+  <span class="wordmark-sway">Sway</span>
+  <span class="wordmark-bar" aria-hidden="true"></span>
+  <span class="wordmark-still">still</span>
+</span>

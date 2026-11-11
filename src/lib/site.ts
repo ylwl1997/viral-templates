@@ -17,8 +17,8 @@ const photoRetentionDays = retentionDays(import.meta.env.PUBLIC_PHOTO_RETENTION_
 const videoRetentionDays = retentionDays(import.meta.env.PUBLIC_VIDEO_RETENTION_DAYS as string | undefined, 30);
 
 export const SITE = {
-  name: 'Viral Templates',
-  shortName: 'ViralTemplates',
+  name: 'Swaystill',
+  shortName: 'Swaystill',
   /** Canonical origin for sitemap / shared legal pages (https). */
   url: `https://${SITE_APEX}`,
   apex: SITE_APEX,
@@ -36,7 +36,7 @@ export const SITE = {
   photoRetentionDays,
   videoRetentionDays,
   pricing: {
-    /** One credit is about one second. Dollar amounts are charged only when checkout is open. */
+    /** One credit is about one second. Pack dollar amounts are the live prices. */
     creditPerSecond: 1,
     packs: [
       { id: 'starter', label: 'Starter', labelZh: '入门', credits: 60, cents: 599, usd: 5.99 },
@@ -51,6 +51,21 @@ export const SITE = {
 } as const;
 
 export type Lang = 'en' | 'zh';
+
+export function formatUsd(usd: number): string {
+  return `$${usd.toFixed(2)}`;
+}
+
+/** Customer-facing pack list. Same three packs, both languages. */
+export function packPriceList(lang: Lang): string {
+  const parts = SITE.pricing.packs.map((p) =>
+    lang === 'zh'
+      ? `${p.labelZh} ${formatUsd(p.usd)}（${p.credits} 积分）`
+      : `${p.label} ${formatUsd(p.usd)} (${p.credits} credits)`,
+  );
+  if (lang === 'zh' || parts.length < 2) return parts.join(lang === 'zh' ? '，' : ', ');
+  return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`;
+}
 
 /** Internal path helper for template shells (`/t/…` or `/zh/t/…`). Not shown in customer copy. */
 export function keywordPath(

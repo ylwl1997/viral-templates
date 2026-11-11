@@ -1,9 +1,10 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import HubFaq from '../../components/HubFaq.astro';
+import { SITE } from '../../lib/site';
 ---
 <Layout
-  title="FAQ"
+  title={`FAQ · ${SITE.name}`}
   description="Questions about photos, consent, credits, and the looks you can open today."
   canonicalPath="/faq/"
   lang="en"

@@ -1,15 +1,16 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import { SITE } from '../../../lib/site';
 ---
 <Layout
-  title="服务条款"
-  description="Viral Templates 服务条款。"
+  title={`服务条款 · ${SITE.name}`}
+  description={`${SITE.name} 服务条款。`}
   canonicalPath="/terms/"
   lang="zh"
 >
-  <div class="page-head wrap"><h1>服务条款</h1><p>本产品预览的演示条款。</p></div>
+  <div class="page-head wrap"><h1>服务条款</h1><p>成人同意、积分，以及成片。</p></div>
   <section class="section wrap prose">
     <p>需成人同意。非 Coldplay、Karol G、CapCut 或任何厂牌、场馆官方。Kiss Cam 不含真实演唱会素材。吊扇效果是生成的，切勿把手机绑在风扇上。</p>
-    <p>1 积分大约是短片的 1 秒。生成排队时扣这个效果所需的积分。短片没完成，积分退回账户。新账户从 0 积分开始。只有积分包付款完成后才会扣银行卡。结账不可用时，购买不会扣款。成片会标明为生成内容。</p>
+    <p>1 积分大约是短片的 1 秒。生成排队时扣这个效果所需的积分。短片没完成，积分退回账户。新账户从 0 积分开始。只有积分包付款完成后才会扣银行卡。成片会标明为生成内容。</p>
   </section>
 </Layout>

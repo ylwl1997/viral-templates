@@ -306,6 +306,7 @@ const env = {
     },
   },
   AUTH_SECRET: 'media-test-secret-1',
+  VIDEO_PROVIDER: 'bailian',
   BAILIAN_API_KEY: API_KEY,
   DASHSCOPE_API_KEY: 'should-not-win',
   JOB_PROCESS_SECRET: PROCESS_SECRET,

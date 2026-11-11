@@ -9,9 +9,9 @@
  */
 
 import { getDb } from './account-db.js';
-import { bailianRuntime } from './bailian.js';
 import { processRemakeJobs } from './bailian-worker.js';
 import { mediaConfigured } from './r2-media.js';
+import { providerConfigured, videoBackends } from './video-provider.js';
 
 const QUIET = new Set(['bailian_unconfigured', 'r2_unbound', 'not_found']);
 
@@ -19,13 +19,13 @@ export async function kickRemakeJob({ env, request, db, jobId }) {
   const id = typeof jobId === 'string' ? jobId.trim() : '';
   if (!id || !env || !request) return null;
   if (!mediaConfigured(env)) return null;
-  let runtime;
+  let backends;
   try {
-    runtime = bailianRuntime(env);
+    backends = videoBackends(env);
   } catch {
     return null;
   }
-  if (!runtime.configured) return null;
+  if (!providerConfigured(backends)) return null;
   const database = db || getDb(env);
   if (!database) return null;
   const first = await processRemakeJobs({

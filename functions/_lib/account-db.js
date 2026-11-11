@@ -548,6 +548,90 @@ export async function saveProviderTask(db, jobId, taskId) {
   throw fail('storage_error');
 }
 
+/**
+ * Create was rate-limited or the provider connection failed before a task id
+ * existed. Leave the job queued and remember how long to wait.
+ * The code is internal. Customer notes stay the queued copy.
+ */
+export async function deferQueuedJob(db, jobId, errorCode) {
+  const id = cleanId(jobId);
+  const code = oneLine(errorCode, 80);
+  if (!id || !/^retry_later_[1-9][0-9]{3,5}$/.test(code)) return false;
+  await ensureSchema(db);
+  const now = new Date().toISOString();
+  const result = await db
+    .prepare(
+      `UPDATE jobs
+       SET status = 'queued',
+           error_code = ?,
+           note_en = ?,
+           note_zh = ?,
+           updated_at = ?
+       WHERE id = ? AND status = 'running' AND provider_task_id IS NULL`,
+    )
+    .bind(code, QUEUED_NOTE_EN, QUEUED_NOTE_ZH, now, id)
+    .run();
+  return changesOf(result) === 1;
+}
+
+/** Drop the current task id after a split piece is stored, before the next piece is submitted. */
+export async function clearProviderTask(db, jobId, taskId) {
+  const id = cleanId(jobId);
+  const task = cleanTaskId(taskId);
+  if (!id || !task) return false;
+  await ensureSchema(db);
+  const now = new Date().toISOString();
+  const result = await db
+    .prepare(
+      `UPDATE jobs
+       SET provider_task_id = NULL,
+           error_code = NULL,
+           updated_at = ?
+       WHERE id = ? AND status = 'running' AND provider_task_id = ?`,
+    )
+    .bind(now, id, task)
+    .run();
+  return changesOf(result) === 1;
+}
+
+/** Poll was rate-limited. Keep the task id and do not call the provider again until the wait elapses. */
+export async function noteRunningBackoff(db, jobId, errorCode) {
+  const id = cleanId(jobId);
+  const code = oneLine(errorCode, 80);
+  if (!id || !/^retry_later_[1-9][0-9]{3,5}$/.test(code)) return false;
+  await ensureSchema(db);
+  const now = new Date().toISOString();
+  const result = await db
+    .prepare(
+      `UPDATE jobs
+       SET error_code = ?,
+           updated_at = ?
+       WHERE id = ? AND status = 'running' AND provider_task_id IS NOT NULL`,
+    )
+    .bind(code, now, id)
+    .run();
+  return changesOf(result) === 1;
+}
+
+/** A later split piece was rate-limited. The finished pieces stay stored. */
+export async function noteIdleBackoff(db, jobId, errorCode) {
+  const id = cleanId(jobId);
+  const code = oneLine(errorCode, 80);
+  if (!id || !/^retry_later_[1-9][0-9]{3,5}$/.test(code)) return false;
+  await ensureSchema(db);
+  const now = new Date().toISOString();
+  const result = await db
+    .prepare(
+      `UPDATE jobs
+       SET error_code = ?,
+           updated_at = ?
+       WHERE id = ? AND status = 'running' AND provider_task_id IS NULL`,
+    )
+    .bind(code, now, id)
+    .run();
+  return changesOf(result) === 1;
+}
+
 /** Upload failed before a task existed. Safe to try again. */
 export async function revertQueuedJob(db, jobId) {
   const id = cleanId(jobId);

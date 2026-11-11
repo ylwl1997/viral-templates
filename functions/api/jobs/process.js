@@ -1,10 +1,10 @@
 import { accountError } from '../../_lib/account-api.js';
 import { fail, getDb } from '../../_lib/account-db.js';
-import { bailianRuntime } from '../../_lib/bailian.js';
 import { processRemakeJobs } from '../../_lib/bailian-worker.js';
 import { bearerAuthorized } from '../../_lib/job-media.js';
 import { mediaConfigured } from '../../_lib/r2-media.js';
 import { jsonNoStore } from '../../_lib/session.js';
+import { providerConfigured, videoBackends } from '../../_lib/video-provider.js';
 
 /**
  * Ops trigger for Bailian remake jobs.
@@ -44,19 +44,22 @@ export async function onRequestPost(context) {
     );
   }
 
-  let runtime;
+  let backends;
   try {
-    runtime = bailianRuntime(context.env);
+    backends = videoBackends(context.env);
   } catch (err) {
-    const code = err && err.code ? err.code : 'bailian_bad_base';
+    const code = err && err.code ? err.code : 'video_provider';
     return jsonNoStore({ ok: false, error: code }, 503);
   }
-  if (!runtime.configured) {
+  if (!providerConfigured(backends)) {
+    const bailianOnly = backends.selected === 'bailian';
     return jsonNoStore(
       {
         ok: false,
         error: 'bailian_unconfigured',
-        message: 'Set the Pages secret BAILIAN_API_KEY. Do not commit it.',
+        message: bailianOnly
+          ? 'Set the Pages secret BAILIAN_API_KEY. Do not commit it.'
+          : 'Set the Pages secret AGNES_API_KEY or BAILIAN_API_KEY. Do not commit it.',
       },
       503,
     );
@@ -110,8 +113,8 @@ function clampWait(raw) {
 }
 
 function clampInterval(raw) {
-  if (raw == null || raw === '') return 15_000;
+  if (raw == null || raw === '') return 6_000;
   const n = Number(raw);
-  if (!Number.isInteger(n) || n < 2_000 || n > 20_000) throw fail('bad_limit');
+  if (!Number.isInteger(n) || n < 5_000 || n > 20_000) throw fail('bad_limit');
   return n;
 }

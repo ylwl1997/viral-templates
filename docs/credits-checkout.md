@@ -88,4 +88,4 @@ Test charges use card `4576 7500 0000 0110` (any future expiry, any CVC). `4576 
 
 A provider refund of a pack does not remove credits. The signed-in credits page can store a short note (`POST /api/account/support`) for a missing top-up or a missing job refund.
 
-`FAL_KEY` / `FAL_MODEL` stay unused. The default generator remains Bailian `wan2.2-animate-mix`.
+`FAL_KEY` / `FAL_MODEL` stay unused. The default generator is Agnes Video 2.5 reference mode. A template longer than 12 seconds is split into 4–12 second pieces and joined in the worker. Bailian `wan2.2-animate-mix` runs only when that split cannot be done. See [`agnes-video.md`](agnes-video.md). Customer pages do not name either provider.

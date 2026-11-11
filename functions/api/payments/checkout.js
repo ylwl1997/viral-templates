@@ -1,6 +1,6 @@
 import { accountError, openAccount } from '../../_lib/account-api.js';
 import { jsonNoStore } from '../../_lib/session.js';
-import { createCheckout } from '../../_lib/waffo.js';
+import { createCheckout } from '../../_lib/pancake.js';
 
 export async function onRequestPost(context) {
   const opened = await openAccount(context);

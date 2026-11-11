@@ -1,4 +1,4 @@
-import { checkoutStatus } from '../../_lib/waffo.js';
+import { checkoutStatus } from '../../_lib/pancake.js';
 import { jsonNoStore } from '../../_lib/session.js';
 
 export async function onRequestGet(context) {

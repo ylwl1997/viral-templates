@@ -76,4 +76,4 @@ Local `npx wrangler pages dev` keeps `MEDIA` on disk under `.wrangler/`. It does
 
 ## What this does not do
 
-Generate queues a job and starts Bailian in the background. `POST /api/jobs/process` is the ops drain and writes `results/{userId}/{jobId}.mp4` ([`bailian-animate.md`](bailian-animate.md)). Credit checkout is not called. `POST /api/jobs/{id}/result` still stores an MP4 you send; it does not create one.
+Generate queues a job and starts the remake worker in the background. `POST /api/jobs/process` is the ops drain and writes `results/{userId}/{jobId}.mp4` ([`agnes-video.md`](agnes-video.md)). Credit checkout is not called. `POST /api/jobs/{id}/result` still stores an MP4 you send; it does not create one.

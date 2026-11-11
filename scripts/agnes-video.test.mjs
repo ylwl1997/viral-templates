@@ -1,0 +1,682 @@
+import fs from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+import { appendLedger, getCredits } from '../functions/_lib/account-db.js';
+import {
+  AGNES_MODEL,
+  AGNES_VIDEO_MAX_BYTES,
+  DEFAULT_AGNES_BASE,
+  REFERENCE_PROMPT,
+  agnesMediaDecision,
+  agnesOutputSeconds,
+  agnesPollDelayMs,
+  agnesPollUrl,
+  assertAgnesInputUrl,
+  buildReferenceRequest,
+  customMediaOrigin,
+  planAgnesSegments,
+  probeReferenceMp4,
+} from '../functions/_lib/agnes.js';
+import { cutReferenceMp4 } from '../functions/_lib/mp4-segments.js';
+import { probeImage } from '../functions/_lib/image-precheck.js';
+import { queueJobWithMedia } from '../functions/_lib/job-media.js';
+import { ensureSchema } from '../functions/_lib/account-db.js';
+import { processRemakeJobs } from '../functions/_lib/bailian-worker.js';
+import { getTemplate } from '../functions/_lib/templates.js';
+import { resolveVideoProvider, selectRemakeProvider } from '../functions/_lib/video-provider.js';
+import { CLASSIC_DASHSCOPE_BASE } from '../functions/_lib/bailian.js';
+
+function assert(cond, message) {
+  if (!cond) throw new Error(message || 'assertion failed');
+}
+
+function pad(bytes, length = 32) {
+  const out = new Uint8Array(length);
+  out.set(bytes);
+  return out;
+}
+
+const jpeg = probeImage('jpeg', 720, 1280);
+const mp4 = pad(Uint8Array.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]));
+const AGNES_KEY = 'agnes-test-key-not-real';
+const BAILIAN_KEY = 'sk-test-bailian-key';
+const bbyFile = new Uint8Array(fs.readFileSync(new URL('../public/brand/templates/bby-wow-demo.mp4', import.meta.url)));
+const kissFile = new Uint8Array(fs.readFileSync(new URL('../public/brand/templates/kiss-cam-demo.mp4', import.meta.url)));
+const fanFile = new Uint8Array(fs.readFileSync(new URL('../public/brand/templates/ceiling-fan-demo.mp4', import.meta.url)));
+
+assert(resolveVideoProvider({}) === 'agnes', 'default provider');
+assert(resolveVideoProvider({ VIDEO_PROVIDER: 'agnes' }) === 'agnes', 'explicit agnes');
+assert(resolveVideoProvider({ VIDEO_PROVIDER: 'bailian' }) === 'bailian', 'explicit bailian');
+let badProvider = false;
+try {
+  resolveVideoProvider({ VIDEO_PROVIDER: 'kling' });
+} catch (err) {
+  badProvider = err && err.code === 'video_provider';
+}
+assert(badProvider, 'unknown provider');
+
+assert(agnesOutputSeconds(6.041667) === '6', 'bby seconds');
+assert(agnesOutputSeconds(getTemplate('kiss-cam').durationSeconds) === '6', 'kiss seconds');
+assert(agnesOutputSeconds(15.278005) === null, 'fan is not trimmed to 12');
+assert(agnesOutputSeconds(12) === '12', '12s stays');
+assert(agnesOutputSeconds(12.01) === null, 'just over 12 falls back');
+assert(agnesOutputSeconds(1.9) === null, 'under 2 falls back');
+assert(agnesOutputSeconds(2.2) === '4', 'short reference requests the minimum output');
+assert(agnesOutputSeconds(3.6) === '4', '3.6 rounds to 4');
+
+let delay = 0;
+const delays = [];
+for (let i = 0; i < 6; i += 1) {
+  delay = agnesPollDelayMs(delay);
+  delays.push(delay);
+}
+assert(delays.join(',') === '6000,12000,24000,48000,60000,60000', delays.join(','));
+
+assert(customMediaOrigin({ PUBLIC_SITE_APEX: 'swaystill.com' }) === 'https://swaystill.com', 'apex origin');
+assert(customMediaOrigin({ PUBLIC_SITE_APEX: 'https://swaystill.com/path' }) === 'https://swaystill.com', 'apex strips path');
+assert(customMediaOrigin({ PUBLIC_SITE_APEX: 'viral-templates.pages.dev' }) === '', 'pages.dev is not a public input origin');
+assert(customMediaOrigin({}) === '', 'missing apex');
+for (const blocked of [
+  'https://viral-templates.pages.dev/brand/templates/bby-wow-demo.mp4',
+  'https://swaystill.pages.dev/clip.mp4',
+  'https://job.workers.dev/clip.mp4',
+  'https://pub-abc.r2.dev/clip.mp4',
+  'http://swaystill.com/brand/templates/bby-wow-demo.mp4',
+  'https://user:pass@swaystill.com/brand/templates/bby-wow-demo.mp4',
+  'https://evil.example/brand/templates/bby-wow-demo.mp4',
+]) {
+  let refused = false;
+  try {
+    assertAgnesInputUrl(blocked, 'https://swaystill.com');
+  } catch (err) {
+    refused = err && err.code === 'agnes_unreachable_input';
+  }
+  assert(refused, `accepted ${blocked}`);
+}
+assert(
+  assertAgnesInputUrl('https://bby-wow.swaystill.com/brand/templates/bby-wow-demo.mp4', 'https://swaystill.com').includes('bby-wow.swaystill.com'),
+  'keyword host',
+);
+
+const shaped = buildReferenceRequest(
+  {
+    apiKey: AGNES_KEY,
+    base: DEFAULT_AGNES_BASE,
+    model: AGNES_MODEL,
+    publicOrigin: 'https://swaystill.com',
+  },
+  {
+    imageUrl: 'https://swaystill.com/api/media/jobs/job_abc/photo?exp=1&sig=ab',
+    videoUrl: 'https://swaystill.com/brand/templates/bby-wow-demo.mp4',
+    seconds: '6',
+  },
+);
+assert(shaped.url === 'https://api.agnes-ai.cn/v1/videos', shaped.url);
+assert(shaped.headers.Authorization === `Bearer ${AGNES_KEY}`, 'bearer');
+assert(shaped.body.model === 'agnes-video-2.5', shaped.body.model);
+assert(shaped.body.mode === 'reference', shaped.body.mode);
+assert(shaped.body.seconds === '6', shaped.body.seconds);
+assert(typeof shaped.body.seconds === 'string', 'seconds is a string');
+assert(shaped.body.size === '720P', shaped.body.size);
+assert(shaped.body.aspect_ratio === '9:16', shaped.body.aspect_ratio);
+assert(shaped.body.images.length === 1, 'one image');
+assert(shaped.body.videos.length === 1, 'one video');
+assert(shaped.body.videos[0].start_seconds === 0, 'start');
+assert(shaped.body.videos[0].require_audio === false, 'audio optional');
+assert(shaped.body.prompt === REFERENCE_PROMPT, shaped.body.prompt);
+assert(shaped.body.prompt.includes('<Image 1>') && shaped.body.prompt.includes('<Video 1>'), 'placeholders');
+assert(!JSON.stringify(shaped.body).includes(AGNES_KEY), 'key in body');
+assert(!shaped.body.first_frame && !shaped.body.video_url, 'legacy media fields');
+assert(
+  agnesPollUrl({ base: DEFAULT_AGNES_BASE, model: AGNES_MODEL }, 'task_bbywow0001') ===
+    'https://api.agnes-ai.cn/agnesapi?video_id=task_bbywow0001&model_name=agnes-video-2.5',
+  'poll url',
+);
+
+const bbyProbe = probeReferenceMp4(bbyFile);
+const kissProbe = probeReferenceMp4(kissFile);
+const fanProbe = probeReferenceMp4(fanFile);
+assert(bbyProbe.fps === 24, `bby fps ${bbyProbe.fps}`);
+assert(kissProbe.fps === 24, `kiss fps ${kissProbe.fps}`);
+assert(fanProbe.fps === 30, `fan fps ${fanProbe.fps}`);
+assert(agnesOutputSeconds(bbyProbe.durationSeconds) === '6', `bby file seconds ${bbyProbe.durationSeconds}`);
+assert(agnesOutputSeconds(fanProbe.durationSeconds) === null, `fan file was clamped ${fanProbe.durationSeconds}`);
+assert(bbyFile.byteLength < AGNES_VIDEO_MAX_BYTES && fanFile.byteLength < AGNES_VIDEO_MAX_BYTES, 'demos are under 50MB');
+
+const image = { imageBytes: jpeg.byteLength, imageWidth: 720, imageHeight: 1280 };
+const bbyDecision = agnesMediaDecision({ durationSeconds: 6.041667, videoBytes: bbyFile, ...image });
+assert(bbyDecision.ok && bbyDecision.seconds === '6' && bbyDecision.segments.length === 1, JSON.stringify(bbyDecision));
+const fanDecision = agnesMediaDecision({ durationSeconds: 6.041667, videoBytes: fanFile, ...image });
+assert(fanDecision.ok && fanDecision.reason === 'split' && fanDecision.segments.length === 2, JSON.stringify(fanDecision));
+for (const segment of fanDecision.segments) {
+  const length = segment.end - segment.start;
+  assert(length >= 4 && length <= 12, `fan piece ${length}`);
+  assert(Number(segment.seconds) >= 4 && Number(segment.seconds) <= 12, segment.seconds);
+}
+assert(fanDecision.segments[0].seconds === '8', fanDecision.segments[0].seconds);
+assert(fanDecision.segments[1].seconds === '7', fanDecision.segments[1].seconds);
+assert(fanDecision.segments[1].end - fanDecision.segments[1].start >= 4, 'fan was split as 12 plus a short tail');
+const evenFan = planAgnesSegments(15.278005, []);
+assert(evenFan.length === 2, 'even split');
+assert(Math.abs(evenFan[0].end - 15.278005 / 2) < 0.02, evenFan[0].end);
+assert(planAgnesSegments(13, [1]) == null, 'a 1s keyframe cannot make two 4–12s pieces');
+const long = planAgnesSegments(25, []);
+assert(long.length === 3, `25s pieces ${long && long.length}`);
+assert(long.every((segment) => segment.end - segment.start >= 4 && segment.end - segment.start <= 12), '25s pieces out of range');
+const stubDecision = agnesMediaDecision({ durationSeconds: 15.278005, videoBytes: mp4, ...image });
+assert(stubDecision.ok && stubDecision.segments.length === 2, 'catalog duration still plans a split when the file has no header');
+const sizeDecision = agnesMediaDecision({
+  durationSeconds: 6,
+  videoBytes: { byteLength: AGNES_VIDEO_MAX_BYTES },
+  ...image,
+});
+assert(!sizeDecision.ok && sizeDecision.reason === 'size', sizeDecision.reason);
+const wideDecision = agnesMediaDecision({
+  durationSeconds: 6,
+  videoBytes: bbyFile,
+  imageBytes: 1000,
+  imageWidth: 6000,
+  imageHeight: 3000,
+});
+assert(!wideDecision.ok && wideDecision.reason === 'image_dimensions', wideDecision.reason);
+
+const slow = syntheticClip({ fps: 20, seconds: 6 });
+const slowDecision = agnesMediaDecision({ durationSeconds: 6, videoBytes: slow, ...image });
+assert(probeReferenceMp4(slow).fps === 20, `synthetic fps ${probeReferenceMp4(slow).fps}`);
+assert(!slowDecision.ok && slowDecision.reason === 'fps', JSON.stringify(slowDecision));
+
+const agnesBackends = {
+  selected: 'agnes',
+  agnes: { configured: true, publicOrigin: 'https://swaystill.com' },
+};
+assert(selectRemakeProvider(agnesBackends, bbyDecision).provider === 'agnes', 'bby selects agnes');
+assert(selectRemakeProvider(agnesBackends, fanDecision).provider === 'agnes', 'fan stays on the split path');
+assert(selectRemakeProvider({ ...agnesBackends, agnes: { configured: false, publicOrigin: 'https://swaystill.com' } }, bbyDecision).reason === 'agnes_unset', 'missing key');
+assert(
+  selectRemakeProvider({ selected: 'agnes', agnes: { configured: true, publicOrigin: '' } }, bbyDecision).reason === 'public_origin',
+  'pages host falls back',
+);
+assert(selectRemakeProvider({ selected: 'bailian', agnes: agnesBackends.agnes }, bbyDecision).provider === 'bailian', 'switch');
+
+function u32(n) {
+  const out = new Uint8Array(4);
+  new DataView(out.buffer).setUint32(0, n);
+  return out;
+}
+
+function box(type, payload) {
+  const out = new Uint8Array(8 + payload.length);
+  new DataView(out.buffer).setUint32(0, out.length);
+  out.set([type.charCodeAt(0), type.charCodeAt(1), type.charCodeAt(2), type.charCodeAt(3)], 4);
+  out.set(payload, 8);
+  return out;
+}
+
+function concat(parts) {
+  const total = parts.reduce((sum, part) => sum + part.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const part of parts) {
+    out.set(part, offset);
+    offset += part.length;
+  }
+  return out;
+}
+
+function header(timescale, duration) {
+  const payload = new Uint8Array(32);
+  new DataView(payload.buffer).setUint32(12, timescale);
+  new DataView(payload.buffer).setUint32(16, duration);
+  return payload;
+}
+
+function syntheticClip({ fps, seconds }) {
+  const samples = fps * seconds;
+  const mdhd = header(fps, samples);
+  const hdlr = new Uint8Array(24);
+  hdlr.set([0x76, 0x69, 0x64, 0x65], 8);
+  const stts = concat([new Uint8Array(4), u32(1), u32(samples), u32(1)]);
+  const stbl = box('stbl', box('stts', stts));
+  const minf = box('minf', stbl);
+  const mdia = box('mdia', concat([box('mdhd', mdhd), box('hdlr', hdlr), minf]));
+  const trak = box('trak', mdia);
+  const mvhd = header(1000, seconds * 1000);
+  return box('moov', concat([box('mvhd', mvhd), trak]));
+}
+
+function wrap(sqlite) {
+  function prepared(sql, params = []) {
+    return {
+      bind(...next) {
+        return prepared(sql, next);
+      },
+      async run() {
+        const info = sqlite.prepare(sql).run(...params);
+        return { meta: { changes: info.changes } };
+      },
+      async first() {
+        return sqlite.prepare(sql).get(...params) ?? null;
+      },
+      async all() {
+        return { results: sqlite.prepare(sql).all(...params) };
+      },
+    };
+  }
+  return {
+    prepare(sql) {
+      return prepared(sql);
+    },
+    async batch(statements) {
+      sqlite.exec('BEGIN');
+      try {
+        const out = [];
+        for (const stmt of statements) out.push(await stmt.run());
+        sqlite.exec('COMMIT');
+        return out;
+      } catch (err) {
+        sqlite.exec('ROLLBACK');
+        throw err;
+      }
+    },
+  };
+}
+
+function mockBucket() {
+  const objects = new Map();
+  return {
+    objects,
+    async put(key, value, opts) {
+      const bytes = value instanceof Uint8Array ? value : new Uint8Array(value);
+      objects.set(key, { bytes, opts });
+    },
+    async get(key) {
+      const row = objects.get(key);
+      if (!row) return null;
+      return {
+        key,
+        body: row.bytes,
+        size: row.bytes.byteLength,
+        httpMetadata: (row.opts && row.opts.httpMetadata) || {},
+        customMetadata: (row.opts && row.opts.customMetadata) || {},
+      };
+    },
+    async delete(key) {
+      objects.delete(key);
+    },
+  };
+}
+
+function jsonResponse(status, body) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+const policy = {
+  data: {
+    policy: 'policy',
+    signature: 'sig',
+    upload_dir: 'dashscope-instant/test/2026',
+    upload_host: 'https://dashscope-file-mgr.oss-cn-beijing.aliyuncs.com',
+    oss_access_key_id: 'LTAtest',
+    x_oss_object_acl: 'private',
+    x_oss_forbid_overwrite: 'true',
+  },
+};
+
+const script = {
+  create: 'ok',
+  poll: 'completed',
+  agnesPolls: 0,
+  creates: 0,
+  bailianTasks: 0,
+};
+
+function installFetch() {
+  const calls = [];
+  async function fetchImpl(url, init = {}) {
+    const href = String(url);
+    calls.push({ url: href, init });
+    if (href.includes('/brand/templates/') && href.endsWith('.mp4')) {
+      return new Response(mp4, { status: 200, headers: { 'content-type': 'video/mp4' } });
+    }
+    if (href.startsWith('https://api.agnes-ai.cn/v1/videos')) {
+      assert(init.method === 'POST', 'create method');
+      assert((init.headers || {}).Authorization === `Bearer ${AGNES_KEY}`, 'create auth');
+      script.creates += 1;
+      if (script.create === 'reject') return jsonResponse(400, { error: { message: 'Invalid reference media' } });
+      if (script.create === 'rate') return jsonResponse(429, { message: 'too many' });
+      if (script.create === 'down') return jsonResponse(500, { message: `bad ${AGNES_KEY}` });
+      const videoId = `task_bby${String(script.creates).padStart(6, '0')}`;
+      return jsonResponse(200, {
+        id: videoId,
+        task_id: videoId,
+        video_id: videoId,
+        status: 'queued',
+        internal_status: 'pending',
+      });
+    }
+    if (href.startsWith('https://api.agnes-ai.cn/agnesapi')) {
+      const pollUrl = new URL(href);
+      assert(pollUrl.searchParams.get('model_name') === AGNES_MODEL, href);
+      assert(String(pollUrl.searchParams.get('video_id') || '').startsWith('task_'), href);
+      script.agnesPolls += 1;
+      if (script.poll === 'rate' && script.agnesPolls === 1) return jsonResponse(429, { message: 'too many' });
+      if (script.poll === 'hide') {
+        return jsonResponse(200, {
+          status: 'in_progress',
+          internal_status: 'completed',
+          url: 'https://cdn.example.com/hidden.mp4',
+        });
+      }
+      if (script.poll === 'fail') {
+        return jsonResponse(200, {
+          status: 'failed',
+          internal_status: 'pending',
+          error: { message: `bad ${AGNES_KEY}` },
+        });
+      }
+      return jsonResponse(200, {
+        status: 'completed',
+        internal_status: 'pending',
+        url: 'https://cdn.example.com/out.mp4',
+      });
+    }
+    if (href === 'https://cdn.example.com/out.mp4') {
+      const body = script.downloads && script.downloads.length ? script.downloads.shift() : mp4;
+      return new Response(body, {
+        status: 200,
+        headers: { 'content-type': 'video/mp4', 'content-length': String(body.byteLength) },
+      });
+    }
+    if (href.includes('/uploads')) {
+      if (href.includes('llm-g1ozpdi7y5eyp1mh')) return jsonResponse(404, { code: 'NotFound', message: 'no uploads' });
+      assert(href.startsWith(CLASSIC_DASHSCOPE_BASE), href);
+      return jsonResponse(200, policy);
+    }
+    if (href.includes('dashscope-file-mgr.oss-cn-beijing.aliyuncs.com')) {
+      return new Response(null, { status: 200 });
+    }
+    if (href.includes('/services/aigc/image2video/video-synthesis')) {
+      script.bailianTasks += 1;
+      const taskId = `0385dc79-5ff8-4d82-bcb6-m${String(script.bailianTasks).padStart(6, '0')}`;
+      return jsonResponse(200, { output: { task_id: taskId, task_status: 'PENDING' }, request_id: 'req_submit' });
+    }
+    if (href.includes('/tasks/')) {
+      const taskId = href.split('/tasks/')[1];
+      return jsonResponse(200, {
+        output: {
+          task_id: taskId,
+          task_status: 'SUCCEEDED',
+          results: { video_url: 'http://dashscope-result-bj.oss-cn-beijing.aliyuncs.com/out.mp4?Expires=1' },
+        },
+      });
+    }
+    if (href.includes('dashscope-result-bj.oss-cn-beijing.aliyuncs.com')) {
+      return new Response(mp4, { status: 200, headers: { 'content-type': 'video/mp4', 'content-length': String(mp4.byteLength) } });
+    }
+    throw new Error(`unexpected fetch ${href}`);
+  }
+  return { fetchImpl, calls };
+}
+
+function createBody(calls) {
+  const call = calls.find((item) => item.url.startsWith('https://api.agnes-ai.cn/v1/videos') && item.init.method === 'POST');
+  assert(call, 'missing create');
+  return JSON.parse(call.init.body);
+}
+
+const sqlite = new DatabaseSync(':memory:');
+const db = wrap(sqlite);
+await ensureSchema(db);
+const bucket = mockBucket();
+const user = { user_id: 'u_agnes', email: 'agnes-user@example.com', name: 'Agnes User' };
+const requestOrigin = 'https://viral-templates.pages.dev';
+const env = {
+  DB: db,
+  MEDIA: bucket,
+  ASSETS: {
+    async fetch(request) {
+      const href = String(request && request.url ? request.url : request);
+      const body = href.includes('ceiling-fan') ? fanFile : mp4;
+      return new Response(body, { status: 200, headers: { 'content-type': 'video/mp4' } });
+    },
+  },
+  AUTH_SECRET: 'media-test-secret-1',
+  PUBLIC_SITE_APEX: 'swaystill.com',
+  AGNES_API_KEY: AGNES_KEY,
+  BAILIAN_API_KEY: BAILIAN_KEY,
+  JOB_PROCESS_SECRET: 'job-process-secret-1',
+};
+await appendLedger(db, user, { delta: 500, kind: 'topup', label_en: 'Test pack', label_zh: '测试包' });
+
+async function queue(slug, photos) {
+  return queueJobWithMedia({
+    db,
+    env,
+    request: new Request(`${requestOrigin}/api/jobs`, { method: 'POST' }),
+    user,
+    templateSlug: slug,
+    photos,
+  });
+}
+
+const onePhoto = [{ bytes: jpeg, contentType: 'image/jpeg', ext: 'jpg' }];
+const twoPhotos = [onePhoto[0], onePhoto[0]];
+const { fetchImpl, calls } = installFetch();
+
+async function run(jobId, nowMs = Date.now()) {
+  return processRemakeJobs({
+    db,
+    env,
+    request: new Request(`${requestOrigin}/api/jobs/process`, { method: 'POST' }),
+    fetchImpl,
+    jobId,
+    nowMs,
+  });
+}
+
+const bby = await queue('bby-wow', onePhoto);
+const started = await run(bby.job.id);
+assert(started.provider.name === 'agnes', JSON.stringify(started.provider));
+assert(started.provider.model === AGNES_MODEL, started.provider.model);
+assert(started.provider.mode === 'reference', started.provider.mode);
+assert(started.provider.base_host === 'api.agnes-ai.cn', started.provider.base_host);
+assert(started.processed[0].status === 'running', JSON.stringify(started.processed[0]));
+assert(started.processed[0].provider === 'agnes', started.processed[0].provider);
+const bbyBody = createBody(calls);
+assert(bbyBody.seconds === '6', bbyBody.seconds);
+assert(bbyBody.mode === 'reference', bbyBody.mode);
+assert(bbyBody.images.length === 1, JSON.stringify(bbyBody.images));
+assert(bbyBody.images[0].startsWith(`https://swaystill.com/api/media/jobs/${bby.job.id}/photo?`), bbyBody.images[0]);
+assert(bbyBody.images[0].includes('exp=') && bbyBody.images[0].includes('sig='), bbyBody.images[0]);
+assert(!bbyBody.images[0].includes('photo-2'), bbyBody.images[0]);
+assert(bbyBody.videos[0].url === 'https://swaystill.com/brand/templates/bby-wow-demo.mp4', bbyBody.videos[0].url);
+assert(bbyBody.videos[0].start_seconds === 0 && bbyBody.videos[0].require_audio === false, JSON.stringify(bbyBody.videos[0]));
+assert(!JSON.stringify(bbyBody).includes('pages.dev'), 'create body used the request host');
+assert(!JSON.stringify(bbyBody).includes('workers.dev') && !JSON.stringify(bbyBody).includes('r2.dev'), 'blocked host in body');
+const createsBeforePoll = script.creates;
+script.poll = 'hide';
+const hidden = await run(bby.job.id);
+assert(hidden.processed[0].status === 'running', JSON.stringify(hidden.processed[0]));
+assert(hidden.processed[0].action === 'polling', hidden.processed[0].action);
+assert(!calls.some((call) => call.url.includes('cdn.example.com')), 'internal_status completed was treated as done');
+script.poll = 'completed';
+const ready = await run(bby.job.id);
+assert(ready.processed[0].status === 'ready', JSON.stringify(ready.processed[0]));
+assert(calls.some((call) => call.url === 'https://cdn.example.com/out.mp4'), 'downloaded top-level url');
+assert(script.creates === createsBeforePoll, 'poll created another Agnes task');
+const readyRow = sqlite.prepare(`SELECT status, provider_task_id, note_en FROM jobs WHERE id = ?`).get(bby.job.id);
+assert(readyRow.status === 'ready' && String(readyRow.provider_task_id).startsWith('agn_task_'), JSON.stringify(readyRow));
+assert(!/agnes|bailian|waffo/i.test(readyRow.note_en), readyRow.note_en);
+const afterBby = await getCredits(db, user);
+assert(afterBby.balance === 494, `bby balance ${afterBby.balance}`);
+assert(afterBby.ledger.filter((row) => row.job_id === bby.job.id).map((row) => row.kind).join() === 'deduction', 'bby charged once');
+
+const kiss = await queue('kiss-cam', twoPhotos);
+const kissRun = await run(kiss.job.id);
+assert(kissRun.processed[0].provider === 'agnes', JSON.stringify(kissRun.processed[0]));
+const kissBody = createBody(calls.filter((call) => call.url.includes('/v1/videos')).slice(-1).length ? calls : calls);
+const kissCreates = calls.filter((call) => call.url.startsWith('https://api.agnes-ai.cn/v1/videos'));
+const kissPayload = JSON.parse(kissCreates[kissCreates.length - 1].init.body);
+assert(kissPayload.seconds === '6', kissPayload.seconds);
+assert(kissPayload.images.length === 1, 'kiss sent both photos');
+assert(kissPayload.videos[0].url === 'https://swaystill.com/brand/templates/kiss-cam-demo.mp4', kissPayload.videos[0].url);
+assert(!JSON.stringify(kissPayload).includes('photo-2'), 'second photo url sent');
+
+const fanCuts = fanDecision.segments.map((segment) => cutReferenceMp4(fanFile, segment.start, segment.end));
+script.downloads = fanCuts.slice();
+script.poll = 'completed';
+const bailianBeforeFan = script.bailianTasks;
+const fan = await queue('ceiling-fan', onePhoto);
+const fanStart = await run(fan.job.id);
+assert(fanStart.processed[0].provider === 'agnes', JSON.stringify(fanStart.processed[0]));
+assert(fanStart.processed[0].status === 'running', JSON.stringify(fanStart.processed[0]));
+const fanCreates = calls.filter((call) => call.url.startsWith('https://api.agnes-ai.cn/v1/videos'));
+const firstPiece = JSON.parse(fanCreates[fanCreates.length - 1].init.body);
+assert(firstPiece.seconds === '8', firstPiece.seconds);
+assert(firstPiece.videos[0].start_seconds === 0, JSON.stringify(firstPiece.videos[0]));
+assert(firstPiece.videos[0].url.includes(`/seg0?`), firstPiece.videos[0].url);
+assert(!firstPiece.videos[0].url.includes('ceiling-fan-demo.mp4'), 'full 15s file was sent');
+assert(firstPiece.videos[0].url.startsWith('https://swaystill.com/'), firstPiece.videos[0].url);
+const fanNext = await run(fan.job.id);
+assert(fanNext.processed[0].status === 'running', JSON.stringify(fanNext.processed[0]));
+const fanCreates2 = calls.filter((call) => call.url.startsWith('https://api.agnes-ai.cn/v1/videos'));
+const secondPiece = JSON.parse(fanCreates2[fanCreates2.length - 1].init.body);
+assert(secondPiece.seconds === '7', secondPiece.seconds);
+assert(secondPiece.videos[0].url.includes('/seg1?'), secondPiece.videos[0].url);
+assert(fanCreates2.length === fanCreates.length + 1, 'second piece was not submitted');
+const fanReady = await run(fan.job.id);
+assert(fanReady.processed[0].status === 'ready', JSON.stringify(fanReady.processed[0]));
+assert(script.bailianTasks === bailianBeforeFan, 'ceiling fan fell back to mix');
+const fanRow = sqlite.prepare(`SELECT status, note_en, provider_task_id FROM jobs WHERE id = ?`).get(fan.job.id);
+assert(fanRow.status === 'ready', fanRow.status);
+assert(String(fanRow.provider_task_id).startsWith('ag1_'), fanRow.provider_task_id);
+assert(!/agnes|bailian|waffo/i.test(fanRow.note_en), fanRow.note_en);
+const afterFan = await getCredits(db, user);
+assert(afterFan.balance === 494 - 6 - 15, `fan balance ${afterFan.balance}`);
+assert(afterFan.ledger.filter((row) => row.job_id === fan.job.id).map((row) => row.kind).join() === 'deduction', 'fan charged once');
+script.downloads = null;
+
+script.create = 'reject';
+const rejected = await queue('bby-wow', onePhoto);
+const rejectRun = await run(rejected.job.id);
+assert(rejectRun.processed[0].provider === 'bailian', JSON.stringify(rejectRun.processed[0]));
+assert(rejectRun.processed[0].status === 'running', JSON.stringify(rejectRun.processed[0]));
+const rejectRow = sqlite.prepare(`SELECT provider_task_id, status FROM jobs WHERE id = ?`).get(rejected.job.id);
+assert(rejectRow.status === 'running' && !String(rejectRow.provider_task_id).startsWith('agn_'), JSON.stringify(rejectRow));
+const afterReject = await getCredits(db, user);
+assert(afterReject.ledger.filter((row) => row.job_id === rejected.job.id).map((row) => row.kind).join() === 'deduction', 'fallback charged twice or refunded');
+
+script.create = 'down';
+const uncertain = await queue('bby-wow', onePhoto);
+const createsBeforeOutage = script.creates;
+const uncertainRun = await run(uncertain.job.id);
+assert(uncertainRun.processed[0].status === 'running', JSON.stringify(uncertainRun.processed[0]));
+assert(uncertainRun.processed[0].provider === 'bailian', JSON.stringify(uncertainRun.processed[0]));
+assert(script.creates === createsBeforeOutage + 1, 'outage retried Agnes');
+const uncertainRow = sqlite.prepare(`SELECT status, note_en, provider_task_id FROM jobs WHERE id = ?`).get(uncertain.job.id);
+assert(uncertainRow.status === 'running', uncertainRow.status);
+assert(!String(uncertainRow.provider_task_id).startsWith('ag'), uncertainRow.provider_task_id);
+assert(!/agnes|bailian|waffo/i.test(uncertainRow.note_en), uncertainRow.note_en);
+assert(!uncertainRow.note_en.includes(AGNES_KEY), 'note leaked the key');
+const afterUncertain = await getCredits(db, user);
+assert(
+  afterUncertain.ledger.filter((row) => row.job_id === uncertain.job.id).map((row) => row.kind).join() === 'deduction',
+  'outage fallback charged twice or refunded',
+);
+
+script.create = 'rate';
+const rated = await queue('bby-wow', onePhoto);
+const rateStart = Date.now();
+const createsAtRate = script.creates;
+const rateRun = await run(rated.job.id, rateStart);
+assert(rateRun.processed[0].status === 'queued', JSON.stringify(rateRun.processed[0]));
+assert(rateRun.processed[0].error === 'retry_later', rateRun.processed[0].error);
+assert(script.creates === createsAtRate + 1, 'rate limit did not create');
+const held = await run(rated.job.id, rateStart + 1000);
+assert(held.processed[0].action === 'retry', JSON.stringify(held.processed[0]));
+assert(script.creates === createsAtRate + 1, 'retried Agnes inside the backoff');
+script.create = 'ok';
+const released = await run(rated.job.id, rateStart + 8000);
+assert(released.processed[0].status === 'running', JSON.stringify(released.processed[0]));
+assert(script.creates === createsAtRate + 2, 'did not retry after the backoff');
+assert(released.processed[0].provider === 'agnes', released.processed[0].provider);
+
+script.poll = 'fail';
+const failed = await queue('bby-wow', onePhoto);
+const failedStart = await run(failed.job.id);
+assert(failedStart.processed[0].status === 'running', JSON.stringify(failedStart.processed[0]));
+const bailianBeforeFail = script.bailianTasks;
+const createsBeforeFail = script.creates;
+const failedPoll = await run(failed.job.id);
+assert(failedPoll.processed[0].status === 'failed', JSON.stringify(failedPoll.processed[0]));
+assert(script.bailianTasks === bailianBeforeFail, 'failed Agnes task fell through to mix');
+assert(script.creates === createsBeforeFail, 'failed Agnes task was created again');
+const failedNote = sqlite.prepare(`SELECT note_en, error_code FROM jobs WHERE id = ?`).get(failed.job.id);
+assert(failedNote.error_code === 'agnes_failed', failedNote.error_code);
+assert(!/agnes|bailian|waffo/i.test(failedNote.note_en), failedNote.note_en);
+assert(!failedNote.note_en.includes(AGNES_KEY), failedNote.note_en);
+const afterFailed = await getCredits(db, user);
+assert(
+  afterFailed.ledger.filter((row) => row.job_id === failed.job.id).map((row) => row.kind).sort().join() === 'deduction,refund',
+  'failed task refund',
+);
+
+script.poll = 'rate';
+script.agnesPolls = 0;
+const polled = await queue('bby-wow', onePhoto);
+const pollStart = await run(polled.job.id);
+assert(pollStart.processed[0].provider === 'agnes', JSON.stringify(pollStart.processed[0]));
+const pollsBefore = calls.filter((call) => call.url.includes('/agnesapi')).length;
+const limited = await run(polled.job.id, Date.now());
+assert(limited.processed[0].action === 'retry_poll', JSON.stringify(limited.processed[0]));
+assert(limited.processed[0].error === 'retry_later', limited.processed[0].error);
+const again = await run(polled.job.id, Date.now());
+assert(calls.filter((call) => call.url.includes('/agnesapi')).length === pollsBefore + 1, '429 was polled again immediately');
+script.poll = 'completed';
+const later = await run(polled.job.id, Date.now() + 8000);
+assert(later.processed[0].status === 'ready', JSON.stringify(later.processed[0]));
+
+const switched = { ...env, VIDEO_PROVIDER: 'bailian' };
+const forced = await queueJobWithMedia({
+  db,
+  env: switched,
+  request: new Request(`${requestOrigin}/api/jobs`, { method: 'POST' }),
+  user,
+  templateSlug: 'bby-wow',
+  photos: onePhoto,
+});
+const createsBeforeSwitch = script.creates;
+const switchRun = await processRemakeJobs({
+  db,
+  env: switched,
+  request: new Request(`${requestOrigin}/api/jobs/process`, { method: 'POST' }),
+  fetchImpl,
+  jobId: forced.job.id,
+});
+assert(script.creates === createsBeforeSwitch, 'bailian switch called Agnes');
+assert(switchRun.processed[0].provider === 'bailian', JSON.stringify(switchRun.processed[0]));
+
+const pagesEnv = { ...env, PUBLIC_SITE_APEX: 'viral-templates.pages.dev' };
+const pagesJob = await queueJobWithMedia({
+  db,
+  env: pagesEnv,
+  request: new Request(`${requestOrigin}/api/jobs`, { method: 'POST' }),
+  user,
+  templateSlug: 'bby-wow',
+  photos: onePhoto,
+});
+const createsBeforePages = script.creates;
+const pagesRun = await processRemakeJobs({
+  db,
+  env: pagesEnv,
+  request: new Request(`${requestOrigin}/api/jobs/process`, { method: 'POST' }),
+  fetchImpl,
+  jobId: pagesJob.job.id,
+});
+assert(script.creates === createsBeforePages, 'pages.dev apex called Agnes');
+assert(pagesRun.processed[0].provider === 'bailian', JSON.stringify(pagesRun.processed[0]));
+assert(!calls.some((call) => /pages\.dev|workers\.dev|r2\.dev/.test(JSON.stringify(call.init && call.init.body || ''))), 'provider body contains a blocked host');
+
+console.log('agnes-video.test.mjs ok');

@@ -1,6 +1,6 @@
 # Bailian animate-mix (ops)
 
-Customer pages do not mention DashScope. This is the server path that turns a queued remake into an MP4.
+Customer pages do not mention DashScope. This is the fallback when Agnes is unset, switched off, or the clip cannot be split into 4–12s pieces. A long template is not sent here just because it is over 12s. See [`agnes-video.md`](agnes-video.md). `VIDEO_PROVIDER=bailian` forces this path for every look.
 
 Model: `wan2.2-animate-mix`. It replaces the person in the template video and keeps that video’s scene, motion, lighting, and outfits. Mode: `wan-std` (cheaper). Override the mode with `BAILIAN_MODE=wan-pro`. Override the model with `BAILIAN_MODEL`.
 

@@ -111,7 +111,7 @@ Auth + account APIs (Pages Functions):
 - `GET /api/account/credits`
 - `POST /api/jobs` — signed-in Generate queues a job, then `waitUntil` starts Bailian for that job. Photo bytes are stored in R2 when the `MEDIA` binding is present; otherwise the job still queues and `media.error` is `r2_unbound`. The browser does not send `JOB_PROCESS_SECRET`.
 - `POST /api/jobs/continue` — signed-in. Submits or polls one of that user's queued or running jobs. No process secret.
-- `POST /api/jobs/process` — ops-only drain for every user. Claims queued jobs, calls Bailian `wan2.2-animate-mix`, stores the MP4 in R2, and marks the job `ready` or `failed`. Requires `JOB_PROCESS_SECRET` and `BAILIAN_API_KEY`. See [`docs/bailian-animate.md`](docs/bailian-animate.md).
+- `POST /api/jobs/process` — ops-only drain for every user. Claims queued jobs, calls Agnes Video 2.5 reference mode (mix is the fallback), stores the MP4 in R2, and marks the job `ready` or `failed`. Requires `JOB_PROCESS_SECRET` and `AGNES_API_KEY` or `BAILIAN_API_KEY`. See [`docs/agnes-video.md`](docs/agnes-video.md).
 - `POST /api/jobs/{id}/result` — ops-only manual ingest. Stores a finished MP4 and sets `result_url`. Requires `RESULT_INGEST_SECRET`. Does not call Bailian.
 - `GET /api/media/jobs/{id}/{photo|photo-2|result}` — private download (owner session or signed `exp` + `sig`).
 
@@ -130,6 +130,7 @@ npm run test:account
 npm run test:auth
 npm run test:media
 npm run test:bailian
+npm run test:agnes
 npm run test:payments
 npm run build
 npx wrangler pages dev dist --port 8788
@@ -193,7 +194,7 @@ Details and env names: [`docs/credits-checkout.md`](docs/credits-checkout.md).
 
 ### Known limits
 
-- Google sign-in runs when the secrets in [`docs/google-oauth.md`](docs/google-oauth.md) are set. Bailian `wan2.2-animate-mix` runs after `BAILIAN_API_KEY` is set. Create starts it with `waitUntil`. Pages has no cron trigger; `workers/job-drain` posts `POST /api/jobs/process` every two minutes once that Worker is deployed ([`docs/bailian-animate.md`](docs/bailian-animate.md)). Inputs are uploaded to DashScope temporary storage (`oss://`). Do not pass `*.pages.dev` media URLs to Bailian. Aliyun cannot fetch them (`InvalidURL.ConnectionRefused`).
+- Google sign-in runs when the secrets in [`docs/google-oauth.md`](docs/google-oauth.md) are set. Remakes use Agnes Video 2.5 reference mode when `AGNES_API_KEY` is set. Bby Wow and Kiss Cam (about 6s) are one job. Ceiling Fan (about 15s) is cut into two 4–12s pieces and joined back in this worker. Mix runs only when a split cannot fix the media, the key is unset, or `VIDEO_PROVIDER=bailian`. Create starts generation with `waitUntil`. Pages has no cron trigger; `workers/job-drain` posts `POST /api/jobs/process` every two minutes once that Worker is deployed ([`docs/agnes-video.md`](docs/agnes-video.md)). Agnes inputs are public `https://{PUBLIC_SITE_APEX}/…` URLs. Mix uploads bytes to DashScope temporary storage (`oss://`). Do not pass `*.pages.dev`, `*.workers.dev`, or `*.r2.dev` media URLs to either provider.
 - A pack refund or chargeback from the payment provider does not remove credits by itself. The credits page can store a short note for that case.
 - Session cookie is **host-only** (not shared across brand hosts). The database is shared. The same Google account maps to the same `user_id` on every host after signing in there, so credits and jobs follow the person. `/t/{slug}/` on the apex is the same host and the same cookie.
 - Brand Account link needs a prior brand-page visit (cookie) or open Sign in with `?next=/t/{slug}/…`
@@ -203,9 +204,9 @@ Details and env names: [`docs/credits-checkout.md`](docs/credits-checkout.md).
 
 | Key | Purpose |
 |-----|---------|
-| `PUBLIC_SITE_APEX` | Apex hostname for Host / subdomain mapping (default `viral-templates.pages.dev`) |
+| `PUBLIC_SITE_APEX` | Apex hostname for Host / subdomain mapping (default `viral-templates.pages.dev`). Agnes photo and template URLs use this host. It must be the custom domain or those jobs stay on mix |
 | `FAL_KEY` / `FAL_API_KEY` | Optional unused hook. Not the default generator |
-| `FAL_MODEL` | Optional unused model id. Default generation stays `wan2.2-animate-mix` |
+| `FAL_MODEL` | Optional unused model id. Default generation is Agnes Video 2.5 reference mode |
 | `WAFFO_MERCHANT_ID` | Pancake Merchant ID (`MER_`…). With the store id and private key, Buy can start. Missing any of them keeps Buy closed |
 | `WAFFO_PRIVATE_KEY` | Pancake API private key for the selected environment. Test key first. Do not commit it |
 | `WAFFO_PANCAKE_STORE_ID` | Pancake Store ID (`STO_`…). Dashboard → Settings → Store Profile |
@@ -222,7 +223,10 @@ Details and env names: [`docs/credits-checkout.md`](docs/credits-checkout.md).
 | `PHOTO_RETENTION_DAYS` | Function env for object metadata. Default 7. Falls back to `PUBLIC_PHOTO_RETENTION_DAYS` |
 | `VIDEO_RETENTION_DAYS` | Function env for object metadata. Default 30 |
 | `RESULT_INGEST_SECRET` | Bearer token for `POST /api/jobs/{id}/result`. 16+ characters. Not a customer feature |
-| `BAILIAN_API_KEY` | Pages secret for DashScope. Beijing workspace key. Do not commit. `DASHSCOPE_API_KEY` is used only when this is unset |
+| `AGNES_API_KEY` | Pages secret for Agnes Video 2.5. Do not commit. Required for the primary remake path |
+| `AGNES_BASE_URL` | Optional text. Default `https://api.agnes-ai.cn/v1` |
+| `VIDEO_PROVIDER` | Optional text. `agnes` (default) or `bailian`. `bailian` forces mix and does not call Agnes |
+| `BAILIAN_API_KEY` | Pages secret for DashScope mix, used when Agnes is unset or the template does not fit. Do not commit. `DASHSCOPE_API_KEY` is used only when this is unset |
 | `BAILIAN_DASHSCOPE_BASE_URL` | Optional text. Default `https://llm-g1ozpdi7y5eyp1mh.cn-beijing.maas.aliyuncs.com/api/v1`. Set `https://dashscope.aliyuncs.com/api/v1` to use the classic host |
 | `BAILIAN_MODE` | Optional text. `wan-std` (default, cheaper) or `wan-pro` |
 | `BAILIAN_MODEL` | Optional text. Default `wan2.2-animate-mix` |
@@ -246,6 +250,7 @@ npm run test:account
 npm run test:auth
 npm run test:media
 npm run test:bailian
+npm run test:agnes
 npm run test:payments
 npm run smoke:bailian
 npm run pages:dev

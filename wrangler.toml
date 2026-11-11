@@ -34,8 +34,11 @@ migrations_dir = "migrations"
 #   handoff/{userId}/{token}.jpg|png|webp           phone upload, delete after 1 day
 #   templates/                                      reserved; the app does not write it
 # Lifecycle rules are set on the bucket, not by this binding. See docs/r2-media.md.
-# Bailian remake worker (values are NOT stored in this file):
-#   BAILIAN_API_KEY              Pages secret. Do not commit.
+# Remake worker (values are NOT stored in this file):
+#   AGNES_API_KEY                Pages secret. Do not commit. Primary reference model.
+#   AGNES_BASE_URL               optional text. Default https://api.agnes-ai.cn/v1
+#   VIDEO_PROVIDER               optional text: agnes (default) or bailian
+#   BAILIAN_API_KEY              Pages secret. Do not commit. Fallback mix model.
 #   JOB_PROCESS_SECRET           Pages secret for POST /api/jobs/process
 # Pages cannot run a cron. workers/job-drain is a separate Worker
 # (*/2 * * * *) that POSTs that route. Do not add [triggers] here.

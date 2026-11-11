@@ -1,46 +1,84 @@
 /**
- * Process queued remake jobs through Bailian wan2.2-animate-mix.
+ * Process queued remake jobs.
+ *
+ * Primary path is Agnes Video 2.5 reference mode when VIDEO_PROVIDER is agnes
+ * (the default) and PUBLIC_SITE_APEX is a public custom domain. A template
+ * that fits in 2–12s is one job. A longer template is cut into 4–12s pieces,
+ * each piece is its own job, and the results are joined here. wan2.2-animate-mix
+ * is the fallback only when a split cannot make every piece fit, or for fps,
+ * size, format, a missing public origin, or an Agnes refusal before a task exists.
  *
  * One pass submits new tasks and polls tasks already running. Video generation
  * takes minutes. Create starts a pass with waitUntil. Pages Functions have
  * no cron, so workers/job-drain posts /api/jobs/process every two minutes,
  * and the signed-in account page can post /api/jobs/continue. Ops can still
  * repeat POST /api/jobs/process (see scripts/smoke-bailian.mjs). wait_ms can
- * poll inside one request for a short window.
+ * poll inside one request. Agnes polls wait at least 6s and back off after 429.
  *
- * Subject image is R2 upload_key (slot 0). wan2.2-animate-mix takes one image
- * and replaces that person in the template video. The template keeps its scene,
+ * Subject image is R2 upload_key (slot 0). Both models take one image and
+ * replace that person in the template video. The template keeps its scene,
  * motion, lighting, and outfits. Kiss Cam's second photo stays in R2 and is not sent.
- * The template demo MP4 is video_url, read from the Pages ASSETS
- * binding (or this deployment). Both files are uploaded to DashScope temporary
+ *
+ * Bailian uploads the photo and the template demo to DashScope temporary
  * storage. image_url and video_url sent to Bailian are oss:// only.
- * Never pass *.pages.dev, *.workers.dev, or *.r2.dev. Aliyun cannot fetch them
- * (InvalidURL.ConnectionRefused). upload_url is a signed pages.dev link for
- * the account UI and is not a Bailian input.
+ * Agnes receives public https URLs on the custom domain: a signed photo link
+ * and /brand/templates/{slug}-demo.mp4. Never pass *.pages.dev, *.workers.dev,
+ * or *.r2.dev to either provider.
  */
 
 import {
   claimQueuedJob,
+  clearProviderTask,
+  deferQueuedJob,
   fail,
   listRemakeCandidates,
   markJobFailed,
+  noteIdleBackoff,
+  noteRunningBackoff,
   refundOutstandingFailures,
   revertQueuedJob,
   saveProviderTask,
 } from './account-db.js';
 import {
+  AGNES_VIDEO_MAX_BYTES,
+  agnesInputUrls,
+  agnesMediaDecision,
+  agnesPollDelayMs,
+  agnesSegmentInputs,
+  createReferenceVideo,
+  downloadAgnesVideo,
+  getAgnesVideo,
+  packAgnesTaskId,
+  probeReferenceMp4,
+  redactAgnesDetail,
+  unpackAgnesTaskId,
+} from './agnes.js';
+import { concatMp4, cutReferenceMp4 } from './mp4-segments.js';
+import {
   BAILIAN_IMAGE_MAX_BYTES,
-  bailianRuntime,
   downloadResultVideo,
   getAnimateTask,
   redactDetail,
   submitAnimateMove,
   uploadTempFile,
 } from './bailian.js';
+import { readImageSize } from './image-precheck.js';
 import { mp4HasAudio, muxStyleAudio } from './mp4-finish.js';
 import { getTemplate } from './templates.js';
 import { storeJobResult } from './job-media.js';
-import { getMedia, mediaConfigured, requestOrigin, sniffImage, sniffMp4, VIDEO_MAX_BYTES } from './r2-media.js';
+import {
+  deleteMedia,
+  getMedia,
+  mediaConfigured,
+  partObjectKey,
+  putMedia,
+  requestOrigin,
+  segmentObjectKey,
+  sniffImage,
+  sniffMp4,
+  VIDEO_MAX_BYTES,
+} from './r2-media.js';
+import { providerConfigured, videoBackends, selectRemakeProvider } from './video-provider.js';
 
 // The stale clock starts at claim. After that the job is `running` with no
 // task id while two temp uploads (60s each) and synthesis (30s) run.
@@ -156,8 +194,10 @@ function ageMs(updatedAt, nowMs) {
   return nowMs - at;
 }
 
-async function submitClaimed(ctx, row, prepared) {
+async function submitBailian(ctx, row, prepared) {
   const { db, runtime, fetchImpl } = ctx;
+  if (!runtime || !runtime.configured) return failJob(db, row, 'failed');
+  if (prepared.image.bytes.byteLength > BAILIAN_IMAGE_MAX_BYTES) return failJob(db, row, 'photo_too_large');
   let imageUrl = '';
   let videoUrl = '';
   try {
@@ -186,7 +226,7 @@ async function submitClaimed(ctx, row, prepared) {
   try {
     const submitted = await submitAnimateMove(runtime, fetchImpl, { imageUrl, videoUrl });
     await saveProviderTask(db, row.id, submitted.taskId);
-    return { id: row.id, status: 'running', action: 'submitted', task_id: submitted.taskId };
+    return { id: row.id, status: 'running', action: 'submitted', task_id: submitted.taskId, provider: 'bailian' };
   } catch (err) {
     if (err && err.code === 'provider_task_taken') {
       console.error('provider_task_taken', row.id);
@@ -214,11 +254,162 @@ async function readSubject(bucket, row) {
   const bytes = await readStoredBytes(obj);
   const sniffed = sniffImage(bytes);
   if (!sniffed) throw fail('no_photo');
-  if (bytes.byteLength > BAILIAN_IMAGE_MAX_BYTES) throw fail('photo_too_large');
   return { bytes, contentType: sniffed.contentType, filename: `subject.${sniffed.ext}` };
 }
 
+function retryHoldMs(row, nowMs) {
+  const match = /^retry_later_(\d+)$/.exec(row && row.error_code ? row.error_code : '');
+  if (!match) return 0;
+  const delay = Number(match[1]);
+  if (!Number.isFinite(delay) || delay < 1000) return 0;
+  const elapsed = ageMs(row.updated_at, nowMs);
+  if (elapsed >= delay) return 0;
+  return delay - elapsed;
+}
+
+function chooseProvider(ctx, template, image, reference) {
+  const sniffed = sniffImage(image.bytes);
+  const size = sniffed ? readImageSize(image.bytes, sniffed.ext) : null;
+  const decision = agnesMediaDecision({
+    durationSeconds: template && template.durationSeconds,
+    videoBytes: reference,
+    imageBytes: image.bytes.byteLength,
+    imageWidth: size ? size.width : 0,
+    imageHeight: size ? size.height : 0,
+  });
+  return selectRemakeProvider(ctx.backends, decision);
+}
+
+function agnesCode(err) {
+  if (!err) return 'failed';
+  if (err.code === 'agnes_error') return `agnes_${err.providerCode || 'error'}`;
+  return err.code || 'failed';
+}
+
+async function segmentInputs(ctx, row, prepared, segment) {
+  const segments = prepared.selection && prepared.selection.segments;
+  const count = segments && segments.length ? segments.length : 1;
+  if (count < 2) return agnesInputUrls(ctx.env, row.id, prepared.template.referenceVideo);
+  let cut;
+  try {
+    cut = cutReferenceMp4(prepared.reference, segment.start, segment.end);
+  } catch (err) {
+    console.error('segment_cut', row.id, err && err.code ? err.code : 'error');
+    const wrapped = fail('segment_media');
+    wrapped.cause = err;
+    throw wrapped;
+  }
+  const probed = probeReferenceMp4(cut);
+  const tooLong = probed.durationSeconds != null && (probed.durationSeconds < 2 || probed.durationSeconds > 12.05);
+  if (cut.byteLength >= AGNES_VIDEO_MAX_BYTES || tooLong) throw fail('segment_media');
+  await putMedia(ctx.bucket, segmentObjectKey(row.user_id, row.id, segment.index), cut, {
+    contentType: 'video/mp4',
+    customMetadata: { kind: 'segment', job_id: row.id },
+  });
+  return agnesSegmentInputs(ctx.env, row.id, segment.index);
+}
+
+async function submitAgnesSegment(ctx, row, prepared, index) {
+  const { db, agnes, fetchImpl } = ctx;
+  const segments = (prepared.selection && prepared.selection.segments) || [
+    { index: 0, seconds: prepared.seconds },
+  ];
+  const segment = segments[index];
+  if (!segment) return failJob(db, row, 'failed');
+  let inputs;
+  try {
+    inputs = await segmentInputs(ctx, row, prepared, segment);
+  } catch (err) {
+    console.error('agnes_input', row.id, err && err.code ? err.code : 'error');
+    if (index === 0) return { fallback: true };
+    return failJob(db, row, 'failed');
+  }
+  if (!inputs) return index === 0 ? { fallback: true } : failJob(db, row, 'failed');
+  let created;
+  try {
+    created = await createReferenceVideo(agnes, fetchImpl, {
+      imageUrl: inputs.imageUrl,
+      videoUrl: inputs.videoUrl,
+      seconds: segment.seconds,
+    });
+  } catch (err) {
+    // Refused or unreachable before a task id exists. Mix can still run, once.
+    const outage = err && (err.rejected || err.code === 'agnes_submit_uncertain' || (err.transient && err.httpStatus !== 429));
+    if (outage && index === 0) return { fallback: true };
+    if (err && err.httpStatus === 429) {
+      const wait = agnesPollDelayMs(prepared.backoffMs);
+      const code = `retry_later_${wait}`;
+      const deferred = index === 0 ? await deferQueuedJob(db, row.id, code) : await noteIdleBackoff(db, row.id, code);
+      if (!deferred) return { id: row.id, status: 'running', action: 'busy', provider: 'agnes' };
+      return {
+        id: row.id,
+        status: index === 0 ? 'queued' : 'running',
+        action: 'retry',
+        error: 'retry_later',
+        retry_after_ms: wait,
+        provider: 'agnes',
+      };
+    }
+    const code = err && err.code === 'agnes_submit_uncertain'
+      ? 'agnes_submit_uncertain'
+      : err && err.providerCode
+        ? `agnes_${err.providerCode}`
+        : 'agnes_submit_uncertain';
+    console.error('agnes_create', row.id, code);
+    return failJob(db, row, code, {
+      detail: redactAgnesDetail(err && err.providerMessage, agnes && agnes.apiKey),
+      note_en: 'Video generation did not start. Please try again from Create.',
+      note_zh: '视频生成没有开始。请在创作页再试一次。',
+    });
+  }
+  let storedId;
+  try {
+    storedId = packAgnesTaskId(created.videoId, index, segments.length);
+  } catch (err) {
+    console.error('agnes_create', row.id, 'agnes_bad_task');
+    if (index === 0) return { fallback: true };
+    return failJob(db, row, 'agnes_submit_uncertain', {
+      note_en: 'Video generation did not start. Please try again from Create.',
+      note_zh: '视频生成没有开始。请在创作页再试一次。',
+    });
+  }
+  try {
+    await saveProviderTask(db, row.id, storedId);
+    return { id: row.id, status: 'running', action: 'submitted', task_id: storedId, provider: 'agnes' };
+  } catch (err) {
+    if (err && err.code === 'provider_task_taken') {
+      console.error('provider_task_taken', row.id);
+      return failJob(db, row, 'provider_task_taken');
+    }
+    if (err && err.code === 'storage_error') {
+      console.error('agnes_create', row.id, 'task_not_saved');
+      return { id: row.id, status: 'running', action: 'submit_unsaved', error: 'storage_error', provider: 'agnes' };
+    }
+    throw err;
+  }
+}
+
+async function submitAgnes(ctx, row, prepared) {
+  return submitAgnesSegment(ctx, row, prepared, 0);
+}
+
+async function submitRouted(ctx, row, prepared) {
+  if (prepared.selection.provider === 'agnes') {
+    const agnesResult = await submitAgnes(ctx, row, prepared);
+    if (agnesResult && agnesResult.fallback) {
+      if (!ctx.runtime || !ctx.runtime.configured) return failJob(ctx.db, row, 'failed');
+      return submitBailian(ctx, row, prepared);
+    }
+    return agnesResult;
+  }
+  return submitBailian(ctx, row, prepared);
+}
+
 async function prepareQueued(ctx, row) {
+  const hold = retryHoldMs(row, ctx.nowMs);
+  if (hold) {
+    return { id: row.id, status: 'queued', action: 'retry', error: 'retry_later', retry_after_ms: hold };
+  }
   const template = getTemplate(row.template_slug);
   if (!template || !template.referenceVideo) return failJob(ctx.db, row, 'no_reference_video');
   if (!row.upload_key) {
@@ -248,14 +439,28 @@ async function prepareQueued(ctx, row) {
     }
     return failJob(ctx.db, row, 'no_reference_video');
   }
+  const selection = chooseProvider(ctx, template, image, reference);
+  if (selection.provider === 'bailian' && image.bytes.byteLength > BAILIAN_IMAGE_MAX_BYTES) {
+    return failJob(ctx.db, row, 'photo_too_large');
+  }
+  const previous = /^retry_later_(\d+)$/.exec(row.error_code || '');
   const claimed = await claimQueuedJob(ctx.db, row.id);
   if (!claimed) return { id: row.id, status: 'running', action: 'busy' };
-  return submitClaimed(ctx, row, { image, reference });
+  return submitRouted(ctx, row, {
+    image,
+    reference,
+    template,
+    selection,
+    seconds: selection.seconds,
+    backoffMs: previous ? Number(previous[1]) : 0,
+  });
 }
 
 async function pollRunning(ctx, row) {
-  const { db, runtime, fetchImpl } = ctx;
+  const { db } = ctx;
   if (!row.provider_task_id) {
+    const resumed = await resumeSplit(ctx, row);
+    if (resumed) return resumed;
     if (ageMs(row.updated_at, ctx.nowMs) < SUBMIT_STALE_MS) {
       return { id: row.id, status: 'running', action: 'busy' };
     }
@@ -269,6 +474,201 @@ async function pollRunning(ctx, row) {
     }
     return { id: row.id, status: 'running', action: 'busy' };
   }
+  const hold = retryHoldMs(row, ctx.nowMs);
+  if (hold) {
+    return { id: row.id, status: 'running', action: 'retry_poll', error: 'retry_later', retry_after_ms: hold };
+  }
+  if (unpackAgnesTaskId(row.provider_task_id)) return pollAgnes(ctx, row);
+  return pollBailian(ctx, row);
+}
+
+async function readPartBytes(bucket, userId, jobId, count) {
+  const parts = [];
+  for (let index = 0; index < count; index += 1) {
+    const obj = await getMedia(bucket, partObjectKey(userId, jobId, index));
+    const bytes = await readStoredBytes(obj);
+    if (!bytes) break;
+    parts.push(bytes);
+  }
+  return parts;
+}
+
+async function discardSplitObjects(bucket, userId, jobId, count) {
+  for (let index = 0; index < count; index += 1) {
+    try {
+      await deleteMedia(bucket, segmentObjectKey(userId, jobId, index));
+      await deleteMedia(bucket, partObjectKey(userId, jobId, index));
+    } catch (err) {
+      console.error('segment_discard', err && err.code ? err.code : 'error');
+    }
+  }
+}
+
+async function loadSplitPlan(ctx, row) {
+  const template = getTemplate(row.template_slug);
+  if (!template || !template.referenceVideo) return null;
+  const reference = await loadReferenceVideo(ctx.env, ctx.origin, template.referenceVideo, ctx.fetchImpl);
+  const image = await readSubject(ctx.bucket, row);
+  const selection = chooseProvider(ctx, template, image, reference);
+  if (!selection || selection.provider !== 'agnes' || !selection.segments || selection.segments.length < 2) return null;
+  return { template, reference, selection, image };
+}
+
+async function stitchParts(ctx, row, parts) {
+  let joined;
+  try {
+    joined = concatMp4(parts);
+  } catch (err) {
+    console.error('segment_join', row.id, err && err.code ? err.code : 'error');
+    return failJob(ctx.db, row, 'failed');
+  }
+  const stored = await persistVideo(ctx, row, joined);
+  if (stored && stored.status === 'ready') await discardSplitObjects(ctx.bucket, row.user_id, row.id, parts.length);
+  if (stored && !stored.provider) stored.provider = 'agnes';
+  return stored;
+}
+
+async function storeSplitPiece(ctx, row, info, videoUrl) {
+  let plan;
+  try {
+    plan = await loadSplitPlan(ctx, row);
+  } catch (err) {
+    console.error('segment_plan', row.id, err && err.code ? err.code : 'error');
+    return failJob(ctx.db, row, err && err.code === 'reference_fetch' ? 'no_reference_video' : 'failed');
+  }
+  if (!plan) return failJob(ctx.db, row, 'failed');
+  let bytes;
+  try {
+    bytes = await downloadAgnesVideo(ctx.fetchImpl, videoUrl, VIDEO_MAX_BYTES);
+  } catch (err) {
+    const permanent =
+      err &&
+      (err.code === 'video_too_large' ||
+        err.code === 'agnes_bad_result' ||
+        err.rejected ||
+        err.httpStatus === 404 ||
+        err.httpStatus === 410);
+    if (!permanent && err && (err.transient || err.code === 'agnes_error')) {
+      return {
+        id: row.id,
+        status: 'running',
+        action: 'retry_download',
+        error: agnesCode(err),
+        detail: redactAgnesDetail(err.providerMessage, ctx.agnes && ctx.agnes.apiKey),
+        retry_after_ms: err.httpStatus === 429 ? agnesPollDelayMs(0) : 0,
+        provider: 'agnes',
+      };
+    }
+    return failJob(ctx.db, row, err && err.code === 'agnes_error' ? agnesCode(err) : (err && err.code) || 'failed');
+  }
+  if (!sniffMp4(bytes)) return failJob(ctx.db, row, 'bad_video');
+  await putMedia(ctx.bucket, partObjectKey(row.user_id, row.id, info.index), bytes, {
+    contentType: 'video/mp4',
+    customMetadata: { kind: 'part', job_id: row.id },
+  });
+  const next = info.index + 1;
+  if (next < plan.selection.segments.length) {
+    const cleared = await clearProviderTask(ctx.db, row.id, row.provider_task_id);
+    if (!cleared) return { id: row.id, status: 'running', action: 'busy', provider: 'agnes' };
+    return submitAgnesSegment(ctx, row, { ...plan, backoffMs: 0 }, next);
+  }
+  const parts = await readPartBytes(ctx.bucket, row.user_id, row.id, plan.selection.segments.length);
+  if (parts.length !== plan.selection.segments.length) return failJob(ctx.db, row, 'failed');
+  return stitchParts(ctx, row, parts);
+}
+
+async function resumeSplit(ctx, row) {
+  let head = null;
+  try {
+    head = await getMedia(ctx.bucket, partObjectKey(row.user_id, row.id, 0));
+  } catch (err) {
+    console.error('segment_resume', row.id, err && err.code ? err.code : 'error');
+    return null;
+  }
+  if (!head) return null;
+  const hold = retryHoldMs(row, ctx.nowMs);
+  if (hold) {
+    return { id: row.id, status: 'running', action: 'retry', error: 'retry_later', retry_after_ms: hold, provider: 'agnes' };
+  }
+  let plan;
+  try {
+    plan = await loadSplitPlan(ctx, row);
+  } catch (err) {
+    if (err && err.code === 'reference_fetch') {
+      return { id: row.id, status: 'running', action: 'retry', error: 'reference_fetch', provider: 'agnes' };
+    }
+    return failJob(ctx.db, row, 'failed');
+  }
+  if (!plan) return failJob(ctx.db, row, 'failed');
+  const parts = await readPartBytes(ctx.bucket, row.user_id, row.id, plan.selection.segments.length);
+  if (parts.length >= plan.selection.segments.length) return stitchParts(ctx, row, parts);
+  return submitAgnesSegment(ctx, row, { ...plan, backoffMs: 0 }, parts.length);
+}
+
+async function pollAgnes(ctx, row) {
+  const { db, agnes, fetchImpl } = ctx;
+  const info = unpackAgnesTaskId(row.provider_task_id);
+  const videoId = info && info.videoId;
+  if (!videoId || !agnes || !agnes.configured) {
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'retry_poll',
+      error: 'retry_later',
+      retry_after_ms: agnesPollDelayMs(0),
+      provider: 'agnes',
+    };
+  }
+  let task;
+  try {
+    task = await getAgnesVideo(agnes, fetchImpl, videoId);
+  } catch (err) {
+    console.error('agnes_poll', row.id, err && err.providerCode ? err.providerCode : err && err.code);
+    if (err && err.httpStatus === 429) {
+      const previous = /^retry_later_(\d+)$/.exec(row.error_code || '');
+      const wait = agnesPollDelayMs(previous ? Number(previous[1]) : 0);
+      await noteRunningBackoff(db, row.id, `retry_later_${wait}`);
+      return {
+        id: row.id,
+        status: 'running',
+        action: 'retry_poll',
+        error: 'retry_later',
+        retry_after_ms: wait,
+        provider: 'agnes',
+      };
+    }
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'retry_poll',
+      error: agnesCode(err),
+      detail: redactAgnesDetail(err && err.providerMessage, agnes.apiKey),
+      retry_after_ms: agnesPollDelayMs(0),
+      provider: 'agnes',
+    };
+  }
+  const status = String(task.status || '').toLowerCase();
+  if (status === 'queued' || status === 'in_progress') {
+    return { id: row.id, status: 'running', action: 'polling', task_status: status, provider: 'agnes' };
+  }
+  if (status === 'completed') {
+    const videoUrl = typeof task.url === 'string' ? task.url : '';
+    if (!videoUrl) return failJob(db, row, 'agnes_no_result');
+    if (!info.multi) return storeAgnesSuccess(ctx, row, videoUrl);
+    return storeSplitPiece(ctx, row, info, videoUrl);
+  }
+  if (status === 'failed') {
+    const message = task.error && typeof task.error === 'object' ? task.error.message : task.error;
+    console.error('agnes_task', row.id, 'failed');
+    return failJob(db, row, 'agnes_failed', {
+      detail: redactAgnesDetail(message, agnes.apiKey),
+    });
+  }
+  return { id: row.id, status: 'running', action: 'polling', task_status: status || 'unknown', provider: 'agnes' };
+}
+
+async function pollBailian(ctx, row) {
+  const { db, runtime, fetchImpl } = ctx;
   let task;
   try {
     task = await getAnimateTask(runtime, fetchImpl, row.provider_task_id);
@@ -288,19 +688,20 @@ async function pollRunning(ctx, row) {
     return { id: row.id, status: 'running', action: 'polling', task_status: taskStatus };
   }
   if (taskStatus === 'SUCCEEDED') {
-    return storeSuccess(ctx, row, output);
+    const stored = await storeBailianSuccess(ctx, row, output);
+    if (stored && !stored.provider) stored.provider = 'bailian';
+    return stored;
   }
   const code = output.code ? `bailian_${String(output.code).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40)}` : `bailian_${taskStatus}`;
   console.error('bailian_task', row.id, code);
   return failJob(db, row, code || 'failed', { detail: redactDetail(output.message, runtime.apiKey) });
 }
 
-async function storeSuccess(ctx, row, output) {
+async function storeBailianSuccess(ctx, row, output) {
   const videoUrl = output && output.results ? output.results.video_url : '';
   let bytes;
   try {
-    const safeUrl = videoUrl;
-    bytes = await downloadResultVideo(ctx.fetchImpl, safeUrl, VIDEO_MAX_BYTES);
+    bytes = await downloadResultVideo(ctx.fetchImpl, videoUrl, VIDEO_MAX_BYTES);
   } catch (err) {
     const permanent =
       err &&
@@ -315,10 +716,47 @@ async function storeSuccess(ctx, row, output) {
         action: 'retry_download',
         error: err.code === 'bailian_error' ? `bailian_${err.providerCode}` : err.code || 'download',
         detail: redactDetail(err.providerMessage, ctx.runtime.apiKey),
+        provider: 'bailian',
       };
     }
     return failJob(ctx.db, row, err && err.code ? err.code : 'failed');
   }
+  const stored = await persistVideo(ctx, row, bytes);
+  if (stored && !stored.provider) stored.provider = 'bailian';
+  return stored;
+}
+
+async function storeAgnesSuccess(ctx, row, videoUrl) {
+  let bytes;
+  try {
+    bytes = await downloadAgnesVideo(ctx.fetchImpl, videoUrl, VIDEO_MAX_BYTES);
+  } catch (err) {
+    const permanent =
+      err &&
+      (err.code === 'video_too_large' ||
+        err.code === 'agnes_bad_result' ||
+        err.rejected ||
+        err.httpStatus === 404 ||
+        err.httpStatus === 410);
+    if (!permanent && err && (err.transient || err.code === 'agnes_error')) {
+      return {
+        id: row.id,
+        status: 'running',
+        action: 'retry_download',
+        error: agnesCode(err),
+        detail: redactAgnesDetail(err.providerMessage, ctx.agnes && ctx.agnes.apiKey),
+        retry_after_ms: err.httpStatus === 429 ? agnesPollDelayMs(0) : 0,
+        provider: 'agnes',
+      };
+    }
+    return failJob(ctx.db, row, err && err.code === 'agnes_error' ? agnesCode(err) : (err && err.code) || 'failed');
+  }
+  const stored = await persistVideo(ctx, row, bytes);
+  if (stored && !stored.provider) stored.provider = 'agnes';
+  return stored;
+}
+
+async function persistVideo(ctx, row, bytes) {
   if (!sniffMp4(bytes)) return failJob(ctx.db, row, 'bad_video');
   const finished = await decorateResult(ctx, row, bytes);
   if (finished.retry) {
@@ -408,6 +846,35 @@ async function processOnce(ctx) {
   return processed.filter(Boolean);
 }
 
+function summarizeProvider(backends, processed) {
+  const used = new Set((processed || []).map((row) => row && row.provider).filter(Boolean));
+  let name = backends.selected;
+  if (used.size === 1) name = [...used][0];
+  else if (used.size > 1) name = 'mixed';
+  if (name === 'agnes') {
+    return {
+      name: 'agnes',
+      model: backends.agnes.model,
+      mode: 'reference',
+      base_host: new URL(backends.agnes.base).host,
+    };
+  }
+  if (name === 'mixed') {
+    return {
+      name: 'mixed',
+      model: backends.agnes.model,
+      mode: 'reference',
+      base_host: new URL(backends.agnes.base).host,
+    };
+  }
+  return {
+    name: 'bailian',
+    model: backends.bailian.model,
+    mode: backends.bailian.mode,
+    base_host: new URL(backends.bailian.base).host,
+  };
+}
+
 export async function processRemakeJobs({
   db,
   env,
@@ -416,7 +883,7 @@ export async function processRemakeJobs({
   limit = 1,
   jobId = '',
   waitMs = 0,
-  pollIntervalMs = 15_000,
+  pollIntervalMs = 6_000,
   sleepImpl = sleep,
   nowMs = Date.now(),
   userId = '',
@@ -427,8 +894,9 @@ export async function processRemakeJobs({
   } catch (err) {
     console.error('credit_refund', err && err.code ? err.code : 'error');
   }
-  const runtime = bailianRuntime(env);
-  if (!runtime.configured) throw fail('bailian_unconfigured');
+  const backends = videoBackends(env);
+  if (!providerConfigured(backends)) throw fail('bailian_unconfigured');
+  const runtime = backends.bailian;
   const bucket = env.MEDIA;
   const ctx = {
     db,
@@ -436,6 +904,8 @@ export async function processRemakeJobs({
     request,
     fetchImpl,
     runtime,
+    agnes: backends.agnes,
+    backends,
     bucket,
     origin: requestOrigin(request),
     limit,
@@ -451,7 +921,8 @@ export async function processRemakeJobs({
   while (waitMs > 0 && Date.now() < deadline) {
     const pending = processed.some((row) => row.status === 'running' || row.action === 'retry');
     if (!pending) break;
-    const delay = Math.min(pollIntervalMs, deadline - Date.now());
+    const backoff = processed.reduce((max, row) => Math.max(max, row && row.retry_after_ms ? row.retry_after_ms : 0), 0);
+    const delay = Math.min(Math.max(pollIntervalMs, backoff), Math.max(0, deadline - Date.now()));
     if (delay > 0) await sleepImpl(delay);
     ctx.pollOnly = true;
     ctx.onlyIds = watched;
@@ -460,11 +931,7 @@ export async function processRemakeJobs({
     if (next.length) processed = next;
   }
   return {
-    provider: {
-      model: runtime.model,
-      mode: runtime.mode,
-      base_host: new URL(runtime.base).host,
-    },
+    provider: summarizeProvider(backends, processed),
     processed,
   };
 }

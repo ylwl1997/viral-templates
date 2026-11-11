@@ -30,7 +30,19 @@ export const MIN_MEDIA_BYTES = 32;
 export const RESULT_LINK_TTL_SEC = 60 * 60;
 export const MAX_RETENTION_DAYS = 365;
 
-export const MEDIA_KINDS = new Set(['photo', 'photo-2', 'result']);
+export const MEDIA_KINDS = new Set([
+  'photo',
+  'photo-2',
+  'result',
+  'seg0',
+  'seg1',
+  'seg2',
+  'seg3',
+  'seg4',
+  'seg5',
+  'seg6',
+  'seg7',
+]);
 
 const text = new TextEncoder();
 
@@ -93,14 +105,32 @@ export function resultObjectKey(userId, jobId) {
   return `results/${userId}/${jobId}.mp4`;
 }
 
+/** Public reference slice Agnes fetches for one split piece. */
+export function segmentObjectKey(userId, jobId, index) {
+  if (!isSafeId(userId) || !isSafeId(jobId)) throw fail('storage_error');
+  if (!Number.isInteger(index) || index < 0 || index > 7) throw fail('storage_error');
+  return `uploads/${userId}/${jobId}/s${index}.mp4`;
+}
+
+/** Private generated piece, joined into the final result before the customer sees it. */
+export function partObjectKey(userId, jobId, index) {
+  if (!isSafeId(userId) || !isSafeId(jobId)) throw fail('storage_error');
+  if (!Number.isInteger(index) || index < 0 || index > 7) throw fail('storage_error');
+  return `results/${userId}/${jobId}/p${index}.mp4`;
+}
+
 export function assertObjectKey(key) {
   if (typeof key !== 'string' || key.length > 240 || key.includes('..') || key.includes('\\')) {
     throw fail('storage_error');
   }
   const photo = /^uploads\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/[01]\.(jpg|png|webp)$/;
+  const segment = /^uploads\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/s[0-7]\.mp4$/;
   const video = /^results\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\.mp4$/;
+  const part = /^results\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/p[0-7]\.mp4$/;
   const handoff = /^handoff\/[A-Za-z0-9_-]+\/[a-f0-9]{32}\.(jpg|png|webp)$/;
-  if (!photo.test(key) && !video.test(key) && !handoff.test(key)) throw fail('storage_error');
+  if (!photo.test(key) && !segment.test(key) && !video.test(key) && !part.test(key) && !handoff.test(key)) {
+    throw fail('storage_error');
+  }
   return key;
 }
 

@@ -5,7 +5,7 @@
  *   JOB_PROCESS_SECRET='...' node scripts/smoke-bailian.mjs
  *   SMOKE_BASE_URL=https://viral-templates.pages.dev   (default)
  *   SMOKE_JOB_ID=job_...                               (optional)
- *   SMOKE_INTERVAL_MS=15000
+ *   SMOKE_INTERVAL_MS=8000
  *   SMOKE_ATTEMPTS=40
  *
  * Create a signed-in job first (POST /api/jobs with a photo). Then run this
@@ -15,7 +15,7 @@
 const secret = typeof process.env.JOB_PROCESS_SECRET === 'string' ? process.env.JOB_PROCESS_SECRET.trim() : '';
 const base = (process.env.SMOKE_BASE_URL || 'https://viral-templates.pages.dev').replace(/\/$/, '');
 const jobId = typeof process.env.SMOKE_JOB_ID === 'string' ? process.env.SMOKE_JOB_ID.trim() : '';
-const intervalMs = clamp(process.env.SMOKE_INTERVAL_MS, 15_000, 2_000, 60_000);
+const intervalMs = clamp(process.env.SMOKE_INTERVAL_MS, 8_000, 5_000, 60_000);
 const attempts = clamp(process.env.SMOKE_ATTEMPTS, 40, 1, 80);
 
 if (secret.length < 16) {

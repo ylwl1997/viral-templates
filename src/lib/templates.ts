@@ -211,16 +211,16 @@ export const TEMPLATES: readonly Template[] = [
     status: 'live',
     photoCount: 1,
     creditCost: 15,
-    durationEn: '~12–15s',
-    durationZh: '约 12–15 秒',
+    durationEn: '~15s',
+    durationZh: '约 15 秒',
     taglineEn: '1 photo → fan-wipe outfit change (AI only — no real fan)',
     taglineZh: '1 张照片 → 吊扇换装转场（纯 AI · 勿绑真风扇）',
     seoTitleEn: 'Ceiling Fan Transition AI — 1 photo outfit change',
     seoTitleZh: 'Ceiling Fan Transition AI — 1 张照片换装转场',
     seoDescEn:
-      'One adult-consent photo → ~12–15s AI ceiling-fan outfit change. Never strap a phone to a fan. Adult consent required.',
+      'One adult-consent photo → ~15s AI ceiling-fan outfit change. Never strap a phone to a fan. Adult consent required.',
     seoDescZh:
-      '1 张成人同意照片 → 约 12–15 秒吊扇换装转场。切勿把手机绑在风扇上。需成人同意。',
+      '1 张成人同意照片 → 约 15 秒吊扇换装转场。切勿把手机绑在风扇上。需成人同意。',
     heroEn: 'One photo. A fan-wipe outfit change — never a real fan.',
     heroZh: '一张照片，一次吊扇换装 —— 切勿使用真风扇。',
     howEn: ['Upload 1 adult-consent photo', 'Confirm consent & safety note', 'Generate your clip'],
@@ -231,8 +231,9 @@ export const TEMPLATES: readonly Template[] = [
     demoVideo: '/brand/templates/ceiling-fan-demo.mp4',
     theme: { accent: 'cyan', heroPreset: 'centered', typeVoice: 'cool', cardStyle: 'mesh', coverStyle: 'radial', ambience: 'none' },
     disclaimerEn:
-      'Adult consent only · no minors. Pure AI — never strap a phone to a spinning fan. Not affiliated with CapCut.',
-    disclaimerZh: '仅限成人同意 · 禁止未成年人。纯 AI · 切勿把手机绑在旋转风扇上。非 CapCut 官方。',
+      'Adult consent only · no minors. Pure AI — never strap a phone to a spinning fan. Fan-made AI remix — not official CapCut, HoYoverse, miHoYo, or Genshin Impact.',
+    disclaimerZh:
+      '仅限成人同意 · 禁止未成年人。纯 AI · 切勿把手机绑在旋转风扇上。粉丝向 AI remix · 非 CapCut、HoYoverse、miHoYo 或 Genshin Impact 官方。',
     ...FAN_LIVE,
   },
   {

@@ -1,5 +1,5 @@
 import { JOB_MEDIA_COLUMNS, JOB_PROVIDER_COLUMNS, SCHEMA_SQL, schemaStatements } from './schema.js';
-import { getTemplate } from './templates.js';
+import { creditsForDuration, getTemplate } from './templates.js';
 
 const JOB_STATUSES = new Set(['queued', 'running', 'ready', 'failed']);
 const LEDGER_KINDS = new Set(['topup', 'deduction', 'refund']);
@@ -570,7 +570,8 @@ export async function revertQueuedJob(db, jobId) {
 }
 
 export function templateCreditCost(template) {
-  const cost = template && template.creditCost;
+  const seconds = template && template.durationSeconds;
+  const cost = creditsForDuration(seconds);
   if (!Number.isInteger(cost) || cost < 1 || cost > 120) return 0;
   return cost;
 }

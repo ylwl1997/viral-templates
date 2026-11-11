@@ -111,7 +111,7 @@ Auth + account APIs (Pages Functions):
 - `GET /api/account/credits`
 - `POST /api/jobs` — signed-in Generate queues a job, then `waitUntil` starts Bailian for that job. Photo bytes are stored in R2 when the `MEDIA` binding is present; otherwise the job still queues and `media.error` is `r2_unbound`. The browser does not send `JOB_PROCESS_SECRET`.
 - `POST /api/jobs/continue` — signed-in. Submits or polls one of that user's queued or running jobs. No process secret.
-- `POST /api/jobs/process` — ops-only drain for every user. Claims queued jobs, calls Bailian `wan2.2-animate-move`, stores the MP4 in R2, and marks the job `ready` or `failed`. Requires `JOB_PROCESS_SECRET` and `BAILIAN_API_KEY`. See [`docs/bailian-animate.md`](docs/bailian-animate.md).
+- `POST /api/jobs/process` — ops-only drain for every user. Claims queued jobs, calls Bailian `wan2.2-animate-mix`, stores the MP4 in R2, and marks the job `ready` or `failed`. Requires `JOB_PROCESS_SECRET` and `BAILIAN_API_KEY`. See [`docs/bailian-animate.md`](docs/bailian-animate.md).
 - `POST /api/jobs/{id}/result` — ops-only manual ingest. Stores a finished MP4 and sets `result_url`. Requires `RESULT_INGEST_SECRET`. Does not call Bailian.
 - `GET /api/media/jobs/{id}/{photo|photo-2|result}` — private download (owner session or signed `exp` + `sig`).
 
@@ -185,7 +185,7 @@ Same bucket from the CLI (needs Cloudflare credentials): `npx wrangler r2 bucket
 
 Details and env names: [`docs/credits-checkout.md`](docs/credits-checkout.md).
 
-- One credit is about one second. Live looks cost 10 (Bby Wow), 12 (Kiss Cam), and 15 (Ceiling Fan). A signed-in Generate deducts that cost when the photo is stored and the job is queued. A failed job, including a generation failure, refunds that deduction once. The first allowlisted sign-in stays at **0** credits. There is no starter grant.
+- One credit is one second of that look’s source clip, rounded to the nearest second (at least 1). The pages and the charge use that same number. A signed-in Generate deducts it when the photo is stored and the job is queued. A failed job, including a generation failure, refunds that deduction once. The first allowlisted sign-in stays at **0** credits. There is no starter grant. Unpublished looks have no duration and are not charged.
 - Desktop Create can open a 15-minute link so a phone can upload into the same draft. The photo stays in the private `MEDIA` bucket (`handoff/`). Refresh keeps the draft in this browser.
 - Photos are rejected when the shorter side is under 300 pixels or the long side is more than 2.5× the short side. The browser shrinks oversized phone photos before upload.
 - Each live look’s reference clip has an audio bed. The job worker copies that audio onto a finished clip that has none. If that copy fails, the job fails and the credits return. Stored MP4s get an XMP label (`trainedAlgorithmicMedia`). That is not a C2PA manifest.
@@ -193,7 +193,7 @@ Details and env names: [`docs/credits-checkout.md`](docs/credits-checkout.md).
 
 ### Known limits
 
-- Google sign-in runs when the secrets in [`docs/google-oauth.md`](docs/google-oauth.md) are set. Bailian `wan2.2-animate-move` runs after `BAILIAN_API_KEY` is set. Create starts it with `waitUntil`. Pages has no cron trigger; `workers/job-drain` posts `POST /api/jobs/process` every two minutes once that Worker is deployed ([`docs/bailian-animate.md`](docs/bailian-animate.md)). Inputs are uploaded to DashScope temporary storage (`oss://`). Do not pass `*.pages.dev` media URLs to Bailian. Aliyun cannot fetch them (`InvalidURL.ConnectionRefused`).
+- Google sign-in runs when the secrets in [`docs/google-oauth.md`](docs/google-oauth.md) are set. Bailian `wan2.2-animate-mix` runs after `BAILIAN_API_KEY` is set. Create starts it with `waitUntil`. Pages has no cron trigger; `workers/job-drain` posts `POST /api/jobs/process` every two minutes once that Worker is deployed ([`docs/bailian-animate.md`](docs/bailian-animate.md)). Inputs are uploaded to DashScope temporary storage (`oss://`). Do not pass `*.pages.dev` media URLs to Bailian. Aliyun cannot fetch them (`InvalidURL.ConnectionRefused`).
 - A pack refund or chargeback from the payment provider does not remove credits by itself. The credits page can store a short note for that case.
 - Session cookie is **host-only** (not shared across brand hosts). The database is shared. The same Google account maps to the same `user_id` on every host after signing in there, so credits and jobs follow the person. `/t/{slug}/` on the apex is the same host and the same cookie.
 - Brand Account link needs a prior brand-page visit (cookie) or open Sign in with `?next=/t/{slug}/…`
@@ -205,7 +205,7 @@ Details and env names: [`docs/credits-checkout.md`](docs/credits-checkout.md).
 |-----|---------|
 | `PUBLIC_SITE_APEX` | Apex hostname for Host / subdomain mapping (default `viral-templates.pages.dev`) |
 | `FAL_KEY` / `FAL_API_KEY` | Optional unused hook. Not the default generator |
-| `FAL_MODEL` | Optional unused model id. Default generation stays `wan2.2-animate-move` |
+| `FAL_MODEL` | Optional unused model id. Default generation stays `wan2.2-animate-mix` |
 | `WAFFO_MERCHANT_ID` | Pancake Merchant ID (`MER_`…). With the store id and private key, Buy can start. Missing any of them keeps Buy closed |
 | `WAFFO_PRIVATE_KEY` | Pancake API private key for the selected environment. Test key first. Do not commit it |
 | `WAFFO_PANCAKE_STORE_ID` | Pancake Store ID (`STO_`…). Dashboard → Settings → Store Profile |
@@ -225,7 +225,7 @@ Details and env names: [`docs/credits-checkout.md`](docs/credits-checkout.md).
 | `BAILIAN_API_KEY` | Pages secret for DashScope. Beijing workspace key. Do not commit. `DASHSCOPE_API_KEY` is used only when this is unset |
 | `BAILIAN_DASHSCOPE_BASE_URL` | Optional text. Default `https://llm-g1ozpdi7y5eyp1mh.cn-beijing.maas.aliyuncs.com/api/v1`. Set `https://dashscope.aliyuncs.com/api/v1` to use the classic host |
 | `BAILIAN_MODE` | Optional text. `wan-std` (default, cheaper) or `wan-pro` |
-| `BAILIAN_MODEL` | Optional text. Default `wan2.2-animate-move` |
+| `BAILIAN_MODEL` | Optional text. Default `wan2.2-animate-mix` |
 | `BAILIAN_PUBLIC_MEDIA_BASE` | Optional https origin Aliyun can fetch. Leave unset. `*.pages.dev` is rejected. The worker still uploads `oss://` |
 | `JOB_PROCESS_SECRET` | Bearer token for `POST /api/jobs/process` and the `workers/job-drain` cron. 16+ characters. Not the Bailian key. Create does not require the browser to send it |
 | `AUTH_SECRET` | HMAC for `vt_session`, the Google state cookie, and media download signatures (16+ chars). On `*.pages.dev` / localhost a public preview fallback is used if unset. Google sign-in refuses that fallback |

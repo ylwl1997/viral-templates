@@ -2,7 +2,7 @@
  * Store Create photos and finished MP4s.
  * Queueing a job does not call a video provider and does not mark it ready.
  * POST /api/jobs then starts Bailian with waitUntil. POST /api/jobs/process
- * is the ops drain (Bailian wan2.2-animate-move) and then
+ * is the ops drain (Bailian wan2.2-animate-mix) and then
  * writes the MP4 here. A clip is playable only after bytes are in R2 and the
  * job row is ready (see also POST /api/jobs/:id/result for a manual ingest).
  */

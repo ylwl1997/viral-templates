@@ -1,6 +1,24 @@
 /** Template catalog. logo = public path to brand mark. Ops routing uses slug — never in customer copy. */
 
 import { BBY_LIVE, FAN_LIVE, KISS_LIVE } from './liveCases';
+import { getTemplate as sourceTemplate } from '../../functions/_lib/templates.js';
+
+function liveTiming(slug: string) {
+  const source = sourceTemplate(slug);
+  const credits = source && source.creditCost;
+  const durationSeconds = source && source.durationSeconds;
+  if (!durationSeconds || !credits) throw new Error(`Live look ${slug} is missing a source duration`);
+  return {
+    durationSeconds,
+    creditCost: credits,
+    durationEn: `~${credits}s`,
+    durationZh: `约 ${credits} 秒`,
+  };
+}
+
+const bbyTiming = liveTiming('bby-wow');
+const kissTiming = liveTiming('kiss-cam');
+const fanTiming = liveTiming('ceiling-fan');
 
 export type TemplateStatus = 'live' | 'soon';
 
@@ -108,7 +126,9 @@ export type Template = {
   displayNameZh: string;
   status: TemplateStatus;
   photoCount: 1 | 2;
-  /** Credits charged when a signed-in generate stores a photo. About one per second. */
+  /** Source clip length in seconds. Absent on unpublished looks. */
+  durationSeconds?: number;
+  /** Credits charged when a signed-in generate stores a photo. Derived from durationSeconds. */
   creditCost?: number;
   durationEn: string;
   durationZh: string;
@@ -149,17 +169,15 @@ export const TEMPLATES: readonly Template[] = [
     displayNameZh: 'Bby Wow AI',
     status: 'live',
     photoCount: 1,
-    creditCost: 10,
-    durationEn: '~10s',
-    durationZh: '约 10 秒',
+    ...bbyTiming,
     taglineEn: '1 photo → vertical party-dance clip',
     taglineZh: '1 张照片 → 竖屏派对舞短片',
     seoTitleEn: 'Bby Wow AI — 1 photo party dance video',
     seoTitleZh: 'Bby Wow AI — 1 张照片派对舞短片',
     seoDescEn:
-      'Turn one adult-consent photo into a ~10s vertical party-dance AI video. Adult consent required.',
+      `Turn one adult-consent photo into a ~${bbyTiming.creditCost}s vertical party-dance AI video. Adult consent required.`,
     seoDescZh:
-      '用 1 张成人同意照片生成约 10 秒竖屏派对舞 AI 短片。需成人同意。',
+      `用 1 张成人同意照片生成约 ${bbyTiming.creditCost} 秒竖屏派对舞 AI 短片。需成人同意。`,
     heroEn: 'One photo. A vertical party-dance clip.',
     heroZh: '一张照片，一条竖屏派对舞短片。',
     howEn: ['Upload 1 adult-consent photo', 'Confirm consent', 'Generate your clip'],
@@ -179,9 +197,7 @@ export const TEMPLATES: readonly Template[] = [
     displayNameZh: 'Coldplay Kiss Cam AI',
     status: 'live',
     photoCount: 2,
-    creditCost: 12,
-    durationEn: '~11–12s',
-    durationZh: '约 11–12 秒',
+    ...kissTiming,
     taglineEn: '2 photos → stadium kiss-cam remix (no concert footage)',
     taglineZh: '2 张照片 → 球场大屏风（无演唱会素材）',
     seoTitleEn: 'Coldplay Kiss Cam AI — 2 photos stadium remix',
@@ -210,17 +226,15 @@ export const TEMPLATES: readonly Template[] = [
     displayNameZh: 'Ceiling Fan Transition AI',
     status: 'live',
     photoCount: 1,
-    creditCost: 15,
-    durationEn: '~15s',
-    durationZh: '约 15 秒',
+    ...fanTiming,
     taglineEn: '1 photo → fan-wipe outfit change (AI only — no real fan)',
     taglineZh: '1 张照片 → 吊扇换装转场（纯 AI · 勿绑真风扇）',
     seoTitleEn: 'Ceiling Fan Transition AI — 1 photo outfit change',
     seoTitleZh: 'Ceiling Fan Transition AI — 1 张照片换装转场',
     seoDescEn:
-      'One adult-consent photo → ~15s AI ceiling-fan outfit change. Never strap a phone to a fan. Adult consent required.',
+      `One adult-consent photo → ~${fanTiming.creditCost}s AI ceiling-fan outfit change. Never strap a phone to a fan. Adult consent required.`,
     seoDescZh:
-      '1 张成人同意照片 → 约 15 秒吊扇换装转场。切勿把手机绑在风扇上。需成人同意。',
+      `1 张成人同意照片 → 约 ${fanTiming.creditCost} 秒吊扇换装转场。切勿把手机绑在风扇上。需成人同意。`,
     heroEn: 'One photo. A fan-wipe outfit change — never a real fan.',
     heroZh: '一张照片，一次吊扇换装 —— 切勿使用真风扇。',
     howEn: ['Upload 1 adult-consent photo', 'Confirm consent & safety note', 'Generate your clip'],

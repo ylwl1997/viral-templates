@@ -1,8 +1,8 @@
-# Bailian animate-move (ops)
+# Bailian animate-mix (ops)
 
 Customer pages do not mention DashScope. This is the server path that turns a queued remake into an MP4.
 
-Model: `wan2.2-animate-move`. Mode: `wan-std` (cheaper). Override the mode with `BAILIAN_MODE=wan-pro`.
+Model: `wan2.2-animate-mix`. It replaces the person in the template video and keeps that video’s scene, motion, lighting, and outfits. Mode: `wan-std` (cheaper). Override the mode with `BAILIAN_MODE=wan-pro`. Override the model with `BAILIAN_MODEL`.
 
 The worker is HTTP only. Do not install or call the Bailian CLI from Pages.
 
@@ -14,9 +14,9 @@ The worker reads the subject photo from the private R2 binding and the template 
 
 Leave `BAILIAN_PUBLIC_MEDIA_BASE` unset. It is an allowlist for an https origin that mainland Aliyun can already fetch (not Cloudflare Pages). Setting it to `*.pages.dev` is rejected. This worker still uploads `oss://` and does not rewrite inputs onto that host.
 
-Subject image is the Create photo in R2 (`upload_key`, slot 0). Reference motion is that template’s demo MP4 (`/brand/templates/{slug}-demo.mp4` for `bby-wow`, `kiss-cam`, and `ceiling-fan`), read from `env.ASSETS` on the same deployment. The result URL from Bailian expires in about 24 hours. The worker downloads it and writes `results/{userId}/{jobId}.mp4`. The playable URL stored on the job is still this app’s signed `/api/media/...` link. That link is for the browser, not for Bailian.
+Subject image is the Create photo in R2 (`upload_key`, slot 0). The template video is that look’s demo MP4 (`/brand/templates/{slug}-demo.mp4` for `bby-wow`, `kiss-cam`, and `ceiling-fan`), read from `env.ASSETS` on the same deployment. The photo replaces the character in that video. The scene, motion, lighting, and outfits stay with the template. The result URL from Bailian expires in about 24 hours. The worker downloads it and writes `results/{userId}/{jobId}.mp4`. The playable URL stored on the job is still this app’s signed `/api/media/...` link. That link is for the browser, not for Bailian.
 
-`wan2.2-animate-move` takes one image. Kiss Cam still stores a second photo. That second photo is not sent. If Kiss Cam was queued with no saved photo, the job fails as `no_photo` and the account page shows that both photos are required.
+`wan2.2-animate-mix` takes one image. Kiss Cam still stores a second photo. That second photo is not sent. If Kiss Cam was queued with no saved photo, the job fails as `no_photo` and the account page shows that both photos are required.
 
 ## Secrets
 
@@ -28,7 +28,7 @@ Set these in **Workers & Pages → viral-templates → Settings → Variables an
 | `JOB_PROCESS_SECRET` | Secret | Yes | Random string, 16+ characters. Bearer token for `POST /api/jobs/process`. This is not the Bailian key. |
 | `BAILIAN_DASHSCOPE_BASE_URL` | Text | No | Default `https://llm-g1ozpdi7y5eyp1mh.cn-beijing.maas.aliyuncs.com/api/v1`. Set `https://dashscope.aliyuncs.com/api/v1` only if you want the classic host for submit and poll. |
 | `BAILIAN_MODE` | Text | No | `wan-std` (default) or `wan-pro`. |
-| `BAILIAN_MODEL` | Text | No | Default `wan2.2-animate-move`. |
+| `BAILIAN_MODEL` | Text | No | Default `wan2.2-animate-mix`. |
 | `BAILIAN_PUBLIC_MEDIA_BASE` | Text | No | Leave unset. An https origin mainland Aliyun can already fetch. `*.pages.dev`, `*.workers.dev`, and `*.r2.dev` are rejected. The worker does not send those hosts, and it still uploads `oss://`. |
 
 API host for the default base: `llm-g1ozpdi7y5eyp1mh.cn-beijing.maas.aliyuncs.com`.
@@ -67,7 +67,7 @@ If the column already exists, that `ALTER` reports a duplicate column. The statu
 
 1. Claim the oldest `queued` job that has a stored photo (or the `job_id` you pass). Status becomes `running`.
 2. Upload the photo and the template demo to DashScope temporary storage.
-3. `POST /services/aigc/image2video/video-synthesis` with `X-DashScope-Async: enable`, model `wan2.2-animate-move`, `parameters.mode` `wan-std` or `wan-pro`.
+3. `POST /services/aigc/image2video/video-synthesis` with `X-DashScope-Async: enable`, model `wan2.2-animate-mix`, `parameters.mode` `wan-std` or `wan-pro`.
 4. Save `provider_task_id`. A later call `GET /tasks/{task_id}`.
 5. On `SUCCEEDED`, download the MP4 and store it in R2. The job becomes `ready`. `result_url` is `/api/media/jobs/{id}/result?exp=&sig=`. The account page plays that URL.
 6. On `FAILED`, `CANCELED`, or `UNKNOWN`, the job becomes `failed`.
@@ -163,9 +163,7 @@ Customer notes do not include the API key. The process JSON `detail` is redacted
 
 ## Credits
 
-Generate does not deduct credits. `appendLedger` is not called from the queue. Failed jobs therefore do not refund.
-
-TODO: when a deduction is added, refund that amount from `markJobFailed` with kind `refund` and the same `job_id`. Do not refund twice.
+Generate deducts the look’s source-duration credits when the photo is stored. A failed job refunds that charge once. The amount is `Math.round(durationSeconds)`, at least 1. See [`credits-checkout.md`](credits-checkout.md).
 
 ## Manual ingest
 

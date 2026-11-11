@@ -1,5 +1,5 @@
 /**
- * One credit is about one second of a clip.
+ * One credit is one second of the look's source clip, rounded, at least 1.
  * Prices are what checkout charges when it is configured. Do not show them
  * as payable amounts until that is true.
  * Keep src/lib/site.ts packs in sync with these numbers.

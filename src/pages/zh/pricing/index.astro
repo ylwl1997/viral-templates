@@ -1,9 +1,14 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
 import { SITE } from '../../../lib/site';
+import { LIVE_TEMPLATES } from '../../../lib/templates';
 import PricingGrid from '../../../design/components/PricingGrid.astro';
 
 const { packs } = SITE.pricing;
+const costs = LIVE_TEMPLATES.map((t) => t.creditCost ?? 0).filter((n) => n > 0);
+const low = Math.min(...costs);
+const high = Math.max(...costs);
+const clipCredits = low === high ? String(low) : `${low}–${high}`;
 ---
 <Layout
   title={`价格 · ${SITE.name}`}
@@ -18,13 +23,13 @@ const { packs } = SITE.pricing;
   <section class="section wrap">
     <PricingGrid
       oneShotLabel="一条短片"
-      oneShotAmount="10–15"
-      oneShotMeta="积分，视效果而定"
+      oneShotAmount={clipCredits}
+      oneShotMeta="积分 · 按素材每秒 1 积分"
       packs={packs}
       packMeta="积分"
       creditUnit="积分"
       popularLabel="热门"
-      note="Bby Wow 10 积分，Kiss Cam 12 积分，Ceiling Fan 15 积分。短片没完成会退回这些积分。在账户里购买套餐。"
+      note="一条短片按该效果素材的秒数计费，四舍五入，每秒 1 积分。短片没完成会退回这些积分。在账户里购买套餐。"
     />
   </section>
 </Layout>

@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { JOB_MEDIA_COLUMNS, JOB_PROVIDER_COLUMNS, SCHEMA_SQL, schemaStatements } from '../functions/_lib/schema.js';
-import { appendLedger, chargeJobCredits, createStubJob, getCredits, listJobs, markJobFailed } from '../functions/_lib/account-db.js';
-import { getTemplate } from '../functions/_lib/templates.js';
+import { appendLedger, chargeJobCredits, createStubJob, getCredits, listJobs, markJobFailed, templateCreditCost } from '../functions/_lib/account-db.js';
+import { creditsForDuration, getTemplate } from '../functions/_lib/templates.js';
 
 const baseline = fs.readFileSync(new URL('../migrations/0001_account.sql', import.meta.url), 'utf8').trim();
 const alter = fs.readFileSync(new URL('../migrations/0002_r2_media.sql', import.meta.url), 'utf8');
@@ -225,11 +225,27 @@ assert(readyRows.jobs.length === 1 && readyRows.jobs[0].result_url === 'https://
 const queuedRows = await listJobs(db, userA, { status: 'queued' });
 assert(queuedRows.jobs.every((row) => row.result_url == null), 'queued url leaked');
 
+assert(creditsForDuration(6.041667) === 6, 'bby round');
+assert(creditsForDuration(15.278005) === 15, 'fan round');
+assert(creditsForDuration(0.2) === 1, 'minimum credit');
+assert(creditsForDuration(0) === 0 && creditsForDuration(null) === 0, 'no duration');
+const bby = getTemplate('bby-wow');
+const kiss = getTemplate('kiss-cam');
+const fan = getTemplate('ceiling-fan');
+assert(bby.durationSeconds === 6.041667 && bby.creditCost === 6, 'bby duration');
+assert(kiss.durationSeconds === 6.041667 && kiss.creditCost === 6, 'kiss duration');
+assert(fan.durationSeconds === 15.278005 && fan.creditCost === 15, 'fan duration');
+assert(templateCreditCost({ durationSeconds: 6.041667, creditCost: 99 }) === 6, 'duration wins');
+assert(templateCreditCost({ creditCost: 10 }) === 0, 'stale cost is not charged');
+for (const slug of ['bulin-47', 'zombie-love', 'smalltown-boy-cats', 'clapping-cat', 'knight-cat', 'car-jump']) {
+  const row = getTemplate(slug);
+  assert(row.durationSeconds == null && row.creditCost === 0 && templateCreditCost(row) === 0, slug);
+}
 const priced = await createStubJob(db, userA, 'bby-wow');
-const charge = await chargeJobCredits(db, userA, priced.id, getTemplate('bby-wow'));
-assert(charge.balance === 5 && charge.delta === -10, `charge ${charge.balance}`);
-const again = await chargeJobCredits(db, userA, priced.id, getTemplate('bby-wow'));
-assert(again.already === true && again.balance === 5, 'second charge moved the balance');
+const charge = await chargeJobCredits(db, userA, priced.id, bby);
+assert(charge.balance === 15 - bby.creditCost && charge.delta === -bby.creditCost, `charge ${charge.balance}`);
+const again = await chargeJobCredits(db, userA, priced.id, bby);
+assert(again.already === true && again.balance === 15 - bby.creditCost, 'second charge moved the balance');
 await expectCode(
   () => chargeJobCredits(db, userB, 'job_bobcharge01', getTemplate('bby-wow')),
   'insufficient_credits',

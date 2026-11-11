@@ -1,9 +1,10 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import { SITE } from '../../../lib/site';
 ---
 <Layout
-  title="服务条款"
-  description="Viral Templates 服务条款。"
+  title={`服务条款 · ${SITE.name}`}
+  description={`${SITE.name} 服务条款。`}
   canonicalPath="/terms/"
   lang="zh"
 >

@@ -1,6 +1,7 @@
 ---
 import type { Lang } from '../../lib/site';
 import HeaderAuth from '../../components/HeaderAuth.astro';
+import Wordmark from './Wordmark.astro';
 
 export type NavItem = { href: string; label: string; current?: boolean; muted?: boolean };
 
@@ -15,6 +16,8 @@ interface Props {
   zhHref?: string;
   cta?: { href: string; label: string } | { disabled: true; label: string };
   nextPath?: string;
+  /** Hub lockup. Brand sites keep their own logo and name. */
+  wordmark?: 'plain' | 'split';
 }
 
 const {
@@ -28,6 +31,7 @@ const {
   zhHref,
   cta,
   nextPath,
+  wordmark = 'plain',
 } = Astro.props;
 const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
 const en = enHref ?? (canonicalPath.startsWith('/') ? canonicalPath : `/${canonicalPath}`);
@@ -35,9 +39,15 @@ const zh = zhHref ?? (en === '/' ? '/zh/' : `/zh${en.endsWith('/') ? en : `${en}
 ---
 <header class="site-header" data-site-header>
   <div class="wrap header-inner">
-    <a class="logo" href={homeHref}>
-      <img src={logoSrc} width="28" height="28" alt="" />
-      {brandName}
+    <a class="logo" href={homeHref} aria-label={wordmark === 'split' ? brandName : undefined}>
+      {wordmark === 'split' ? (
+        <Wordmark />
+      ) : (
+        <>
+          <img src={logoSrc} width="28" height="28" alt="" />
+          {brandName}
+        </>
+      )}
     </a>
     <button
       type="button"

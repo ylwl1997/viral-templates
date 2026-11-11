@@ -13,8 +13,8 @@ const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
   id="questions"
   title={L('Questions', '常见问题')}
   lede={L(
-    'Photos, consent, credits, and what this demo does not do yet.',
-    '关于照片、授权、积分，以及这个演示目前还做不到的事。',
+    'Photos, consent, credits, and the looks you can open today.',
+    '关于照片、授权、积分，以及现在能打开的效果。',
   )}
   cta={{ href: pathFor(lang, '/create/'), label: L('Start creating', '开始制作') }}
   items={localizeFaq(HUB_FAQ, lang)}

@@ -17,10 +17,13 @@ interface Props {
   /** @deprecated use note */
   stubNote?: string;
   popularLabel?: string;
+  /** Unit after the credit count once a dollar price is shown. */
+  creditUnit?: string;
 }
 
-const { oneShotLabel, oneShotAmount, oneShotMeta, packs, packMeta, note, stubNote, popularLabel = 'Popular' } = Astro.props;
+const { oneShotLabel, oneShotAmount, oneShotMeta, packs, packMeta, note, stubNote, popularLabel = 'Popular', creditUnit = 'credits' } = Astro.props;
 const footerNote = note || stubNote;
+const usdLabel = (usd: number) => `$${usd.toFixed(2)}`;
 ---
 <div class="pricing-grid" data-pricing-grid>
   <div class="price-card">
@@ -34,8 +37,8 @@ const footerNote = note || stubNote;
         {p.label}
         {p.popular && <span class="popular-tag">{popularLabel}</span>}
       </h3>
-      <p class="amount" data-pack-amount>{p.credits}</p>
-      <p class="meta" data-pack-meta>{packMeta}</p>
+      <p class="amount" data-pack-amount>{p.usd != null ? usdLabel(p.usd) : p.credits}</p>
+      <p class="meta" data-pack-meta>{p.usd != null ? `${p.credits} ${creditUnit}` : packMeta}</p>
     </div>
   ))}
 </div>

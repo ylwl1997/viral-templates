@@ -1,9 +1,10 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
 import HubFaq from '../../../components/HubFaq.astro';
+import { SITE } from '../../../lib/site';
 ---
 <Layout
-  title="常见问题"
+  title={`常见问题 · ${SITE.name}`}
   description="关于照片、授权、积分，以及现在能打开的效果。"
   canonicalPath="/faq/"
   lang="zh"

@@ -6,14 +6,14 @@ import PricingGrid from '../../design/components/PricingGrid.astro';
 const { packs } = SITE.pricing;
 ---
 <Layout
-  title="Pricing"
-  description="Credits for short vertical clips. One credit is about one second."
+  title={`Pricing · ${SITE.name}`}
+  description="One credit is about one second. Starter $5.99, Mid $14.99, Large $39.99."
   canonicalPath="/pricing/"
   lang="en"
 >
   <div class="page-head wrap">
     <h1>Pricing</h1>
-    <p>One credit is about one second of a clip. Pack prices appear when checkout is open. Nothing on this page charges a card.</p>
+    <p>One credit is about one second of a clip. Pack prices are listed here. This page does not charge a card.</p>
   </div>
   <section class="section wrap">
     <PricingGrid
@@ -21,8 +21,9 @@ const { packs } = SITE.pricing;
       oneShotAmount="10–15"
       oneShotMeta="credits, depending on the look"
       packs={packs}
-      packMeta="credits · price when checkout is open"
-      note="Bby Wow uses 10 credits, Kiss Cam 12, Ceiling Fan 15. A clip that does not finish returns those credits. Buy from your account when checkout is open."
+      packMeta="credits"
+      creditUnit="credits"
+      note="Bby Wow uses 10 credits, Kiss Cam 12, Ceiling Fan 15. A clip that does not finish returns those credits. Buy a pack from your account."
     />
   </section>
 </Layout>

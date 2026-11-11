@@ -1,9 +1,10 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { SITE } from '../../lib/site';
 ---
 <Layout
-  title="Terms"
-  description="Terms of use for Viral Templates."
+  title={`Terms · ${SITE.name}`}
+  description={`Terms of use for ${SITE.name}.`}
   canonicalPath="/terms/"
   lang="en"
 >

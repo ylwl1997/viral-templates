@@ -1,6 +1,8 @@
 # Viral Templates
 
-Customer-facing product: **AI viral video templates**. Apex is a **minimal brand hub** (name + value + legal). Each template is an **independent brand site** — no public keyword matrix, no “directory of slugs” in the UI.
+Customer-facing name: **Swaystill** (https://swaystill.com). This repo, the Pages project, and the notes below keep the working name Viral Templates.
+
+Swaystill makes a short vertical clip from a photo you already have. The apex is a film-still gallery. Each template is an **independent brand site** — no public keyword matrix, no “directory of slugs” in the UI.
 
 - Live preview: https://viral-templates.pages.dev
 

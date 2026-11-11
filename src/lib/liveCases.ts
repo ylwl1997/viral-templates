@@ -1,4 +1,8 @@
+import { packPriceList } from './site';
 import type { LivePack } from './templates';
+
+const packsEn = packPriceList('en');
+const packsZh = packPriceList('zh');
 
 const photo = '/brand/templates';
 
@@ -111,16 +115,16 @@ export const BBY_LIVE: LivePack = {
       id: 'credits',
       qEn: 'How are credits calculated?',
       qZh: '积分怎么计算？',
-      aEn: 'This look uses 10 credits, about one per second. Pack prices show when checkout is open. A failed clip returns the 10 credits.',
-      aZh: '这个效果扣 10 积分，大约每秒 1 积分。结账开放后才显示套餐价格。短片失败会退回这 10 积分。',
+      aEn: `This look uses 10 credits, about one per second. Packs are ${packsEn}. A failed clip returns the 10 credits.`,
+      aZh: `这个效果扣 10 积分，大约每秒 1 积分。套餐为 ${packsZh}。短片失败会退回这 10 积分。`,
     },
     {
       id: 'free',
       qEn: 'Is Bby Wow AI free?',
       qZh: 'Bby Wow AI 免费吗？',
       aEn:
-        'No. This look uses 10 credits. You can buy credits only when checkout is open. Until then, nothing here charges a card.',
-      aZh: '不免费。这个效果扣 10 积分。只有结账开放时才能购买积分。在那之前，这里不会扣银行卡。',
+        `No. This look uses 10 credits. Packs are ${packsEn}. Buying a pack charges a card.`,
+      aZh: `不免费。这个效果扣 10 积分。套餐为 ${packsZh}。购买套餐会扣银行卡。`,
     },
     {
       id: 'kids',
@@ -267,15 +271,15 @@ export const KISS_LIVE: LivePack = {
       qEn: 'How much does it cost?',
       qZh: '怎么收费？',
       aEn:
-        'This look uses 12 credits, about one per second. Pack prices show when checkout is open. A failed clip returns the 12 credits.',
-      aZh: '这个效果扣 12 积分，大约每秒 1 积分。结账开放后才显示套餐价格。短片失败会退回这 12 积分。',
+        `This look uses 12 credits, about one per second. Packs are ${packsEn}. A failed clip returns the 12 credits.`,
+      aZh: `这个效果扣 12 积分，大约每秒 1 积分。套餐为 ${packsZh}。短片失败会退回这 12 积分。`,
     },
     {
       id: 'free',
       qEn: 'Is Coldplay Kiss Cam AI free?',
       qZh: 'Coldplay Kiss Cam AI 免费吗？',
-      aEn: 'No. This look uses 12 credits. Buying credits charges a card only when checkout is open.',
-      aZh: '不免费。这个效果扣 12 积分。只有结账开放时，购买才会扣银行卡。',
+      aEn: `No. This look uses 12 credits. Packs are ${packsEn}. Buying a pack charges a card.`,
+      aZh: `不免费。这个效果扣 12 积分。套餐为 ${packsZh}。购买套餐会扣银行卡。`,
     },
     {
       id: 'kids',
@@ -410,15 +414,15 @@ export const FAN_LIVE: LivePack = {
       id: 'credits',
       qEn: 'How are credits calculated?',
       qZh: '积分怎么计算？',
-      aEn: 'This look uses 15 credits, about one per second. Pack prices show when checkout is open. A failed clip returns the 15 credits.',
-      aZh: '这个效果扣 15 积分，大约每秒 1 积分。结账开放后才显示套餐价格。短片失败会退回这 15 积分。',
+      aEn: `This look uses 15 credits, about one per second. Packs are ${packsEn}. A failed clip returns the 15 credits.`,
+      aZh: `这个效果扣 15 积分，大约每秒 1 积分。套餐为 ${packsZh}。短片失败会退回这 15 积分。`,
     },
     {
       id: 'free',
       qEn: 'Is Ceiling Fan Transition AI free?',
       qZh: 'Ceiling Fan Transition AI 免费吗？',
-      aEn: 'No. This look uses 15 credits. Buying credits charges a card only when checkout is open.',
-      aZh: '不免费。这个效果扣 15 积分。只有结账开放时，购买才会扣银行卡。',
+      aEn: `No. This look uses 15 credits. Packs are ${packsEn}. Buying a pack charges a card.`,
+      aZh: `不免费。这个效果扣 15 积分。套餐为 ${packsZh}。购买套餐会扣银行卡。`,
     },
     {
       id: 'kids',

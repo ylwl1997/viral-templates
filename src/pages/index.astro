@@ -14,17 +14,17 @@ import { localizeFaq } from '../lib/templates';
 const lang = 'en' as const;
 ---
 <Layout
-  title={`${SITE.name} — short vertical clips from a photo`}
-  description="Pick a look, upload a photo, and make a short vertical clip. Adult consent required."
+  title={`${SITE.name} — a short clip from a photo you already have`}
+  description="Choose a look, upload a photo you already have, and keep the frame vertical. Adult consent required."
   canonicalPath="/"
   lang={lang}
 >
   <section class="hero wrap hero-hub">
     <div class="hero-copy">
-      <p class="eyebrow">Templates</p>
-      <h1>A short clip, from a photo you already have.</h1>
+      <p class="eyebrow">Still frames</p>
+      <h1>A short clip, held from a photo you already have.</h1>
       <p class="lede">
-        A quiet studio. Choose a look, upload a photo you already have, and keep the frame vertical. Adult consent required.
+        Choose a look, upload a photo you already have, and keep the frame vertical. Adult consent required.
       </p>
       <div class="hero-cta">
         <a class="btn btn-primary" href={pathFor(lang, '/create/')}>Start creating</a>
@@ -66,7 +66,7 @@ const lang = 'en' as const;
   <section class="section wrap" id="how">
     <div class="section-head">
       <h2>How it works</h2>
-      <p class="sub">The same quiet studio, here or on a look’s own page.</p>
+      <p class="sub">The same room, here or on a look’s own page.</p>
     </div>
     <StepsHow
       steps={[
@@ -80,14 +80,14 @@ const lang = 'en' as const;
   <FaqSplit
     id="faq"
     title="Questions"
-    lede="Photos, consent, and what generate returns on this demo."
+    lede="Photos, consent, and what a finished clip returns."
     cta={{ href: pathFor(lang, '/faq/'), label: 'All questions' }}
     items={localizeFaq(HUB_FAQ_COMPACT, lang)}
   />
 
   <FinalCta
-    title="Ready when you are."
-    lede="Open the studio, or start from a look you already like."
+    title="Start from a photo you already have."
+    lede="Open the studio, or begin with a look."
     primary={{ href: pathFor(lang, '/create/'), label: 'Start creating' }}
     secondary={{ href: pathFor(lang, '/pricing/'), label: 'Pricing' }}
   />

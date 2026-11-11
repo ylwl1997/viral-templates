@@ -7,7 +7,7 @@ interface Props {
 
 const { lang = 'en' } = Astro.props;
 const zh = lang === 'zh';
-const packs = SITE.pricing.packs.map((p) => `${p.label} ${p.credits} ${zh ? '积分' : 'credits'} / $${p.usd}`).join(' · ');
+const packLine = SITE.pricing.packs.map((p) => `${zh ? p.labelZh : p.label} ${p.credits}`).join(' · ');
 ---
 
 <div data-account-panel="credits" data-lang={lang}>
@@ -16,8 +16,8 @@ const packs = SITE.pricing.packs.map((p) => `${p.label} ${p.credits} ${zh ? '积
     <p>
       {
         zh
-          ? '余额和流水保存在你的账户中。购买积分尚未开放。'
-          : 'Balance and ledger are saved with your account. Buying credits is not open yet.'
+          ? '1 积分大约是短片的 1 秒。新账户从 0 开始。短片没完成，积分会退回。'
+          : 'One credit is about one second of a clip. A new account starts at 0. A clip that does not finish returns its credits.'
       }
     </p>
   </header>
@@ -26,12 +26,13 @@ const packs = SITE.pricing.packs.map((p) => `${p.label} ${p.credits} ${zh ? '积
     <span data-alert-text></span>
     <button type="button" class="btn btn-ghost btn-sm" data-retry hidden>Try again</button>
   </p>
+  <p class="account-alert" data-checkout-note hidden role="status"></p>
 
   <div class="card account-stat" style="margin-bottom:1.25rem">
     <p class="account-stat-label">{zh ? '当前余额' : 'Current balance'}</p>
     <p class="account-stat-value" data-balance>—</p>
     <p class="account-stat-meta">
-      {zh ? `计划每次生成 ${SITE.pricing.creditPerGenerate} 积分` : `${SITE.pricing.creditPerGenerate} credit per generate`}
+      {zh ? 'Bby Wow 10 · Kiss Cam 12 · Ceiling Fan 15' : 'Bby Wow 10 · Kiss Cam 12 · Ceiling Fan 15'}
     </p>
   </div>
 
@@ -45,36 +46,53 @@ const packs = SITE.pricing.packs.map((p) => `${p.label} ${p.credits} ${zh ? '积
       <p>
         {
           zh
-            ? '充值、扣费和退还会列在这里。购买积分尚未开放，本页不会扣款。'
-            : 'Top-ups, deductions, and refunds will be listed here. Buying credits is not open yet, and this page does not charge you.'
+            ? '充值、扣费和退还会列在这里。结账未开放时，本页不会扣款。'
+            : 'Top-ups, deductions, and refunds are listed here. Nothing is charged while checkout is closed.'
         }
       </p>
     </div>
     <ul class="ledger-list" data-list hidden></ul>
   </section>
 
-  <section class="account-block">
+  <section class="account-block" data-packs>
     <div class="account-block-head">
-      <h2>{zh ? '充值' : 'Top up'}</h2>
+      <h2>{zh ? '购买积分' : 'Buy credits'}</h2>
     </div>
-    <div class="card callout info">
-      <strong>{zh ? '即将开放 — 结账尚未开通。' : 'Coming soon — checkout is not open yet.'}</strong>
+    <div class="card callout info" data-pack-note>
+      <strong>{zh ? '结账未开放。' : 'Checkout is not open.'}</strong>
       {' '}
       {
         zh
-          ? `套餐（${packs}）稍后接入支付。本页不会产生任何扣款。`
-          : `Packs (${packs}) will open when payments are ready. No charge is made from this page.`
+          ? `套餐积分：${packLine}。价格会在可以付款时显示。现在不会扣款。`
+          : `Packs: ${packLine} credits. Prices appear when a purchase can actually start. Nothing is charged now.`
       }
     </div>
     <div class="pack-row">
       {
         SITE.pricing.packs.map((p) => (
-          <button type="button" class="btn btn-ghost pack-btn" disabled aria-disabled="true">
-            {p.label} · {p.credits} {zh ? '积分' : 'credits'} · ${p.usd}
-            {p.popular ? (zh ? ' · 热门' : ' · Popular') : ''}
+          <button type="button" class="btn btn-line pack-btn" data-pack={p.id} disabled aria-disabled="true">
+            <span data-pack-label>{zh ? p.labelZh : p.label} · {p.credits} {zh ? '积分' : 'credits'}</span>
           </button>
         ))
       }
     </div>
+  </section>
+
+  <section class="account-block">
+    <div class="account-block-head">
+      <h2>{zh ? '有问题' : 'Something off'}</h2>
+    </div>
+    <form class="support-note" data-support>
+      <p>
+        {
+          zh
+            ? '如果付款后积分没有到账，或失败的短片没有退回积分，写一条说明。我们按账户里的邮箱查看。'
+            : 'If a purchase did not add credits, or a failed clip did not return them, leave a note. We read it from the email on this account.'
+        }
+      </p>
+      <textarea name="message" rows="3" maxlength="400" required placeholder={zh ? '发生了什么' : 'What happened'}></textarea>
+      <button type="submit" class="btn btn-line">{zh ? '发送说明' : 'Send note'}</button>
+      <p data-support-status hidden></p>
+    </form>
   </section>
 </div>

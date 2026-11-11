@@ -79,8 +79,8 @@ const footerCols = [
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={name} />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#f7f4ee" />
-    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content={t.slug === 'bby-wow' ? '#1a120e' : t.slug === 'kiss-cam' ? '#101216' : t.slug === 'ceiling-fan' ? '#f4efe6' : '#f7f4ee'} />
+    <meta name="color-scheme" content={t.slug === 'bby-wow' || t.slug === 'kiss-cam' ? 'dark' : 'light'} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Noto+Serif+SC:wght@600;700&family=Outfit:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />

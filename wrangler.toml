@@ -25,6 +25,7 @@ migrations_dir = "migrations"
 # One bucket, key prefixes (do not enable the r2.dev public URL):
 #   uploads/{userId}/{jobId}/{0|1}.{jpg|png|webp}   photos, default 7 days
 #   results/{userId}/{jobId}.mp4                    finished clips, default 30 days
+#   handoff/{userId}/{token}.jpg|png|webp           phone upload, delete after 1 day
 #   templates/                                      reserved; the app does not write it
 # Lifecycle rules are set on the bucket, not by this binding. See docs/r2-media.md.
 # Bailian remake worker (values are NOT stored in this file):

@@ -1,0 +1,72 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+---
+<Layout
+  title="上传照片"
+  description="把照片送回你已经打开的那个画面。"
+  canonicalPath="/phone/"
+  lang="zh"
+>
+  <section class="wrap section" style="max-width: 28rem; margin-inline: auto;">
+    <h1>发送照片</h1>
+    <p class="lede">这个链接只接收一张照片，送到你另一块屏幕上已经打开的草稿。</p>
+    <form class="card" data-phone-form style="padding: 1.1rem;">
+      <label class="upload-zone" for="phone-photo">
+        <input id="phone-photo" type="file" accept="image/jpeg,image/png,image/webp" required />
+        <strong>选择照片</strong>
+        <div class="hint">JPG、PNG 或 WebP。较短边至少 300 像素。</div>
+      </label>
+      <button class="btn btn-primary" type="submit" style="margin-top: 1rem;">发送</button>
+      <p class="status-box" data-phone-status style="margin-top: 0.9rem;">选择照片后继续。</p>
+    </form>
+  </section>
+</Layout>
+<script is:inline>
+  (function () {
+    var form = document.querySelector('[data-phone-form]');
+    var status = document.querySelector('[data-phone-status]');
+    if (!form || !status) return;
+    var token = '';
+    try { token = new URLSearchParams(location.search).get('t') || ''; } catch (e) {}
+    function say(text, kind) {
+      status.textContent = text;
+      status.className = 'status-box' + (kind ? ' ' + kind : '');
+    }
+    if (!/^[a-f0-9]{32}$/.test(token)) {
+      say('这个链接无效。请从另一块屏幕重新开始。', 'err');
+      form.querySelector('button').disabled = true;
+      return;
+    }
+    form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var input = form.querySelector('input');
+      var file = input && input.files && input.files[0];
+      if (!file) return;
+      var btn = form.querySelector('button');
+      btn.disabled = true;
+      say('正在发送…', 'cfg');
+      var body = new FormData();
+      body.set('token', token);
+      body.set('photo', file, file.name || 'photo.jpg');
+      fetch('/api/uploads/phone/file', { method: 'POST', body: body })
+        .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data || {} }; }); })
+        .then(function (res) {
+          if (res.ok && res.data && res.data.ok) {
+            say('已发送。可以回到另一块屏幕。', 'cfg');
+            return;
+          }
+          var code = res.data && res.data.error;
+          if (code === 'photo_too_small') say('请换一张较短边至少 300 像素的照片。', 'err');
+          else if (code === 'photo_aspect') say('这张照片太宽或太高了。', 'err');
+          else if (code === 'upload_expired') say('链接已过期。请从另一块屏幕重新开始。', 'err');
+          else if (code === 'upload_unavailable') say('手机上传现在不可用。', 'err');
+          else say('这张照片没有发出去。', 'err');
+          btn.disabled = false;
+        })
+        .catch(function () {
+          say('这张照片没有发出去。', 'err');
+          btn.disabled = false;
+        });
+    });
+  })();
+</script>

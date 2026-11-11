@@ -36,13 +36,12 @@ export const SITE = {
   photoRetentionDays,
   videoRetentionDays,
   pricing: {
-    oneShotUsd: 2.99,
-    kissCamOneShotUsd: 4.99,
-    creditPerGenerate: 1,
+    /** One credit is about one second. Dollar amounts are charged only when checkout is open. */
+    creditPerSecond: 1,
     packs: [
-      { credits: 5, usd: 9.99, label: 'Starter' },
-      { credits: 15, usd: 24.99, label: 'Creator', popular: true },
-      { credits: 40, usd: 59.99, label: 'Studio' },
+      { id: 'starter', label: 'Starter', labelZh: '入门', credits: 60, cents: 599, usd: 5.99 },
+      { id: 'mid', label: 'Mid', labelZh: '进阶', credits: 180, cents: 1499, usd: 14.99, popular: true },
+      { id: 'large', label: 'Large', labelZh: '大包', credits: 600, cents: 3999, usd: 39.99 },
     ],
   },
   disclaimerEn:

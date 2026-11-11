@@ -18,6 +18,14 @@
   gap: 0.65rem 1.25rem;
   padding: 0.45rem 0;
 }
+[data-shell="hub"] .logo::before {
+  content: "";
+  width: 2px;
+  align-self: stretch;
+  min-height: 1.15rem;
+  background: var(--ink);
+  border-radius: 1px;
+}
 .logo {
   display: inline-flex;
   align-items: center;
@@ -1181,7 +1189,78 @@ html.login-open body { overflow: hidden; }
 [data-theme="kiss-cam"] .card {
   border-radius: 2px;
 }
-[data-theme="bby-wow"] .media-slot { border-radius: 1.35rem; }
+[data-theme="bby-wow"] .media-slot {
+  border-radius: 1.15rem 1.15rem 1.15rem 0.4rem;
+  border-color: rgba(224, 161, 90, 0.35);
+}
+[data-theme="bby-wow"] .media-slot-hero::after {
+  content: "";
+  position: absolute;
+  left: 0.7rem;
+  bottom: 0.75rem;
+  width: 2.6rem;
+  height: 0.72rem;
+  border-radius: 999px;
+  background: #e0a15a;
+  box-shadow: 0 0 0 3px rgba(26, 18, 14, 0.35);
+}
+[data-theme="kiss-cam"] .media-slot {
+  border-radius: 2px;
+  border: 1px solid rgba(213, 221, 230, 0.72);
+}
+[data-theme="kiss-cam"] .media-slot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: inset 0 0 0 8px #0c0e12, inset 0 0 0 9px rgba(213, 221, 230, 0.7);
+}
+[data-theme="ceiling-fan"] .hero {
+  position: relative;
+  overflow: hidden;
+}
+[data-theme="ceiling-fan"] .hero > * { position: relative; z-index: 1; }
+[data-theme="ceiling-fan"] .hero::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: -10%;
+  top: -30%;
+  width: 70%;
+  height: 80%;
+  background: radial-gradient(ellipse at center, rgba(70, 60, 48, 0.14), transparent 68%);
+  transform: rotate(-18deg);
+  pointer-events: none;
+  animation: fan-shadow 18s linear infinite;
+}
+@keyframes fan-shadow {
+  from { transform: rotate(-18deg); }
+  to { transform: rotate(342deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="ceiling-fan"] .hero::before { animation: none; }
+}
+.phone-handoff { margin-top: 0.85rem; }
+.phone-qr { width: 152px; margin-top: 0.6rem; background: #fff; padding: 0.35rem; }
+.phone-qr svg { display: block; width: 100%; height: auto; }
+.phone-link {
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+.pricing-note { margin-top: 1rem; color: var(--muted); font-size: 0.9rem; }
+.support-note textarea {
+  width: 100%;
+  margin: 0.6rem 0 0.8rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
 
 #look, #how, #pricing, #faq, #examples, #templates, #questions {
   scroll-margin-top: calc(var(--header-h) + 0.75rem);

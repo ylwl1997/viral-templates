@@ -1,8 +1,7 @@
 import { SITE } from './site';
 import type { FaqEntry } from './templates';
 
-const { oneShotUsd, kissCamOneShotUsd, packs, creditPerGenerate } = SITE.pricing;
-const packLine = packs.map((p) => p.credits).join(' / ');
+const packLine = SITE.pricing.packs.map((p) => p.credits).join(' / ');
 
 /** Hub-level questions. Brand pages keep their own keyword sets. */
 export const HUB_FAQ: readonly FaqEntry[] = [
@@ -68,8 +67,8 @@ export const HUB_FAQ: readonly FaqEntry[] = [
     qEn: 'Does generate return a finished video?',
     qZh: '生成会给出成片吗？',
     aEn:
-      'Signed-in Generate queues a job on your account and uses one credit. When it finishes, the clip is on your account. Buying credits is not open. There is no fake success clip.',
-    aZh: '登录后生成会把任务排进你的账户并扣 1 积分。完成后，成片会出现在你的账户里。购买积分尚未开通。不会伪造成功视频。',
+      'Signed-in Generate queues a job and uses the credits for that look. The clip shows on your account when it is ready. If it does not finish, those credits return. There is no fake success clip.',
+    aZh: '登录后生成会排队，并扣这个效果所需的积分。完成后，成片会出现在你的账户里。没完成则积分退回。不会伪造成功视频。',
   },
   {
     id: 'length',
@@ -83,16 +82,16 @@ export const HUB_FAQ: readonly FaqEntry[] = [
     id: 'credits',
     qEn: 'How do credits work?',
     qZh: '积分怎么计算？',
-    aEn: `Each generate uses ${creditPerGenerate} credit. Demo prices start at $${oneShotUsd} for a one-photo clip and $${kissCamOneShotUsd} for the two-photo kiss-cam look, with packs of ${packLine} credits. Checkout is not open.`,
-    aZh: `每次生成扣 ${creditPerGenerate} 积分。演示价格：一张照片的短片 $${oneShotUsd} 起，两张照片的 kiss cam $${kissCamOneShotUsd}，积分包为 ${packLine}。结账尚未开放。`,
+    aEn: `One credit is about one second. Bby Wow uses 10, Kiss Cam 12, and Ceiling Fan 15. Packs are ${packLine} credits. Prices show when checkout is open. A new account starts at 0 credits.`,
+    aZh: `1 积分大约 1 秒。Bby Wow 扣 10，Kiss Cam 扣 12，Ceiling Fan 扣 15。积分包为 ${packLine}。结账开放后才显示价格。新账户从 0 积分开始。`,
   },
   {
     id: 'free',
     qEn: 'Is Viral Templates free?',
     qZh: 'Viral Templates 免费吗？',
     aEn:
-      'No. Prices on the Pricing page are demo figures. Checkout is not open, so you cannot pay here yet. Generate is not a free finished download.',
-    aZh: '不免费。价格页上是演示数字。结账尚未开放，所以这里还不能付款。生成也不是一次免费的成片下载。',
+      'No. A clip uses credits. You can buy a pack only when checkout is open on this site. Until then, nothing here charges a card.',
+    aZh: '不免费。一条短片要消耗积分。只有本站结账开放时才能购买积分包。在那之前，这里不会扣银行卡。',
   },
   {
     id: 'kids',
@@ -113,9 +112,9 @@ export const HUB_FAQ: readonly FaqEntry[] = [
     qEn: 'What if generate fails? Is there a refund?',
     qZh: '生成失败会退款吗？',
     aEn:
-      'Checkout is not open on this demo, so no card is charged. The job is queued and a credit is used. The clip appears on your account when generation succeeds. If it fails, no clip is saved. When payments exist, refund rules will be on the Terms page.',
+      'The credits for that job return to your account. No clip is saved. A card is charged only after a completed pack purchase. If checkout is not open, buying does not charge you.',
     aZh:
-      '这个演示未开放结账，所以不会扣银行卡。任务会排队并扣 1 积分。生成成功后，成片会出现在你的账户里。失败则没有成片。支付上线后，退款规则写在服务条款里。',
+      '这次任务的积分会退回账户。不会留下成片。只有积分包真正付款完成后才会扣银行卡。结账未开放时，购买不会扣款。',
   },
   {
     id: 'retention',

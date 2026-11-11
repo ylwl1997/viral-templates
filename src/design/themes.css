@@ -60,74 +60,101 @@
 
 /* —— Live brands —— */
 
-/* Bby Wow — blush paper, soft serif, poster-left split */
-[data-theme="bby-wow"],
-.kw-site.accent-magenta {
-  --accent: #9d3458;
-  --accent-2: #9d3458;
-  --accent-bright: #7a2343;
-  --accent-soft: rgba(157, 52, 88, 0.08);
+/* Bby Wow — dim house after midnight, amber practical light, one wristband */
+[data-theme="bby-wow"] {
+  color-scheme: dark;
+  --accent: #e0a15a;
+  --accent-2: #e0a15a;
+  --accent-bright: #f0c48a;
+  --accent-soft: rgba(224, 161, 90, 0.16);
   --accent-dim: var(--accent-soft);
-  --link: #9d3458;
-  --link-hover: #7a2343;
-  --eyebrow: #9d3458;
-  --accent-ink: #fffaf8;
-  --cover-a: rgba(157, 52, 88, 0.2);
-  --cover-b: rgba(90, 40, 60, 0.08);
-  --cover-c: #f6e4ea;
-  --bg: #fbf3f0;
-  --bg-elevated: #fffaf8;
-  --surface: #fffaf8;
-  --surface-2: #f6ebe7;
-  --surface-3: #eddcd6;
+  --link: #f0c48a;
+  --link-hover: #f6d7ad;
+  --eyebrow: #e0a15a;
+  --accent-ink: #1a120e;
+  --ink: #f3e2c8;
+  --on-ink: #1a120e;
+  --text: #f6efe6;
+  --text-muted: #cbb8a4;
+  --secondary: #e7d7c6;
+  --muted: #cbb8a4;
+  --faint: #8d7764;
+  --border: rgba(243, 214, 176, 0.16);
+  --border-strong: rgba(243, 214, 176, 0.32);
+  --cover-a: rgba(224, 161, 90, 0.28);
+  --cover-b: rgba(40, 20, 10, 0.4);
+  --cover-c: #3a2418;
+  --bg: #1a120e;
+  --bg-elevated: #241910;
+  --surface: #2a1d14;
+  --surface-2: #3a281c;
+  --surface-3: #4a3424;
+  --ambience-opacity: 0.45;
 }
-[data-theme="bby-wow"] { --ambience-opacity: 0.5; }
+[data-theme="bby-wow"] .btn-primary:hover {
+  background: #fff6ea;
+  color: #1a120e;
+  border-color: #fff6ea;
+}
 
-/* Kiss Cam — newsprint, heavy serif, left rule */
-[data-theme="kiss-cam"],
-.kw-site.accent-amber {
-  --accent: #8a5a12;
-  --accent-2: #8a5a12;
-  --accent-bright: #6d460c;
-  --accent-soft: rgba(138, 90, 18, 0.1);
+/* Kiss Cam — night stadium, cool graphite, scoreboard bezel */
+[data-theme="kiss-cam"] {
+  color-scheme: dark;
+  --accent: #d5dde6;
+  --accent-2: #d5dde6;
+  --accent-bright: #f4f7fb;
+  --accent-soft: rgba(213, 221, 230, 0.12);
   --accent-dim: var(--accent-soft);
-  --link: #8a5a12;
-  --link-hover: #6d460c;
-  --eyebrow: #8a5a12;
-  --accent-ink: #fbf8f1;
-  --cover-a: rgba(138, 90, 18, 0.18);
-  --cover-b: rgba(60, 40, 12, 0.08);
-  --cover-c: #efe4cc;
-  --bg: #f3efe4;
-  --bg-elevated: #fbf8f1;
-  --surface: #fbf8f1;
-  --surface-2: #efe8d8;
-  --surface-3: #e4d9c4;
+  --link: #d5dde6;
+  --link-hover: #f4f7fb;
+  --eyebrow: #9aa6b4;
+  --accent-ink: #101216;
+  --ink: #f2f5f8;
+  --on-ink: #101216;
+  --text: #e7edf3;
+  --text-muted: #aeb8c4;
+  --secondary: #d5dde6;
+  --muted: #aeb8c4;
+  --faint: #7e8b99;
+  --border: rgba(213, 221, 230, 0.16);
+  --border-strong: rgba(213, 221, 230, 0.38);
+  --cover-a: rgba(180, 196, 214, 0.2);
+  --cover-b: rgba(8, 10, 14, 0.45);
+  --cover-c: #1c222b;
+  --bg: #101216;
+  --bg-elevated: #161a20;
+  --surface: #1b2129;
+  --surface-2: #252c36;
+  --surface-3: #303844;
+  --ambience-opacity: 0.55;
 }
-[data-theme="kiss-cam"] { --ambience-opacity: 0.7; }
+[data-theme="kiss-cam"] .btn-primary:hover {
+  background: #fff;
+  color: #101216;
+  border-color: #fff;
+}
 
-/* Ceiling Fan — cool mist, grotesque, flat hatch */
-[data-theme="ceiling-fan"],
-.kw-site.accent-cyan {
-  --accent: #0e5c56;
-  --accent-2: #0e5c56;
-  --accent-bright: #0a4540;
-  --accent-soft: rgba(14, 92, 86, 0.08);
+/* Ceiling Fan — daytime plaster and linen, one slow blade shadow */
+[data-theme="ceiling-fan"] {
+  --accent: #8d8376;
+  --accent-2: #8d8376;
+  --accent-bright: #5e564c;
+  --accent-soft: rgba(141, 131, 118, 0.12);
   --accent-dim: var(--accent-soft);
-  --link: #0e5c56;
-  --link-hover: #0a4540;
-  --eyebrow: #0e5c56;
-  --accent-ink: #f4f8f7;
-  --cover-a: rgba(14, 92, 86, 0.16);
-  --cover-b: rgba(20, 50, 48, 0.06);
-  --cover-c: #e3eeeb;
-  --bg: #eef3f1;
-  --bg-elevated: #f7faf9;
-  --surface: #f7faf9;
-  --surface-2: #e4eeeb;
-  --surface-3: #d5e3df;
+  --link: #6d6458;
+  --link-hover: #3f3a34;
+  --eyebrow: #8d8376;
+  --accent-ink: #f7f4ee;
+  --cover-a: rgba(160, 148, 132, 0.2);
+  --cover-b: rgba(90, 80, 68, 0.08);
+  --cover-c: #efe6d8;
+  --bg: #f4efe6;
+  --bg-elevated: #fbf7f1;
+  --surface: #fbf7f1;
+  --surface-2: #efe6d8;
+  --surface-3: #e4d8c8;
+  --ambience-opacity: 0;
 }
-[data-theme="ceiling-fan"] { --ambience-opacity: 0; }
 
 /* —— Soon brands: own paper, not a dark leftover —— */
 .kw-site.accent-violet,

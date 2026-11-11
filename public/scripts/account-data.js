@@ -75,6 +75,49 @@
     }
   }
 
+  function paintPacks(panel, checkout, lang) {
+    var note = panel.querySelector('[data-pack-note]');
+    var available = !!(checkout && checkout.available);
+    var packs = (checkout && checkout.packs) || [];
+    var byId = {};
+    packs.forEach(function (pack) { byId[pack.id] = pack; });
+    if (note) {
+      note.hidden = available;
+    }
+    panel.querySelectorAll('[data-pack]').forEach(function (btn) {
+      var pack = byId[btn.getAttribute('data-pack')];
+      var label = btn.querySelector('[data-pack-label]');
+      if (available && pack && pack.usd) {
+        btn.disabled = false;
+        btn.removeAttribute('aria-disabled');
+        btn.classList.toggle('btn-primary', !!pack.popular);
+        btn.classList.toggle('btn-line', !pack.popular);
+        if (label) {
+          var name = lang === 'zh' ? pack.label_zh || pack.label : pack.label;
+          label.textContent = name + ' · ' + pack.credits + (lang === 'zh' ? ' 积分' : ' credits') + ' · $' + pack.usd;
+        }
+      } else {
+        btn.disabled = true;
+        btn.setAttribute('aria-disabled', 'true');
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-line');
+      }
+    });
+    var banner = panel.querySelector('[data-checkout-note]');
+    if (!banner) return;
+    var flag = '';
+    try { flag = new URLSearchParams(location.search).get('checkout') || ''; } catch (e) {}
+    if (flag === 'return') {
+      banner.hidden = false;
+      banner.textContent = lang === 'zh'
+        ? '如果已经付款，余额会在确认后更新。回到这一页并不表示已经扣款成功。'
+        : 'If you paid, the balance updates after it is confirmed. Coming back to this page is not a payment.';
+    } else if (flag === 'cancel') {
+      banner.hidden = false;
+      banner.textContent = lang === 'zh' ? '没有完成付款，余额没有变化。' : 'The payment was not completed. Your balance is unchanged.';
+    }
+  }
+
   function clear(node) {
     while (node.firstChild) node.removeChild(node.firstChild);
   }
@@ -300,6 +343,12 @@
             renderLedger(list, data.ledger, lang);
             showList();
           }
+          var debug = '';
+          try { if (new URLSearchParams(location.search).get('debug') === '1') debug = '?debug=1'; } catch (e) {}
+          return fetch('/api/payments/status' + debug, { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (checkout) { paintPacks(panel, checkout || {}, lang); })
+            .catch(function () { paintPacks(panel, { available: false }, lang); });
         });
       } else {
         setLoading(panel, false);
@@ -336,6 +385,65 @@
     });
     var retry = panel.querySelector('[data-retry]');
     if (retry) retry.addEventListener('click', load);
+    panel.querySelectorAll('[data-pack]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        fetch('/api/payments/checkout', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ pack: btn.getAttribute('data-pack') }),
+        })
+          .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data || {} }; }); })
+          .then(function (res) {
+            var url = res.data && res.data.url;
+            if (res.ok && url && /^https:\/\//.test(url)) {
+              location.href = url;
+              return;
+            }
+            var banner = panel.querySelector('[data-checkout-note]');
+            if (banner) {
+              banner.hidden = false;
+              banner.textContent = lang === 'zh'
+                ? '购买没有开始，也没有扣款。'
+                : 'The purchase did not start, and you were not charged.';
+            }
+            btn.disabled = false;
+          })
+          .catch(function () {
+            btn.disabled = false;
+          });
+      });
+    });
+    var support = panel.querySelector('[data-support]');
+    if (support) {
+      support.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var field = support.querySelector('textarea');
+        var status = support.querySelector('[data-support-status]');
+        fetch('/api/account/support', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ message: field ? field.value : '' }),
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (!status) return;
+            status.hidden = false;
+            status.textContent = data && data.ok
+              ? (lang === 'zh' ? '已记下。' : 'Noted.')
+              : (lang === 'zh' ? '这条说明没有发出去。' : 'The note was not sent.');
+            if (data && data.ok && field) field.value = '';
+          })
+          .catch(function () {
+            if (!status) return;
+            status.hidden = false;
+            status.textContent = lang === 'zh' ? '这条说明没有发出去。' : 'The note was not sent.';
+          });
+      });
+    }
     load();
   }
 

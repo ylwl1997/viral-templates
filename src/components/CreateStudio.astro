@@ -11,22 +11,19 @@ interface Props {
 const { template: t, lang = 'en' } = Astro.props;
 const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
 const home = keywordPath(lang, t.slug, '');
-const price =
-  t.photoCount === 2 ? SITE.pricing.kissCamOneShotUsd : SITE.pricing.oneShotUsd;
+const credits = t.creditCost ?? 0;
 const slots = t.photoCount === 2 ? [0, 1] : [0];
 const uid = `cs-${t.slug}`;
 const signInBase = signInHref(lang);
 const creditsHref = accountHref(lang, 'credits');
 const creationsHref = accountHref(lang, 'creations');
-const generateReady = SITE.falConfigured;
-const payReady = SITE.waffoConfigured;
 const duration = lang === 'zh' ? t.durationZh : t.durationEn;
 const name = lang === 'zh' ? t.displayNameZh : t.displayName;
 const primaryCase = t.cases?.[0];
 const sources = primaryCase?.sources ?? [];
 const photoLabel = label('Your photo', '上传的照片');
 ---
-<section class="wrap create-studio" id={uid} data-generate-ready={generateReady ? '1' : '0'} data-pay-ready={payReady ? '1' : '0'} data-r2-ready={SITE.r2Configured ? '1' : '0'}>
+<section class="wrap create-studio" id={uid} data-r2-ready={SITE.r2Configured ? '1' : '0'}>
   <div class="credits-bar" data-credits-bar hidden>
     <div>
       <strong>{label('Credits', '积分')}</strong>
@@ -34,7 +31,7 @@ const photoLabel = label('Your photo', '上传的照片');
       <a href={creditsHref} style="margin-left:0.65rem">{label('Account', '账户')}</a>
     </div>
     <div>
-      {label('From', '起')} <strong>${price}</strong>
+      {label('This look', '这个效果')} <strong>{credits}</strong> {label(credits === 1 ? 'credit' : 'credits', '积分')}
       · <a href={`${home}#pricing`}>{label('Pricing', '价格')}</a>
     </div>
   </div>
@@ -68,6 +65,13 @@ const photoLabel = label('Your photo', '上传的照片');
               <img id={`${uid}-preview`} class="preview-img slot-preview" data-slot="0" alt="" hidden />
             </label>
           )}
+          <div class="phone-handoff" data-phone-handoff hidden>
+            <button type="button" class="btn btn-ghost" data-phone-start>
+              {label('Upload from your phone', '用手机上传')}
+            </button>
+            <div class="phone-qr" data-phone-qr hidden></div>
+            <p class="phone-link" data-phone-link hidden></p>
+          </div>
         </div>
       </div>
 
@@ -87,7 +91,7 @@ const photoLabel = label('Your photo', '上传的照片');
           <h3>{label('Length', '时长')}</h3>
           <div class="length-option">
             <strong>{duration}</strong>
-            <span>${price} · {SITE.pricing.creditPerGenerate} {label(SITE.pricing.creditPerGenerate === 1 ? 'credit' : 'credits', '积分')}</span>
+            <span>{credits} {label(credits === 1 ? 'credit' : 'credits', '积分')}</span>
           </div>
         </div>
       </div>
@@ -118,15 +122,9 @@ const photoLabel = label('Your photo', '上传的照片');
         >
           {label('Generate', '生成')}
         </button>
-        <button
-          class="btn btn-ghost"
-          id={`${uid}-pay`}
-          type="button"
-          disabled={!payReady}
-          aria-disabled={!payReady ? 'true' : undefined}
-        >
-          {payReady ? label('Pay', '支付') : label('Coming soon', '即将开放')}
-        </button>
+        <a class="btn btn-ghost" id={`${uid}-pay`} href={creditsHref}>
+          {label('Buy credits', '购买积分')}
+        </a>
       </div>
       <div class="status-box" id={`${uid}-status`}>
         {label(
@@ -175,14 +173,13 @@ const photoLabel = label('Your photo', '上传的照片');
   </div>
 </section>
 
-<script is:inline define:vars={{ photoCount: t.photoCount, uid, signInBase, lang, slug: t.slug, payReady }}>
+<script is:inline define:vars={{ photoCount: t.photoCount, uid, signInBase, lang, slug: t.slug }}>
   (function () {
     const root = document.getElementById(uid);
     if (!root) return;
     const files = {};
     const consent = document.getElementById(uid + '-consent');
     const btn = document.getElementById(uid + '-generate');
-    const pay = document.getElementById(uid + '-pay');
     const status = document.getElementById(uid + '-status');
     const creditsBar = root.querySelector('[data-credits-bar]');
     const debugEls = root.querySelectorAll('[data-debug-only]');
@@ -205,37 +202,208 @@ const photoLabel = label('Your photo', '上传的照片');
       else btn.setAttribute('aria-disabled', 'true');
       btn.textContent = lang === 'zh' ? '生成' : 'Generate';
     }
+    var draftKey = 'vt-draft:' + slug;
+    function photoMessage(kind) {
+      if (kind === 'small') return lang === 'zh' ? '请换一张较短边至少 300 像素的照片。' : 'Use a photo at least 300 pixels on the shorter side.';
+      if (kind === 'aspect') return lang === 'zh' ? '这张照片太宽或太高了。请换一张更接近常见比例的照片。' : 'That photo is too wide or too tall. Use a more ordinary shape.';
+      return lang === 'zh' ? '请上传 JPG、PNG 或 WebP 照片。' : 'Use a JPG, PNG, or WebP photo.';
+    }
+    function remember() {
+      var shots = [];
+      var slots = Object.keys(files);
+      if (!slots.length && !(consent && consent.checked)) {
+        try { localStorage.removeItem(draftKey); } catch (e) {}
+        return;
+      }
+      var left = slots.length;
+      if (!left) {
+        try { localStorage.setItem(draftKey, JSON.stringify({ consent: true, photos: [], at: Date.now() })); } catch (e) {}
+        return;
+      }
+      slots.forEach(function (slot) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          shots.push({ slot: slot, data: String(reader.result || '') });
+          left -= 1;
+          if (left) return;
+          try {
+            localStorage.setItem(draftKey, JSON.stringify({
+              consent: !!(consent && consent.checked),
+              photos: shots,
+              at: Date.now(),
+            }));
+          } catch (e) {}
+        };
+        reader.readAsDataURL(files[slot]);
+      });
+    }
+    function applyFile(slot, file) {
+      files[slot] = file;
+      var preview = root.querySelector('.slot-preview[data-slot="' + slot + '"]');
+      var placeholder = document.getElementById(uid + '-ph');
+      var url = URL.createObjectURL(file);
+      if (preview) {
+        preview.src = url;
+        preview.hidden = false;
+      }
+      if (placeholder) placeholder.hidden = true;
+      var slotEl = root.querySelector('.slot[data-slot="' + slot + '"]');
+      if (slotEl) slotEl.classList.add('has-file');
+      var compare = root.querySelector('[data-compare-original="' + slot + '"]');
+      if (compare) {
+        compare.src = url;
+        var fig = compare.closest('figure');
+        var cap = fig && fig.querySelector('figcaption');
+        if (cap) cap.textContent = lang === 'zh' ? '你的照片' : 'Your photo';
+      }
+      setStatus(lang === 'zh' ? '照片已就绪。请确认授权。' : 'Photo ready. Confirm consent to continue.', 'cfg');
+      syncGenerate();
+      remember();
+    }
+    function preparePhoto(file) {
+      return new Promise(function (resolve) {
+        if (!file || !/^image\/(jpeg|png|webp)$/i.test(file.type || '')) {
+          resolve({ error: 'bad' });
+          return;
+        }
+        var img = new Image();
+        var url = URL.createObjectURL(file);
+        img.onload = function () {
+          var w = img.naturalWidth || 0;
+          var h = img.naturalHeight || 0;
+          URL.revokeObjectURL(url);
+          if (!w || !h) { resolve({ error: 'bad' }); return; }
+          if (Math.min(w, h) < 300) { resolve({ error: 'small' }); return; }
+          if (Math.max(w, h) / Math.min(w, h) > 2.5) { resolve({ error: 'aspect' }); return; }
+          var long = Math.max(w, h);
+          var scale = long > 1280 ? 1280 / long : 1;
+          if (scale === 1 && file.size < 1200000 && /jpeg/i.test(file.type)) {
+            resolve({ file: file });
+            return;
+          }
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(w * scale));
+          canvas.height = Math.max(1, Math.round(h * scale));
+          var ctx = canvas.getContext('2d');
+          if (!ctx) { resolve({ error: 'bad' }); return; }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(function (blob) {
+            if (!blob) { resolve({ error: 'bad' }); return; }
+            resolve({ file: new File([blob], 'photo.jpg', { type: 'image/jpeg' }) });
+          }, 'image/jpeg', 0.86);
+        };
+        img.onerror = function () {
+          URL.revokeObjectURL(url);
+          resolve({ error: 'bad' });
+        };
+        img.src = url;
+      });
+    }
     root.querySelectorAll('.slot-file').forEach(function (input) {
       input.addEventListener('change', function () {
-        const slot = input.getAttribute('data-slot') || '0';
-        const file = input.files && input.files[0];
+        var slot = input.getAttribute('data-slot') || '0';
+        var file = input.files && input.files[0];
         if (!file) return;
-        files[slot] = file;
-        const preview = root.querySelector('.slot-preview[data-slot="' + slot + '"]');
-        const placeholder = document.getElementById(uid + '-ph');
-        var url = URL.createObjectURL(file);
-        if (preview) {
-          preview.src = url;
-          preview.hidden = false;
-        }
-        if (placeholder) placeholder.hidden = true;
-        const slotEl = input.closest('.slot');
-        if (slotEl) slotEl.classList.add('has-file');
-        var compare = root.querySelector('[data-compare-original="' + slot + '"]');
-        if (compare) {
-          compare.src = url;
-          var fig = compare.closest('figure');
-          var cap = fig && fig.querySelector('figcaption');
-          if (cap) cap.textContent = lang === 'zh' ? '你的照片' : 'Your photo';
-        }
-        setStatus(
-          lang === 'zh' ? '照片已就绪。请确认授权。' : 'Photo ready. Confirm consent to continue.',
-          'cfg'
-        );
-        syncGenerate();
+        setStatus(lang === 'zh' ? '正在检查照片…' : 'Checking the photo…', 'cfg');
+        preparePhoto(file).then(function (result) {
+          if (!result || result.error) {
+            delete files[slot];
+            setStatus(photoMessage(result && result.error), 'err');
+            syncGenerate();
+            return;
+          }
+          applyFile(slot, result.file);
+        });
       });
     });
-    if (consent) consent.addEventListener('change', syncGenerate);
+    if (consent) consent.addEventListener('change', function () { syncGenerate(); remember(); });
+    try {
+      var saved = JSON.parse(localStorage.getItem(draftKey) || 'null');
+      if (saved && saved.at && Date.now() - saved.at < 7 * 86400000) {
+        if (saved.consent && consent) consent.checked = true;
+        (saved.photos || []).forEach(function (shot) {
+          if (!shot || typeof shot.data !== 'string' || shot.data.indexOf('data:image/') !== 0) return;
+          fetch(shot.data).then(function (r) { return r.blob(); }).then(function (blob) {
+            applyFile(String(shot.slot || '0'), new File([blob], 'photo.jpg', { type: blob.type || 'image/jpeg' }));
+          }).catch(function () {});
+        });
+      }
+    } catch (e) {}
+    var phoneBox = root.querySelector('[data-phone-handoff]');
+    var phoneTimer = 0;
+    function wideScreen() {
+      try { return window.matchMedia('(min-width: 840px)').matches; } catch (e) { return false; }
+    }
+    function armPhone(user) {
+      if (!phoneBox) return;
+      phoneBox.hidden = !(user && wideScreen());
+    }
+    function placeQr(svg) {
+      var box = root.querySelector('[data-phone-qr]');
+      if (!box) return;
+      box.textContent = '';
+      box.hidden = false;
+      try {
+        var doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+        var node = doc.querySelector('svg');
+        if (node) box.appendChild(document.importNode(node, true));
+      } catch (e) {}
+    }
+    function pollPhone(token, tries) {
+      if (phoneTimer) window.clearTimeout(phoneTimer);
+      if (!token || tries > 90) return;
+      phoneTimer = window.setTimeout(function () {
+        fetch('/api/uploads/phone?token=' + encodeURIComponent(token), { credentials: 'same-origin' })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data && data.photo) {
+              return fetch(data.photo).then(function (r) { return r.blob(); }).then(function (blob) {
+                applyFile(String(data.slot || '0'), new File([blob], 'photo.jpg', { type: blob.type || 'image/jpeg' }));
+                setStatus(lang === 'zh' ? '手机上的照片已放进这里。' : 'The phone photo is in this draft.', 'cfg');
+              });
+            }
+            pollPhone(token, tries + 1);
+          })
+          .catch(function () { pollPhone(token, tries + 1); });
+      }, 2000);
+    }
+    var phoneStart = root.querySelector('[data-phone-start]');
+    if (phoneStart) {
+      phoneStart.addEventListener('click', function () {
+        requireUser(function (user) {
+          if (!user) {
+            setStatus(lang === 'zh' ? '请先登录后再用手机上传。' : 'Sign in to upload from a phone.', 'err');
+            goSignIn();
+            return;
+          }
+          var slot = files['0'] && photoCount > 1 && !files['1'] ? 1 : 0;
+          fetch('/api/uploads/phone', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ template_slug: slug, slot: slot }),
+          })
+            .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data || {} }; }); })
+            .then(function (res) {
+              if (!res.ok || !res.data.url) {
+                setStatus(lang === 'zh' ? '手机上传现在不可用。' : 'Phone upload is not available right now.', 'err');
+                return;
+              }
+              placeQr(res.data.svg || '');
+              var link = root.querySelector('[data-phone-link]');
+              if (link) {
+                link.hidden = false;
+                link.textContent = res.data.url;
+              }
+              setStatus(lang === 'zh' ? '用手机打开这个链接，照片会回到这里。' : 'Open this link on your phone. The photo comes back here.', 'cfg');
+              pollPhone(res.data.token, 0);
+            })
+            .catch(function () {
+              setStatus(lang === 'zh' ? '手机上传现在不可用。' : 'Phone upload is not available right now.', 'err');
+            });
+        });
+      });
+    }
     function goSignIn() {
       var next = location.pathname + location.search + location.hash;
       if (typeof window.vtOpenLogin === 'function') {
@@ -319,6 +487,7 @@ const photoLabel = label('Your photo', '上传的照片');
     }
     function applySession(user) {
       var bal = root.querySelector('[data-credits-balance]');
+      armPhone(user);
       if (creditsBar) creditsBar.hidden = !user;
       if (!user) {
         if (bal) bal.textContent = '—';
@@ -399,8 +568,20 @@ const photoLabel = label('Your photo', '上传的照片');
                 goSignIn();
                 return;
               }
+              if (data.error === 'insufficient_credits') {
+                setStatus(lang === 'zh' ? '积分不够。没完成的短片会退回积分。' : 'Not enough credits. A clip that does not finish returns its credits.', 'err');
+                return;
+              }
+              if (data.error === 'photo_too_small') {
+                setStatus(photoMessage('small'), 'err');
+                return;
+              }
+              if (data.error === 'photo_aspect') {
+                setStatus(photoMessage('aspect'), 'err');
+                return;
+              }
               if (data.error === 'bad_photo') {
-                setStatus(lang === 'zh' ? '请上传 JPG、PNG 或 WebP 照片。' : 'Use a JPG, PNG, or WebP photo.', 'err');
+                setStatus(photoMessage('bad'), 'err');
                 return;
               }
               if (data.error === 'photo_too_large') {
@@ -427,6 +608,7 @@ const photoLabel = label('Your photo', '上传的照片');
               setStatus(note || (lang === 'zh' ? '已加入队列。即将开始生成。' : 'Queued. Generation is starting.'), 'cfg');
               watchJob(job.id, 0);
             }
+            try { localStorage.removeItem(draftKey); } catch (e) {}
             if (follow) follow.hidden = false;
             var media = '';
             if (job.status === 'ready' && job.result_url) {
@@ -453,14 +635,5 @@ const photoLabel = label('Your photo', '上传的照片');
           });
       });
     });
-    if (pay) {
-      pay.addEventListener('click', function () {
-        if (!payReady) return;
-        setStatus(
-          lang === 'zh' ? '支付即将开放。' : 'Pay is coming soon.',
-          'cfg'
-        );
-      });
-    }
   })();
 </script>

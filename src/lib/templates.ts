@@ -108,6 +108,8 @@ export type Template = {
   displayNameZh: string;
   status: TemplateStatus;
   photoCount: 1 | 2;
+  /** Credits charged when a signed-in generate stores a photo. About one per second. */
+  creditCost?: number;
   durationEn: string;
   durationZh: string;
   taglineEn: string;
@@ -147,6 +149,7 @@ export const TEMPLATES: readonly Template[] = [
     displayNameZh: 'Bby Wow AI',
     status: 'live',
     photoCount: 1,
+    creditCost: 10,
     durationEn: '~10s',
     durationZh: '约 10 秒',
     taglineEn: '1 photo → vertical party-dance clip',
@@ -176,6 +179,7 @@ export const TEMPLATES: readonly Template[] = [
     displayNameZh: 'Coldplay Kiss Cam AI',
     status: 'live',
     photoCount: 2,
+    creditCost: 12,
     durationEn: '~11–12s',
     durationZh: '约 11–12 秒',
     taglineEn: '2 photos → stadium kiss-cam remix (no concert footage)',
@@ -206,6 +210,7 @@ export const TEMPLATES: readonly Template[] = [
     displayNameZh: 'Ceiling Fan Transition AI',
     status: 'live',
     photoCount: 1,
+    creditCost: 15,
     durationEn: '~12–15s',
     durationZh: '约 12–15 秒',
     taglineEn: '1 photo → fan-wipe outfit change (AI only — no real fan)',

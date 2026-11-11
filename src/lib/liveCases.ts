@@ -104,23 +104,23 @@ export const BBY_LIVE: LivePack = {
       qEn: 'How long is the video?',
       qZh: '视频有多长？',
       aEn:
-        'About 10 seconds, vertical. On this demo, Generate saves a queued job and uses one credit. It does not hand back a finished file yet.',
-      aZh: '大约 10 秒，竖屏。在这个演示里，生成会把任务排进账户并扣 1 积分，目前不会交回成片。',
+        'About 10 seconds, vertical. This look uses 10 credits. The clip shows on your account when it is ready.',
+      aZh: '大约 10 秒，竖屏。这个效果扣 10 积分。完成后，成片会出现在你的账户里。',
     },
     {
       id: 'credits',
       qEn: 'How are credits calculated?',
       qZh: '积分怎么计算？',
-      aEn: 'Each generate uses 1 credit. Prices on this page are demo prices. Buying credits is not open yet.',
-      aZh: '每次生成扣 1 积分。本页价格是演示价格。购买积分尚未开通。',
+      aEn: 'This look uses 10 credits, about one per second. Pack prices show when checkout is open. A failed clip returns the 10 credits.',
+      aZh: '这个效果扣 10 积分，大约每秒 1 积分。结账开放后才显示套餐价格。短片失败会退回这 10 积分。',
     },
     {
       id: 'free',
       qEn: 'Is Bby Wow AI free?',
       qZh: 'Bby Wow AI 免费吗？',
       aEn:
-        'No. A single clip and the credit packs have demo prices. Checkout is not open on this demo, and Generate does not return a finished video.',
-      aZh: '不免费。单次和积分包都有演示价格。这个演示未开放结账，生成也不会交回成片。',
+        'No. This look uses 10 credits. You can buy credits only when checkout is open. Until then, nothing here charges a card.',
+      aZh: '不免费。这个效果扣 10 积分。只有结账开放时才能购买积分。在那之前，这里不会扣银行卡。',
     },
     {
       id: 'kids',
@@ -141,9 +141,8 @@ export const BBY_LIVE: LivePack = {
       qEn: 'What if generate fails? Is there a refund?',
       qZh: '生成失败会退款吗？',
       aEn:
-        'Checkout is not open, so this demo does not take payment. Signed-in Generate queues a job and uses one credit. The clip appears on your account when generation succeeds. If it fails, no clip is saved. When checkout exists, refund rules will be on the Terms page.',
-      aZh:
-        '这个演示不收款。登录后生成会排队并扣 1 积分。生成成功后，成片会出现在你的账户里。失败则没有成片。真正收费后的退款规则，会写在服务条款里。',
+        'The 10 credits return to your account, and no clip is kept. A card is charged only after a pack purchase completes.',
+      aZh: '这 10 积分会退回账户，也不会留下成片。只有积分包付款完成后才会扣银行卡。',
     },
   ],
 };
@@ -260,23 +259,23 @@ export const KISS_LIVE: LivePack = {
       qEn: 'How long is the clip?',
       qZh: '短片有多长？',
       aEn:
-        'About 11–12 seconds. On this demo, Generate queues a job and uses one credit. A finished file is not returned yet.',
-      aZh: '大约 11–12 秒。这个演示里，生成会排队并扣 1 积分，目前不会交回成片。',
+        'About 11–12 seconds. This look uses 12 credits. The clip shows on your account when it is ready.',
+      aZh: '大约 11–12 秒。这个效果扣 12 积分。完成后，成片会出现在你的账户里。',
     },
     {
       id: 'price',
       qEn: 'How much does it cost?',
       qZh: '怎么收费？',
       aEn:
-        'The two-photo look has its own demo one-shot price, higher than a one-photo look, plus the same credit packs. One generate uses one credit. Buying credits and checkout are not open yet.',
-      aZh: '两张照片的效果有单独的演示单次价格，高于一张照片的效果，积分包相同。每次生成扣 1 积分。购买积分和结账都还没开放。',
+        'This look uses 12 credits, about one per second. Pack prices show when checkout is open. A failed clip returns the 12 credits.',
+      aZh: '这个效果扣 12 积分，大约每秒 1 积分。结账开放后才显示套餐价格。短片失败会退回这 12 积分。',
     },
     {
       id: 'free',
       qEn: 'Is Coldplay Kiss Cam AI free?',
       qZh: 'Coldplay Kiss Cam AI 免费吗？',
-      aEn: 'No. Demo prices are listed on this page. Checkout is not open on this demo.',
-      aZh: '不免费。本页列的是演示价格。这个演示尚未开放结账。',
+      aEn: 'No. This look uses 12 credits. Buying credits charges a card only when checkout is open.',
+      aZh: '不免费。这个效果扣 12 积分。只有结账开放时，购买才会扣银行卡。',
     },
     {
       id: 'kids',
@@ -290,9 +289,9 @@ export const KISS_LIVE: LivePack = {
       qEn: 'What if generate fails? Is there a refund?',
       qZh: '生成失败会退款吗？',
       aEn:
-        'Checkout is not open, so this demo does not charge a card. The job is queued and a credit is used. The clip appears on your account when generation succeeds. If it fails, no clip is saved. Refund terms for real payments will be on the Terms page when checkout exists.',
+        'The 12 credits return to your account, and no clip is kept. A card is charged only after a pack purchase completes.',
       aZh:
-        '这个演示不扣银行卡。任务会排队并扣 1 积分。生成成功后，成片会出现在你的账户里。失败则没有成片。真正付款后的退款规则会写在服务条款里。',
+        '这 12 积分会退回账户，也不会留下成片。只有积分包付款完成后才会扣银行卡。',
     },
   ],
 };
@@ -404,22 +403,22 @@ export const FAN_LIVE: LivePack = {
       qEn: 'How long is the video?',
       qZh: '视频有多长？',
       aEn:
-        'About 12–15 seconds. Generate queues a job and uses one credit. The file shows on your account when the job is ready.',
-      aZh: '大约 12–15 秒。生成会排队并扣 1 积分。任务完成后，成片会出现在你的账户里。',
+        'About 12–15 seconds. This look uses 15 credits. The clip shows on your account when it is ready.',
+      aZh: '大约 12–15 秒。这个效果扣 15 积分。完成后，成片会出现在你的账户里。',
     },
     {
       id: 'credits',
       qEn: 'How are credits calculated?',
       qZh: '积分怎么计算？',
-      aEn: 'One generate uses 1 credit. Prices on this page are a demo. Buying credits is not open.',
-      aZh: '每次生成 1 积分。本页是演示价格。购买积分尚未开通。',
+      aEn: 'This look uses 15 credits, about one per second. Pack prices show when checkout is open. A failed clip returns the 15 credits.',
+      aZh: '这个效果扣 15 积分，大约每秒 1 积分。结账开放后才显示套餐价格。短片失败会退回这 15 积分。',
     },
     {
       id: 'free',
       qEn: 'Is Ceiling Fan Transition AI free?',
       qZh: 'Ceiling Fan Transition AI 免费吗？',
-      aEn: 'No. Demo prices are listed, checkout is not open, and Generate does not return a finished video.',
-      aZh: '不免费。有演示价格，结账未开放，生成也不会交回成片。',
+      aEn: 'No. This look uses 15 credits. Buying credits charges a card only when checkout is open.',
+      aZh: '不免费。这个效果扣 15 积分。只有结账开放时，购买才会扣银行卡。',
     },
     {
       id: 'kids',
@@ -440,9 +439,8 @@ export const FAN_LIVE: LivePack = {
       qEn: 'What if generate fails? Is there a refund?',
       qZh: '生成失败会退款吗？',
       aEn:
-        'This demo does not take payment. Signed-in Generate queues a job and uses a credit. The clip appears on your account when generation succeeds. If it fails, no clip is saved. Paid refund rules will be on Terms when checkout opens.',
-      aZh:
-        '这个演示不收款。登录后会排队并扣 1 积分。生成成功后，成片会出现在你的账户里。失败则没有成片。结账开放后，退款规则写在服务条款里。',
+        'The 15 credits return to your account, and no clip is kept. A card is charged only after a pack purchase completes.',
+      aZh: '这 15 积分会退回账户，也不会留下成片。只有积分包付款完成后才会扣银行卡。',
     },
   ],
 };

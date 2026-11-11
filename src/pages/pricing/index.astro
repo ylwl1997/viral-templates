@@ -3,22 +3,26 @@ import Layout from '../../layouts/Layout.astro';
 import { SITE } from '../../lib/site';
 import PricingGrid from '../../design/components/PricingGrid.astro';
 
-const { packs, oneShotUsd, kissCamOneShotUsd } = SITE.pricing;
+const { packs } = SITE.pricing;
 ---
 <Layout
   title="Pricing"
-  description="Demo pricing for Viral Templates AI video products."
+  description="Credits for short vertical clips. One credit is about one second."
   canonicalPath="/pricing/"
   lang="en"
 >
-  <div class="page-head wrap"><h1>Pricing</h1><p>Demo figures — checkout opens when payments are ready.</p></div>
+  <div class="page-head wrap">
+    <h1>Pricing</h1>
+    <p>One credit is about one second of a clip. Pack prices appear when checkout is open. Nothing on this page charges a card.</p>
+  </div>
   <section class="section wrap">
     <PricingGrid
-      oneShotLabel="One-shot"
-      oneShotUsd={oneShotUsd}
-      oneShotMeta={`Kiss Cam from $${kissCamOneShotUsd} · Demo`}
+      oneShotLabel="A clip"
+      oneShotAmount="10–15"
+      oneShotMeta="credits, depending on the look"
       packs={packs}
-      note="Signed-in Generate queues a job and uses a credit. Buying credits is not open yet."
+      packMeta="credits · price when checkout is open"
+      note="Bby Wow uses 10 credits, Kiss Cam 12, Ceiling Fan 15. A clip that does not finish returns those credits. Buy from your account when checkout is open."
     />
   </section>
 </Layout>

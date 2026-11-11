@@ -10,14 +10,29 @@ export function accountError(err) {
     code === 'bad_limit' ||
     code === 'bad_photo' ||
     code === 'photo_too_large' ||
+    code === 'photo_too_small' ||
+    code === 'photo_aspect' ||
     code === 'bad_video' ||
     code === 'video_too_large' ||
-    code === 'bad_job'
+    code === 'bad_job' ||
+    code === 'bad_pack'
   ) {
     return jsonNoStore({ ok: false, error: code }, 400);
   }
   if (code === 'insufficient_credits') {
-    return jsonNoStore({ ok: false, error: code }, 409);
+    return jsonNoStore(
+      { ok: false, error: code, needed: err.needed, balance: err.balance },
+      409,
+    );
+  }
+  if (code === 'upload_expired') {
+    return jsonNoStore({ ok: false, error: code }, 410);
+  }
+  if (code === 'checkout_unavailable' || code === 'upload_unavailable') {
+    return jsonNoStore({ ok: false, error: code }, 503);
+  }
+  if (code === 'checkout_failed') {
+    return jsonNoStore({ ok: false, error: code }, 502);
   }
   if (code === 'unauthorized') {
     return jsonNoStore({ ok: false, error: 'unauthorized' }, 401);

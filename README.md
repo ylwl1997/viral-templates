@@ -92,7 +92,7 @@ Routes (EN + ZH, hub and `/t/{slug}/account/…` brand shells):
 
 - `/account/` Overview — balance, creation count, and recent jobs from D1
 - `/account/creations/` Jobs for the signed-in user (optional `?status=queued|running|ready|failed`)
-- `/account/credits/` Balance + ledger (top-up / deduction / refund). Buy button stays a checkout stub
+- `/account/credits/` Balance + ledger (top-up / deduction / refund). Buy starts checkout only when payment keys are set; otherwise it stays closed and does not charge
 - `/account/settings/` Profile read-only from session
 - `/account/sign-in/` **Google sign-in** for allowlisted emails. Preview login is localhost-only
 
@@ -127,6 +127,7 @@ npm run test:account
 npm run test:auth
 npm run test:media
 npm run test:bailian
+npm run test:payments
 npm run build
 npx wrangler pages dev dist --port 8788
 # Remote D1 `viral-templates` already exists; 0001_account.sql is applied.
@@ -177,10 +178,20 @@ The Workers binding cannot set lifecycle rules. Add them on the bucket (photos 7
 
 Same bucket from the CLI (needs Cloudflare credentials): `npx wrangler r2 bucket create viral-templates-media`.
 
+### Credits, phone upload, and checkout
+
+Details and env names: [`docs/credits-checkout.md`](docs/credits-checkout.md).
+
+- One credit is about one second. Live looks cost 10 (Bby Wow), 12 (Kiss Cam), and 15 (Ceiling Fan). A signed-in Generate deducts that cost when the photo is stored and the job is queued. A failed job, including a generation failure, refunds that deduction once. The first allowlisted sign-in stays at **0** credits. There is no starter grant.
+- Desktop Create can open a 15-minute link so a phone can upload into the same draft. The photo stays in the private `MEDIA` bucket (`handoff/`). Refresh keeps the draft in this browser.
+- Photos are rejected when the shorter side is under 300 pixels or the long side is more than 2.5× the short side. The browser shrinks oversized phone photos before upload.
+- Each live look’s reference clip has an audio bed. The job worker copies that audio onto a finished clip that has none. If that copy fails, the job fails and the credits return. Stored MP4s get an XMP label (`trainedAlgorithmicMedia`). That is not a C2PA manifest.
+- Pack prices are $5.99 / $14.99 / $39.99 for 60 / 180 / 600 credits, and only when checkout can run. Missing payment keys leave Buy closed: no redirect, no ledger row, no fake charge.
+
 ### Known limits
 
-- No Waffo checkout. Google sign-in runs when the secrets in [`docs/google-oauth.md`](docs/google-oauth.md) are set. Bailian `wan2.2-animate-move` runs after `BAILIAN_API_KEY` is set. Create starts it with `waitUntil`. Pages has no cron trigger; `workers/job-drain` posts `POST /api/jobs/process` every two minutes once that Worker is deployed ([`docs/bailian-animate.md`](docs/bailian-animate.md)). Inputs are uploaded to DashScope temporary storage (`oss://`). Do not pass `*.pages.dev` media URLs to Bailian. Aliyun cannot fetch them (`InvalidURL.ConnectionRefused`). Credits are not deducted yet, and a failed job does not refund (there is nothing to refund until a deduction exists).
-- Top-up buttons do not start checkout. Ledger rows are written only when a top-up, deduction, or refund is posted (no starter grant).
+- Google sign-in runs when the secrets in [`docs/google-oauth.md`](docs/google-oauth.md) are set. Bailian `wan2.2-animate-move` runs after `BAILIAN_API_KEY` is set. Create starts it with `waitUntil`. Pages has no cron trigger; `workers/job-drain` posts `POST /api/jobs/process` every two minutes once that Worker is deployed ([`docs/bailian-animate.md`](docs/bailian-animate.md)). Inputs are uploaded to DashScope temporary storage (`oss://`). Do not pass `*.pages.dev` media URLs to Bailian. Aliyun cannot fetch them (`InvalidURL.ConnectionRefused`).
+- A pack refund or chargeback from the payment provider does not remove credits by itself. The credits page can store a short note for that case.
 - Session cookie is **host-only** (not shared across brand hosts). The database is shared. The same Google account maps to the same `user_id` on every host after signing in there, so credits and jobs follow the person. `/t/{slug}/` on the apex is the same host and the same cookie.
 - Brand Account link needs a prior brand-page visit (cookie) or open Sign in with `?next=/t/{slug}/…`
 - No delete-account / export
@@ -190,9 +201,14 @@ Same bucket from the CLI (needs Cloudflare credentials): `npx wrangler r2 bucket
 | Key | Purpose |
 |-----|---------|
 | `PUBLIC_SITE_APEX` | Apex hostname for Host / subdomain mapping (default `viral-templates.pages.dev`) |
-| `FAL_KEY` / `FAL_API_KEY` | Real image→video (not wired in P0 UI) |
-| `FAL_MODEL` | fal model id |
-| `WAFFO_*` | Payments (stub only) |
+| `FAL_KEY` / `FAL_API_KEY` | Optional unused hook. Not the default generator |
+| `FAL_MODEL` | Optional unused model id. Default generation stays `wan2.2-animate-move` |
+| `WAFFO_API_KEY` | Checkout API key. With the three keys below, Buy can start. Missing any of them keeps Buy closed |
+| `WAFFO_MERCHANT_ID` | Merchant id sent with each order |
+| `WAFFO_PRIVATE_KEY` | Merchant RSA private key (PEM PKCS8 or PKCS1) used to sign create-order |
+| `WAFFO_PUBLIC_KEY` | Provider public key used to verify `X-SIGNATURE` on `POST /api/payments/waffo/webhook` |
+| `WAFFO_API_BASE` | Optional. Default `https://api-sandbox.waffo.com`. Production is `https://api.waffo.com` |
+| `WAFFO_CURRENCY` | Optional ISO currency. Default `USD`. The merchant account must accept it |
 | `PUBLIC_GA4_MEASUREMENT_ID` | GA4 |
 | `PUBLIC_ADSTERRA_SOCIAL_BAR_ZONE` | Adsterra Social Bar |
 | `DB` | Pages D1 binding (not an env string). One database for accounts, jobs, and credit ledger |
@@ -225,6 +241,7 @@ npm run test:account
 npm run test:auth
 npm run test:media
 npm run test:bailian
+npm run test:payments
 npm run smoke:bailian
 npm run pages:dev
 npx wrangler pages deploy dist --project-name=viral-templates

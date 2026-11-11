@@ -1,0 +1,72 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+<Layout
+  title="Upload a photo"
+  description="Send a photo back to the screen you started on."
+  canonicalPath="/phone/"
+  lang="en"
+>
+  <section class="wrap section" style="max-width: 28rem; margin-inline: auto;">
+    <h1>Send a photo</h1>
+    <p class="lede">This link only accepts one photo for the draft already open on your other screen.</p>
+    <form class="card" data-phone-form style="padding: 1.1rem;">
+      <label class="upload-zone" for="phone-photo">
+        <input id="phone-photo" type="file" accept="image/jpeg,image/png,image/webp" required />
+        <strong>Choose a photo</strong>
+        <div class="hint">JPG, PNG, or WebP. Shorter side at least 300 pixels.</div>
+      </label>
+      <button class="btn btn-primary" type="submit" style="margin-top: 1rem;">Send</button>
+      <p class="status-box" data-phone-status style="margin-top: 0.9rem;">Choose a photo to continue.</p>
+    </form>
+  </section>
+</Layout>
+<script is:inline>
+  (function () {
+    var form = document.querySelector('[data-phone-form]');
+    var status = document.querySelector('[data-phone-status]');
+    if (!form || !status) return;
+    var token = '';
+    try { token = new URLSearchParams(location.search).get('t') || ''; } catch (e) {}
+    function say(text, kind) {
+      status.textContent = text;
+      status.className = 'status-box' + (kind ? ' ' + kind : '');
+    }
+    if (!/^[a-f0-9]{32}$/.test(token)) {
+      say('This link is not valid. Start again from the other screen.', 'err');
+      form.querySelector('button').disabled = true;
+      return;
+    }
+    form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var input = form.querySelector('input');
+      var file = input && input.files && input.files[0];
+      if (!file) return;
+      var btn = form.querySelector('button');
+      btn.disabled = true;
+      say('Sending…', 'cfg');
+      var body = new FormData();
+      body.set('token', token);
+      body.set('photo', file, file.name || 'photo.jpg');
+      fetch('/api/uploads/phone/file', { method: 'POST', body: body })
+        .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data || {} }; }); })
+        .then(function (res) {
+          if (res.ok && res.data && res.data.ok) {
+            say('Sent. You can return to the other screen.', 'cfg');
+            return;
+          }
+          var code = res.data && res.data.error;
+          if (code === 'photo_too_small') say('Use a photo at least 300 pixels on the shorter side.', 'err');
+          else if (code === 'photo_aspect') say('That photo is too wide or too tall.', 'err');
+          else if (code === 'upload_expired') say('This link has expired. Start again from the other screen.', 'err');
+          else if (code === 'upload_unavailable') say('Phone upload is not available right now.', 'err');
+          else say('That photo could not be sent.', 'err');
+          btn.disabled = false;
+        })
+        .catch(function () {
+          say('That photo could not be sent.', 'err');
+          btn.disabled = false;
+        });
+    });
+  })();
+</script>

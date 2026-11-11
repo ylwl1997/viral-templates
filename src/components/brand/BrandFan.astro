@@ -11,14 +11,8 @@ if (!story) throw new Error('Ceiling Fan is missing its story');
 const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
 const { lead, support, beats, diy } = story;
 ---
-<section class="section wrap fan-safety">
-  <p class="eyebrow">{L(lead.eyebrowEn, lead.eyebrowZh)}</p>
-  <h2>{L(lead.titleEn, lead.titleZh)}</h2>
-  <p class="story-body">{L(lead.bodyEn, lead.bodyZh)}</p>
-</section>
-
-<section class="section wrap fan-story">
-  <div class="fan-story-col">
+<section class="section wrap">
+  <div class="fan-transition">
     <p class="eyebrow">{L(support.eyebrowEn, support.eyebrowZh)}</p>
     <h2>{L(support.titleEn, support.titleZh)}</h2>
     <p class="story-body">{L(support.bodyEn, support.bodyZh)}</p>
@@ -39,19 +33,29 @@ const { lead, support, beats, diy } = story;
   variant="fan"
   title={L('The photo you upload. The wipe you don’t film.', '上传的是照片，转场不用实拍。')}
   lede={L(
-    'Same person: a formal pale dress on the sofa, then later outfits through the blades.',
-    '同一个人：沙发上的浅色礼服，再经扇叶换到后面的衣服。',
+    'An ordinary everyday photo in casual clothes. No fan in the frame. The blades show up only in the result.',
+    '一张便装的普通日常照。画面里没有风扇。扇叶只出现在成片里。',
   )}
 />
 
+<section class="section wrap fan-safety">
+  <p class="eyebrow">{L(lead.eyebrowEn, lead.eyebrowZh)}</p>
+  <h2>{L(lead.titleEn, lead.titleZh)}</h2>
+  <p class="story-body">{L(lead.bodyEn, lead.bodyZh)}</p>
+</section>
+
 <section class="section wrap fan-diy">
-  <div class="fan-diy-col">
-    <p class="eyebrow">{L(diy.eyebrowEn, diy.eyebrowZh)}</p>
-    <h2>{L(diy.titleEn, diy.titleZh)}</h2>
-    <h3>{L(diy.hardTitleEn, diy.hardTitleZh)}</h3>
-    <p class="story-body">{L(diy.hardEn, diy.hardZh)}</p>
-    <h3 class="fan-diy-next">{L(diy.easyTitleEn, diy.easyTitleZh)}</h3>
-    <p class="story-body">{L(diy.easyEn, diy.easyZh)}</p>
+  <p class="eyebrow">{L(diy.eyebrowEn, diy.eyebrowZh)}</p>
+  <h2>{L(diy.titleEn, diy.titleZh)}</h2>
+  <div class="fan-diy-split">
+    <div>
+      <h3>{L(diy.hardTitleEn, diy.hardTitleZh)}</h3>
+      <p>{L(diy.hardEn, diy.hardZh)}</p>
+    </div>
+    <div class="fan-diy-easy">
+      <h3>{L(diy.easyTitleEn, diy.easyTitleZh)}</h3>
+      <p>{L(diy.easyEn, diy.easyZh)}</p>
+    </div>
   </div>
 </section>
 
@@ -60,7 +64,7 @@ const { lead, support, beats, diy } = story;
   lang={lang}
   howLede={L('Three steps. None of them use a real fan.', '三步。都不用真风扇。')}
   faqLede={L(
-    'The wipe, the first look, and the fan you leave alone.',
-    '关于转场、第一套造型，以及那台不要去碰的风扇。',
+    'The wipe, the photo you upload, and the fan you leave alone.',
+    '关于转场、上传的照片，以及那台不要去碰的风扇。',
   )}
 />

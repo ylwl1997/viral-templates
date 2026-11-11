@@ -229,7 +229,7 @@ export const TEMPLATES: readonly Template[] = [
     logo: '/brand/templates/ceiling-fan.svg',
     poster: '/brand/templates/ceiling-fan-poster.jpg',
     demoVideo: '/brand/templates/ceiling-fan-demo.mp4',
-    theme: { accent: 'cyan', heroPreset: 'centered', typeVoice: 'cool', cardStyle: 'mesh', coverStyle: 'radial', ambience: 'none' },
+    theme: { accent: 'cyan', heroPreset: 'split', typeVoice: 'cool', cardStyle: 'mesh', coverStyle: 'radial', ambience: 'none' },
     disclaimerEn:
       'Adult consent only · no minors. Pure AI — never strap a phone to a spinning fan. Fan-made AI remix — not official CapCut, HoYoverse, miHoYo, or Genshin Impact.',
     disclaimerZh:

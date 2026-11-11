@@ -57,7 +57,7 @@ Also required (outside `theme`): `logo`, EN+ZH names/taglines/hero/how/SEO/discl
 |------|------------|-----------|-----------|------------|----------|
 | `bby-wow` | split | playful | glow | orb | noise |
 | `kiss-cam` | editorial | bold | ribbon | stripes | grid |
-| `ceiling-fan` | centered | cool | mesh | radial | none |
+| `ceiling-fan` | split | cool | mesh | radial | none |
 
 Acceptance: three brand homes side-by-side are obviously different sites, not logo swaps.
 

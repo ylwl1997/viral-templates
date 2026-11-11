@@ -109,6 +109,29 @@ export async function ensureUser(db, user) {
   return row;
 }
 
+/** Oldest users row for this address, if one exists. Does not create a row. */
+export async function findUserByEmail(db, email) {
+  const normalized = oneLine(email, 200).toLowerCase();
+  if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) return null;
+  await ensureSchema(db);
+  const row = await db
+    .prepare(
+      `SELECT user_id, email, name
+       FROM users
+       WHERE lower(email) = ?
+       ORDER BY created_at ASC, user_id ASC
+       LIMIT 1`,
+    )
+    .bind(normalized)
+    .first();
+  if (!row || typeof row.user_id !== 'string' || !row.user_id) return null;
+  return {
+    user_id: String(row.user_id),
+    email: oneLine(row.email, 200).toLowerCase() || normalized,
+    name: oneLine(row.name, 80),
+  };
+}
+
 export function publicResultUrl(status, raw) {
   if (status !== 'ready' || typeof raw !== 'string' || !raw.trim()) return null;
   try {

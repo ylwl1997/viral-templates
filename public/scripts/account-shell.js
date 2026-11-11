@@ -3,6 +3,7 @@
     var list = Array.isArray(providers) ? providers : [];
     var labels = [];
     if (list.indexOf('google') >= 0) labels.push('Google');
+    if (list.indexOf('password') >= 0) labels.push(lang === 'zh' ? '测试登录' : 'Test sign-in');
     if (list.indexOf('preview') >= 0) labels.push(lang === 'zh' ? '预览登录' : 'Preview');
     if (!labels.length) return '—';
     return labels.join(lang === 'zh' ? '、' : ', ');

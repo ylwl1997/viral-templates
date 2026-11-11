@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { onRequestGet as onCallback } from '../functions/api/auth/google/callback.js';
 import { onRequestGet as onStart } from '../functions/api/auth/google/start.js';
+import { onRequestPost as onPassword } from '../functions/api/auth/password.js';
 import { onRequestPost as onPreview } from '../functions/api/auth/preview.js';
+import { onRequestGet as onSession } from '../functions/api/auth/session.js';
 import {
   codeChallengeS256,
   googleRedirectUri,
@@ -23,9 +26,12 @@ import {
   authEmailAllowed,
   authStatus,
   googleConfigured,
+  passwordAuthConfigured,
+  PREVIEW_AUTH_SECRET,
   previewLoginAllowed,
   readSession,
   stableUserId,
+  timingSafeEqualString,
 } from '../functions/_lib/session.js';
 
 const AUTH_SECRET = 'test-auth-secret-value';
@@ -204,12 +210,18 @@ assert(authEmailAllowed({}, 'ada@example.com') === false, 'fallback denies every
 assert(authEmailAllowed({}, '') === false, 'empty email is denied');
 
 const status = authStatus(new Request(`${APEX}/api/auth/session`), googleEnv);
-assert(status.google === true && status.auth_secret === true && status.preview === false, 'auth status');
+assert(
+  status.google === true && status.auth_secret === true && status.preview === false && status.password === false,
+  'auth status',
+);
 const fallback = authStatus(new Request(`${APEX}/api/auth/session`), {
   GOOGLE_CLIENT_ID: CLIENT_ID,
   GOOGLE_CLIENT_SECRET: CLIENT_SECRET,
 });
-assert(fallback.google === true && fallback.auth_secret === false && fallback.preview === false, 'no public secret for google');
+assert(
+  fallback.google === true && fallback.auth_secret === false && fallback.preview === false && fallback.password === false,
+  'no public secret for google',
+);
 
 assert(
   googleRedirectUri(APEX) === `${APEX}/api/auth/google/callback`,
@@ -692,5 +704,322 @@ assert(localOwner.status === 200, `local owner preview ${localOwner.status}`);
 const localOwnerBody = await localOwner.json();
 assert(localOwnerBody.user.email === OWNER_EMAIL, localOwnerBody.user.email);
 assert(setCookie(localOwner, 'vt_session').includes('HttpOnly'), 'allowlisted localhost preview sets a session');
+
+const TEST_PASSWORD = 'test-password-value';
+const FRESH_EMAIL = 'fresh-owner@example.com';
+const OTHER_EMAIL = 'other-owner@example.com';
+const UNLISTED_EMAIL = 'not-listed@example.com';
+const PASSWORD_ALLOWLIST = 'ada@example.com, fresh-owner@example.com, other-owner@example.com';
+
+function passwordEnv(overrides = {}) {
+  return {
+    AUTH_SECRET,
+    AUTH_TEST_EMAIL: 'ada@example.com',
+    AUTH_TEST_PASSWORD: TEST_PASSWORD,
+    AUTH_ALLOWED_EMAILS: PASSWORD_ALLOWLIST,
+    DB: db,
+    ...overrides,
+  };
+}
+
+async function postPassword(origin, env, body) {
+  const logs = [];
+  const previous = {
+    log: console.log,
+    error: console.error,
+    info: console.info,
+    debug: console.debug,
+    warn: console.warn,
+  };
+  const capture = (...args) => {
+    logs.push(args.map((item) => (typeof item === 'string' ? item : JSON.stringify(item))).join(' '));
+  };
+  console.log = capture;
+  console.error = capture;
+  console.info = capture;
+  console.debug = capture;
+  console.warn = capture;
+  try {
+    const res = await onPassword({
+      request: new Request(`${origin}/api/auth/password`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body ?? {}),
+      }),
+      env,
+    });
+    return { res, logs };
+  } finally {
+    console.log = previous.log;
+    console.error = previous.error;
+    console.info = previous.info;
+    console.debug = previous.debug;
+    console.warn = previous.warn;
+  }
+}
+
+function userByEmail(email) {
+  return sqlite.prepare('SELECT user_id, email, name FROM users WHERE lower(email) = ?').get(email) ?? null;
+}
+
+function creditBalance(userId) {
+  const row = sqlite.prepare('SELECT balance FROM credit_accounts WHERE user_id = ?').get(userId);
+  return row ? row.balance : null;
+}
+
+assert((await timingSafeEqualString(TEST_PASSWORD, TEST_PASSWORD)) === true, 'equal secrets match');
+assert((await timingSafeEqualString(TEST_PASSWORD, `${TEST_PASSWORD} `)) === false, 'trailing space differs');
+assert((await timingSafeEqualString('a', 'ab')) === false, 'different lengths differ');
+assert((await timingSafeEqualString('', TEST_PASSWORD)) === false, 'empty secret differs');
+
+assert(
+  passwordAuthConfigured(
+    { AUTH_SECRET, AUTH_TEST_EMAIL: ' A@B.co ', AUTH_TEST_PASSWORD: TEST_PASSWORD },
+    'viral-templates.pages.dev',
+  ) === true,
+  'real secret enables password on pages.dev',
+);
+assert(
+  passwordAuthConfigured(
+    { AUTH_TEST_EMAIL: 'a@b.co', AUTH_TEST_PASSWORD: TEST_PASSWORD, AUTH_PREVIEW_LOGIN: '1' },
+    'viral-templates.pages.dev',
+  ) === false,
+  'preview fallback does not enable password',
+);
+assert(
+  passwordAuthConfigured({ AUTH_TEST_EMAIL: 'a@b.co', AUTH_TEST_PASSWORD: TEST_PASSWORD }, 'localhost') === false,
+  'localhost fallback does not enable password',
+);
+assert(
+  passwordAuthConfigured({ AUTH_SECRET, AUTH_TEST_PASSWORD: TEST_PASSWORD }, 'example.com') === false,
+  'missing test email',
+);
+assert(
+  passwordAuthConfigured({ AUTH_SECRET, AUTH_TEST_EMAIL: '   ', AUTH_TEST_PASSWORD: TEST_PASSWORD }, 'example.com') ===
+    false,
+  'blank test email',
+);
+assert(
+  passwordAuthConfigured({ AUTH_SECRET, AUTH_TEST_EMAIL: 'not-an-email', AUTH_TEST_PASSWORD: TEST_PASSWORD }, 'example.com') ===
+    false,
+  'test email must be an email',
+);
+assert(
+  passwordAuthConfigured({ AUTH_SECRET, AUTH_TEST_EMAIL: 'a@b.co' }, 'example.com') === false,
+  'missing test password',
+);
+assert(
+  passwordAuthConfigured({ AUTH_SECRET, AUTH_TEST_EMAIL: 'a@b.co', AUTH_TEST_PASSWORD: '   ' }, 'example.com') === false,
+  'whitespace test password',
+);
+assert(
+  passwordAuthConfigured(
+    { AUTH_SECRET: 'short-secret', AUTH_TEST_EMAIL: 'a@b.co', AUTH_TEST_PASSWORD: TEST_PASSWORD },
+    'example.com',
+  ) === false,
+  'short secret is not real',
+);
+assert(
+  passwordAuthConfigured(
+    { AUTH_SECRET: PREVIEW_AUTH_SECRET, AUTH_TEST_EMAIL: 'a@b.co', AUTH_TEST_PASSWORD: TEST_PASSWORD },
+    'viral-templates.pages.dev',
+  ) === false,
+  'public preview string is not a real secret',
+);
+
+const statusEmail = 'owner-test@example.com';
+const configuredStatus = passwordEnv({ AUTH_TEST_EMAIL: statusEmail });
+const sessionRes = await onSession({
+  request: new Request(`${APEX}/api/auth/session`),
+  env: configuredStatus,
+});
+const sessionBody = await sessionRes.json();
+assert(sessionBody.password === true && sessionBody.user === null, 'session reports password without a user');
+assert(!JSON.stringify(sessionBody).includes(statusEmail), 'session status does not expose the test email');
+assert(sessionBody.test_email === undefined && sessionBody.AUTH_TEST_EMAIL === undefined, 'no email field on status');
+const offStatus = authStatus(new Request(`${APEX}/api/auth/session`), { AUTH_SECRET });
+assert(offStatus.password === false, 'password flag is false when the test secrets are missing');
+
+const missingSecretCases = [
+  ['no AUTH_SECRET on pages.dev', APEX, passwordEnv({ AUTH_SECRET: undefined })],
+  ['no AUTH_SECRET on localhost', 'http://localhost:8788', passwordEnv({ AUTH_SECRET: undefined })],
+  ['preview string as AUTH_SECRET', APEX, passwordEnv({ AUTH_SECRET: PREVIEW_AUTH_SECRET })],
+  ['missing email', APEX, passwordEnv({ AUTH_TEST_EMAIL: undefined })],
+  ['blank email', APEX, passwordEnv({ AUTH_TEST_EMAIL: '  ' })],
+  ['missing password', APEX, passwordEnv({ AUTH_TEST_PASSWORD: undefined })],
+  ['blank password', APEX, passwordEnv({ AUTH_TEST_PASSWORD: ' \n ' })],
+  ['preview flag cannot enable it', 'https://abc.viral-templates.pages.dev', passwordEnv({ AUTH_SECRET: undefined, AUTH_PREVIEW_LOGIN: '1' })],
+];
+const unavailableShapes = [];
+for (const [label, origin, env] of missingSecretCases) {
+  const { res, logs } = await postPassword(origin, env, { email: 'ada@example.com', password: TEST_PASSWORD });
+  const payload = await res.json();
+  assert(res.status === 403, `${label} status ${res.status}`);
+  assert(payload.error === 'password_unavailable', label);
+  assert(!JSON.stringify(payload).includes(TEST_PASSWORD), `${label} leaked the password`);
+  assert(!logs.join('\n').includes(TEST_PASSWORD), `${label} logged the password`);
+  assert(res.headers.getSetCookie().length === 0, `${label} set a cookie`);
+  unavailableShapes.push(JSON.stringify(payload));
+}
+assert(new Set(unavailableShapes).size === 1, 'missing secrets share one response');
+
+const branchPreview = await onPreview({
+  request: new Request('https://abc.viral-templates.pages.dev/api/auth/preview', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'ada@example.com', name: 'Ada' }),
+  }),
+  env: { ...passwordEnv(), AUTH_PREVIEW_LOGIN: '1', GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: CLIENT_SECRET },
+});
+assert(branchPreview.status === 403, `pages.dev preview ${branchPreview.status}`);
+const branchPreviewBody = await branchPreview.json();
+assert(branchPreviewBody.error === 'preview_disabled', branchPreviewBody.error);
+assert(!setCookie(branchPreview, 'vt_session'), 'password secrets do not open preview on pages.dev');
+assert(
+  previewLoginAllowed(
+    { ...passwordEnv(), AUTH_PREVIEW_LOGIN: '1' },
+    'abc.viral-templates.pages.dev',
+  ) === false,
+  'previewLoginAllowed stays closed on pages.dev',
+);
+
+const adaBefore = userByEmail('ada@example.com');
+const adaCredits = creditBalance(adaBefore.user_id);
+const usersBeforePassword = userCount();
+
+async function assertInvalid(label, env, body) {
+  const { res, logs } = await postPassword(APEX, env, body);
+  const payload = await res.json();
+  const postedPassword = body && typeof body.password === 'string' ? body.password : '';
+  assert(res.status === 401, `${label} status ${res.status}`);
+  assert(payload.ok === false && payload.error === 'invalid_credentials', label);
+  assert(payload.message === 'Invalid email or password.', label);
+  assert(!JSON.stringify(payload).includes(postedPassword), `${label} leaked the password`);
+  assert(!JSON.stringify(payload).includes('AUTH_TEST_'), `${label} named a secret`);
+  assert(res.headers.getSetCookie().length === 0, `${label} set a cookie`);
+  assert(!logs.join('\n').includes(postedPassword), `${label} logged the password`);
+  return JSON.stringify(payload);
+}
+
+const wrongPassword = await assertInvalid('wrong password', passwordEnv(), {
+  email: 'Ada@Example.com',
+  password: 'wrong-password-value',
+});
+const otherEmail = await assertInvalid('email is not AUTH_TEST_EMAIL', passwordEnv(), {
+  email: OTHER_EMAIL,
+  password: TEST_PASSWORD,
+});
+const unlisted = await assertInvalid(
+  'email is not allowlisted',
+  passwordEnv({ AUTH_TEST_EMAIL: UNLISTED_EMAIL, AUTH_ALLOWED_EMAILS: 'ada@example.com' }),
+  { email: 'Not-Listed@Example.com', password: TEST_PASSWORD },
+);
+const spacedPassword = await assertInvalid('password is exact', passwordEnv(), {
+  email: 'ada@example.com',
+  password: `${TEST_PASSWORD} `,
+});
+const badJson = await onPassword({
+  request: new Request(`${APEX}/api/auth/password`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{',
+  }),
+  env: passwordEnv(),
+});
+const badJsonBody = await badJson.json();
+assert(badJson.status === 401 && badJsonBody.error === 'invalid_credentials', 'malformed JSON is invalid credentials');
+assert(!setCookie(badJson, 'vt_session'), 'malformed JSON sets no session');
+assert(wrongPassword === otherEmail && otherEmail === unlisted && unlisted === spacedPassword, 'credential failures match');
+assert(wrongPassword === JSON.stringify(badJsonBody), 'malformed JSON matches the credential error');
+assert(userCount() === usersBeforePassword, 'failed password logins did not create users');
+assert(userByEmail(OTHER_EMAIL) === null, 'a different allowlisted email was not signed in');
+assert(userByEmail(UNLISTED_EMAIL) === null, 'an unlisted test email was not created');
+const adaAfterFail = userByEmail('ada@example.com');
+assert(adaAfterFail.user_id === adaBefore.user_id && adaAfterFail.name === adaBefore.name, 'failed login left the user row');
+assert(creditBalance(adaBefore.user_id) === adaCredits, 'failed login left credits');
+
+const created = await postPassword(APEX, passwordEnv({ AUTH_TEST_EMAIL: ` ${FRESH_EMAIL.toUpperCase()} ` }), {
+  email: ` ${FRESH_EMAIL.toUpperCase()} `,
+  password: TEST_PASSWORD,
+  next: 'https://evil.example/phish',
+});
+assert(created.res.status === 200, `password success ${created.res.status}`);
+const createdBody = await created.res.json();
+const freshId = await stableUserId('password', FRESH_EMAIL);
+assert(createdBody.ok === true, 'password success');
+assert(createdBody.user.email === FRESH_EMAIL, createdBody.user.email);
+assert(createdBody.user.user_id === freshId, 'new password user id');
+assert(JSON.stringify(createdBody.user.providers) === '["password"]', 'password provider');
+assert(createdBody.next === '/account/', createdBody.next);
+assert(createdBody.auth.password === true && createdBody.auth.google === false, 'success status keeps the flag');
+assert(!JSON.stringify(createdBody.auth).includes(FRESH_EMAIL), 'auth status still hides the test email');
+assert(!JSON.stringify(createdBody).includes(TEST_PASSWORD), 'success body has no password');
+assert(!created.logs.join('\n').includes(TEST_PASSWORD), 'success does not log the password');
+const createdCookie = setCookie(created.res, 'vt_session');
+assert(createdCookie.includes('HttpOnly') && createdCookie.includes('Secure'), createdCookie);
+const createdSession = await readSession(
+  new Request(`${APEX}/api/auth/session`, { headers: { cookie: cookieHeader(created.res) } }),
+  passwordEnv(),
+);
+assert(createdSession.user_id === freshId && createdSession.email === FRESH_EMAIL, 'session cookie is the new user');
+const freshRow = userByEmail(FRESH_EMAIL);
+assert(freshRow.user_id === freshId, 'fresh row stored');
+assert(creditBalance(freshId) === 0, `fresh balance ${creditBalance(freshId)}`);
+assert(userCount() === usersBeforePassword + 1, 'one new user');
+
+const secondPassword = await postPassword('http://localhost:8788', passwordEnv({ AUTH_TEST_EMAIL: FRESH_EMAIL }), {
+  email: FRESH_EMAIL,
+  password: TEST_PASSWORD,
+});
+assert(secondPassword.res.status === 200, `localhost password ${secondPassword.res.status}`);
+const secondPasswordBody = await secondPassword.res.json();
+assert(secondPasswordBody.user.user_id === freshId, 'second password login reuses the row');
+assert(userCount() === usersBeforePassword + 1, 'second login did not add a user');
+assert(creditBalance(freshId) === 0, 'second login did not grant credits');
+
+const jobNow = new Date().toISOString();
+sqlite
+  .prepare(
+    `INSERT INTO jobs (id, user_id, template_slug, template_name, template_name_zh, status, note_en, note_zh, created_at, updated_at)
+     VALUES ('job_password_reuse', ?, 'bby-wow', 'Bby Wow', '名字', 'queued', '', '', ?, ?)`,
+  )
+  .run(adaBefore.user_id, jobNow, jobNow);
+const reuse = await postPassword(APEX, passwordEnv({ AUTH_TEST_EMAIL: 'Ada@Example.com' }), {
+  email: 'ADA@example.com',
+  password: TEST_PASSWORD,
+  next: '/account/credits/',
+});
+assert(reuse.res.status === 200, `reuse status ${reuse.res.status}`);
+const reuseBody = await reuse.res.json();
+const passwordOnlyId = await stableUserId('password', 'ada@example.com');
+assert(reuseBody.user.user_id === adaBefore.user_id, 'password login uses the Google user id');
+assert(reuseBody.user.user_id !== passwordOnlyId, 'password login does not mint a second id');
+assert(reuseBody.user.email === 'ada@example.com', reuseBody.user.email);
+assert(reuseBody.user.name === adaBefore.name, 'reuse keeps the existing name');
+assert(reuseBody.next === '/account/credits/', reuseBody.next);
+assert(setCookie(reuse.res, 'vt_session').includes('HttpOnly'), 'reuse sets a session');
+const reuseSession = await readSession(
+  new Request(`${APEX}/api/auth/session`, { headers: { cookie: cookieHeader(reuse.res) } }),
+  passwordEnv(),
+);
+assert(reuseSession.user_id === adaBefore.user_id, 'reuse cookie is the Google user');
+assert(userByEmail('ada@example.com').user_id === adaBefore.user_id, 'still one ada row');
+assert(
+  sqlite.prepare(`SELECT COUNT(*) AS n FROM users WHERE lower(email) = 'ada@example.com'`).get().n === 1,
+  'ada email was not duplicated',
+);
+assert(creditBalance(adaBefore.user_id) === adaCredits, 'reuse did not change credits');
+const reusedJob = sqlite.prepare('SELECT user_id FROM jobs WHERE id = ?').get('job_password_reuse');
+assert(reusedJob.user_id === adaBefore.user_id, 'job stays on the Google user');
+assert(!reuse.logs.join('\n').includes(TEST_PASSWORD), 'reuse does not log the password');
+
+const panel = readFileSync(new URL('../src/components/account/SignInPanel.astro', import.meta.url), 'utf8');
+const modal = readFileSync(new URL('../public/scripts/login-modal.js', import.meta.url), 'utf8');
+assert(panel.includes('id="password-wrap" hidden'), 'password fields start hidden');
+assert(panel.includes('type="password"'), 'sign-in page has a password field');
+assert(modal.includes("google: 'Continue with Google'"), 'dialog keeps Continue with Google');
+assert(modal.includes('passwordWrap.hidden = !passwordOk'), 'dialog shows password fields only when configured');
+assert(!panel.includes('AUTH_TEST_') && !modal.includes('AUTH_TEST_'), 'ui does not name the test secrets');
+assert(!panel.includes(TEST_PASSWORD) && !modal.includes(TEST_PASSWORD), 'ui does not embed the test password');
 
 console.log('google auth tests passed');

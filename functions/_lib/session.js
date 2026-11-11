@@ -158,6 +158,50 @@ export function authEmailAllowed(env, email) {
   return allowedAuthEmails(env).includes(normalized);
 }
 
+const AUTH_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Trimmed, lowercased address, or '' when it is not one email. */
+export function normalizeAuthEmail(value) {
+  if (typeof value !== 'string') return '';
+  const email = value.trim().toLowerCase();
+  if (!email || email.length > 200 || !AUTH_EMAIL_RE.test(email)) return '';
+  return email;
+}
+
+/**
+ * Compare two strings without leaking the expected value through a short-circuit.
+ * Both sides are hashed to a fixed length first so a length mismatch is not a timing signal.
+ */
+export async function timingSafeEqualString(a, b) {
+  const [left, right] = await Promise.all([
+    crypto.subtle.digest('SHA-256', text.encode(String(a ?? ''))),
+    crypto.subtle.digest('SHA-256', text.encode(String(b ?? ''))),
+  ]);
+  if (typeof crypto.subtle.timingSafeEqual === 'function') return crypto.subtle.timingSafeEqual(left, right);
+  const x = new Uint8Array(left);
+  const y = new Uint8Array(right);
+  let diff = 0;
+  for (let i = 0; i < x.length; i += 1) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
+/**
+ * Owner test password sign-in. This is not public registration.
+ * The path is on only when all of these are true:
+ * a real AUTH_SECRET (not the public localhost / *.pages.dev fallback),
+ * AUTH_TEST_EMAIL is one non-empty email, and AUTH_TEST_PASSWORD is a non-empty secret.
+ * AUTH_PREVIEW_LOGIN cannot turn it on. The address is not part of the public status.
+ */
+export function passwordAuthConfigured(env, hostname) {
+  const resolved = resolveAuthSecret(env, hostname);
+  if (!resolved.secret || resolved.previewFallback) return false;
+  if (resolved.secret === PREVIEW_AUTH_SECRET) return false;
+  if (!normalizeAuthEmail(env?.AUTH_TEST_EMAIL)) return false;
+  const password = typeof env?.AUTH_TEST_PASSWORD === 'string' ? env.AUTH_TEST_PASSWORD : '';
+  if (!password.trim()) return false;
+  return true;
+}
+
 function isLocalAuthHost(hostname) {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
 }
@@ -253,6 +297,7 @@ export function authStatus(request, env) {
     ok: true,
     google,
     preview: previewLoginAllowed(env, host) && Boolean(secret.secret),
+    password: passwordAuthConfigured(env, host),
     auth_secret: !secret.previewFallback && Boolean(secret.secret),
     preview_secret_fallback: secret.previewFallback,
   };

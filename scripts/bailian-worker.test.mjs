@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { appendLedger, ensureMediaColumns, ensureSchema, getCredits } from '../functions/_lib/account-db.js';
+import { appendLedger, ensureMediaColumns, ensureSchema, getCredits, saveProviderTask } from '../functions/_lib/account-db.js';
 import { probeImage } from '../functions/_lib/image-precheck.js';
 import {
   CLASSIC_DASHSCOPE_BASE,
@@ -19,6 +19,7 @@ import { onRequestPost as onContinue } from '../functions/api/jobs/continue.js';
 import { queueJobWithMedia } from '../functions/_lib/job-media.js';
 import { kickRemakeJob } from '../functions/_lib/remake-kick.js';
 import { issueSessionCookie } from '../functions/_lib/session.js';
+import { processRemakeJobs, SUBMIT_STALE_MS } from '../functions/_lib/bailian-worker.js';
 import { drainRemakeJobs, processUrl } from '../workers/job-drain/index.js';
 import { JOB_PROVIDER_COLUMNS } from '../functions/_lib/schema.js';
 import { getTemplate } from '../functions/_lib/templates.js';
@@ -222,8 +223,9 @@ function resultTask(taskId) {
   };
 }
 
-function installFetch() {
+function installFetch(options = {}) {
   const calls = [];
+  let submitted = 0;
   async function fetchImpl(url, init = {}) {
     const href = String(url);
     calls.push({ url: href, init });
@@ -253,7 +255,11 @@ function installFetch() {
       assert(body.input.image_url === 'oss://dashscope-instant/test/2026/subject.jpg', body.input.image_url);
       assert(body.input.video_url === 'oss://dashscope-instant/test/2026/reference.mp4', body.input.video_url);
       assert(body.input.watermark === false, 'watermark sent');
-      return jsonResponse(200, { output: { task_id: TASK_OK, task_status: 'PENDING' }, request_id: 'req_submit' });
+      submitted += 1;
+      const taskId = options.unique
+        ? `0385dc79-5ff8-4d82-bcb6-u${String(submitted).padStart(6, '0')}`
+        : TASK_OK;
+      return jsonResponse(200, { output: { task_id: taskId, task_status: 'PENDING' }, request_id: 'req_submit' });
     }
     if (href.includes('/tasks/')) {
       if (href.includes(TASK_BAD)) {
@@ -510,7 +516,7 @@ assert(kissNote.status === 'failed' && kissNote.error_code === 'no_photo', JSON.
 assert(kissNote.note_en.includes('two saved photos'), kissNote.note_en);
 assert(kissNote.note_zh.includes('两张'), kissNote.note_zh);
 
-const { fetchImpl: providerFetch, calls: kickCalls } = installFetch();
+const { fetchImpl: providerFetch, calls: kickCalls } = installFetch({ unique: true });
 let releaseFetch;
 const fetchGate = new Promise((resolve) => {
   releaseFetch = resolve;
@@ -622,6 +628,125 @@ const drainSkipped = await drainRemakeJobs({ JOB_PROCESS_SECRET: 'short', BAILIA
   throw new Error('unconfigured drain must not fetch');
 });
 assert(drainSkipped.error === 'job_process_unconfigured', drainSkipped.error);
+
+assert(SUBMIT_STALE_MS === 8 * 60 * 1000, `stale window ${SUBMIT_STALE_MS}`);
+assert(!workerSource.includes("failJob(db, row, 'submit_interrupted')"), 'stale submit still fails the job');
+const taskIndexes = sqlite.prepare(`PRAGMA index_list(jobs)`).all();
+const taskIndex = taskIndexes.find((row) => row.name === 'idx_jobs_provider_task_id');
+assert(taskIndex && Number(taskIndex.unique) === 1, JSON.stringify(taskIndexes));
+const nullTaskIds = sqlite.prepare(`SELECT COUNT(*) AS n FROM jobs WHERE provider_task_id IS NULL`).get();
+assert(nullTaskIds.n >= 2, `unique index rejected null task ids (${nullTaskIds.n})`);
+
+const staleNow = Date.parse('2026-11-11T06:00:00.000Z');
+const staleJob = await queueJobWithMedia({
+  db,
+  env,
+  request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
+  user,
+  templateSlug: 'bby-wow',
+  photos: [{ bytes: jpeg, contentType: 'image/jpeg', ext: 'jpg' }],
+});
+function ledgerKinds(jobId) {
+  return getCredits(db, user).then((credits) =>
+    credits.ledger.filter((row) => row.job_id === jobId).map((row) => row.kind).sort().join(),
+  );
+}
+assert((await ledgerKinds(staleJob.job.id)) === 'deduction', 'stale job was not charged');
+sqlite.prepare(
+  `UPDATE jobs SET status = 'running', provider_task_id = NULL, error_code = 'submitting', updated_at = ? WHERE id = ?`,
+).run(new Date(staleNow - SUBMIT_STALE_MS + 1000).toISOString(), staleJob.job.id);
+const stillRunning = await processRemakeJobs({
+  db,
+  env,
+  request: new Request(`${origin}/api/jobs/process`, { method: 'POST' }),
+  fetchImpl,
+  jobId: staleJob.job.id,
+  nowMs: staleNow,
+});
+assert(stillRunning.processed[0].status === 'running', JSON.stringify(stillRunning.processed[0]));
+assert(stillRunning.processed[0].action === 'busy', stillRunning.processed[0].action);
+sqlite.prepare(`UPDATE jobs SET updated_at = ? WHERE id = ?`).run(
+  new Date(staleNow - SUBMIT_STALE_MS).toISOString(),
+  staleJob.job.id,
+);
+const requeued = await processRemakeJobs({
+  db,
+  env,
+  request: new Request(`${origin}/api/jobs/process`, { method: 'POST' }),
+  fetchImpl,
+  jobId: staleJob.job.id,
+  nowMs: staleNow,
+});
+assert(requeued.processed[0].status === 'queued', JSON.stringify(requeued.processed[0]));
+assert(requeued.processed[0].action === 'retry', requeued.processed[0].action);
+assert(requeued.processed[0].error === 'submit_stale', requeued.processed[0].error);
+const requeuedRow = sqlite.prepare(`SELECT status, provider_task_id, error_code FROM jobs WHERE id = ?`).get(staleJob.job.id);
+assert(
+  requeuedRow.status === 'queued' && requeuedRow.provider_task_id == null && requeuedRow.error_code == null,
+  JSON.stringify(requeuedRow),
+);
+assert((await ledgerKinds(staleJob.job.id)) === 'deduction', 'stale requeue refunded the charge');
+
+const lateTaskId = '0385dc79-5ff8-4d82-bcb6-cccccc03';
+await saveProviderTask(db, staleJob.job.id, lateTaskId);
+const lateRow = sqlite.prepare(`SELECT status, provider_task_id FROM jobs WHERE id = ?`).get(staleJob.job.id);
+assert(lateRow.status === 'running' && lateRow.provider_task_id === lateTaskId, JSON.stringify(lateRow));
+
+const takenJob = await queueJobWithMedia({
+  db,
+  env,
+  request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
+  user,
+  templateSlug: 'bby-wow',
+  photos: [{ bytes: jpeg, contentType: 'image/jpeg', ext: 'jpg' }],
+});
+let takenDirect = '';
+try {
+  await saveProviderTask(db, takenJob.job.id, lateTaskId);
+} catch (err) {
+  takenDirect = err && err.code;
+}
+assert(takenDirect === 'provider_task_taken', takenDirect);
+const takenDirectRow = sqlite.prepare(`SELECT status, provider_task_id FROM jobs WHERE id = ?`).get(takenJob.job.id);
+assert(takenDirectRow.status === 'queued' && takenDirectRow.provider_task_id == null, JSON.stringify(takenDirectRow));
+const lateOwners = sqlite.prepare(`SELECT id FROM jobs WHERE provider_task_id = ?`).all(lateTaskId);
+assert(lateOwners.length === 1 && lateOwners[0].id === staleJob.job.id, JSON.stringify(lateOwners));
+
+let rawDup = false;
+try {
+  sqlite.prepare(`UPDATE jobs SET provider_task_id = ? WHERE id = ?`).run(TASK_OK, takenJob.job.id);
+} catch (err) {
+  rawDup = /unique constraint failed/i.test(String(err && err.message));
+}
+assert(rawDup, 'unique index allowed a second writer to store the same task id');
+assert(sqlite.prepare(`SELECT provider_task_id FROM jobs WHERE id = ?`).get(takenJob.job.id).provider_task_id == null, 'raw duplicate was stored');
+
+const shared = await processRemakeJobs({
+  db,
+  env,
+  request: new Request(`${origin}/api/jobs/process`, { method: 'POST' }),
+  fetchImpl,
+  jobId: takenJob.job.id,
+  nowMs: Date.now(),
+});
+assert(shared.processed[0].status === 'failed', JSON.stringify(shared.processed[0]));
+assert(shared.processed[0].error === 'provider_task_taken', shared.processed[0].error);
+const sharedRow = sqlite.prepare(`SELECT status, provider_task_id, error_code, note_en FROM jobs WHERE id = ?`).get(takenJob.job.id);
+assert(sharedRow.status === 'failed' && sharedRow.provider_task_id == null, JSON.stringify(sharedRow));
+assert(sharedRow.error_code === 'provider_task_taken', sharedRow.error_code);
+assert(!String(sharedRow.note_en).includes(API_KEY), 'taken note leaked the key');
+const taskOwners = sqlite.prepare(`SELECT id, status FROM jobs WHERE provider_task_id = ?`).all(TASK_OK);
+assert(taskOwners.length === 1 && taskOwners[0].id === queued.job.id && taskOwners[0].status === 'ready', JSON.stringify(taskOwners));
+assert((await ledgerKinds(takenJob.job.id)) === 'deduction,refund', 'taken job was not refunded once');
+
+let failedAttach = '';
+try {
+  await saveProviderTask(db, takenJob.job.id, '0385dc79-5ff8-4d82-bcb6-dddddd04');
+} catch (err) {
+  failedAttach = err && err.code;
+}
+assert(failedAttach === 'storage_error', failedAttach);
+assert(sqlite.prepare(`SELECT status, provider_task_id FROM jobs WHERE id = ?`).get(takenJob.job.id).provider_task_id == null, 'failed job accepted a task id');
 
 globalThis.fetch = previous;
 console.log('bailian-worker.test.mjs ok');

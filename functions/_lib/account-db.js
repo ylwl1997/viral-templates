@@ -74,12 +74,41 @@ export async function ensureMediaColumns(db) {
   }
 }
 
+function errorText(err) {
+  return [err && err.message, err && err.cause && err.cause.message].filter(Boolean).join(' ');
+}
+
+const PROVIDER_TASK_UNIQUE_SQL = `CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_provider_task_id ON jobs (provider_task_id)`;
+
+async function ensureProviderTaskUnique(db) {
+  try {
+    await db.prepare(PROVIDER_TASK_UNIQUE_SQL).run();
+  } catch (err) {
+    // A leftover duplicate must not take down every request. saveProviderTask
+    // still refuses to attach an id that another job already has.
+    console.error('provider_task_unique', errorText(err).slice(0, 200));
+  }
+}
+
 export async function ensureSchema(db) {
   if (schemaReady) return;
   for (const sql of schemaStatements(SCHEMA_SQL)) {
-    await db.prepare(sql).run();
+    try {
+      await db.prepare(sql).run();
+    } catch (err) {
+      const message = errorText(err);
+      const providerIndex = /idx_jobs_provider_task_id/i.test(sql);
+      // The column is added just below on databases that predate provider_task_id.
+      if (providerIndex && /no such column/i.test(message)) continue;
+      if (providerIndex && /unique constraint failed/i.test(message)) {
+        console.error('provider_task_unique', message.slice(0, 200));
+        continue;
+      }
+      throw err;
+    }
   }
   await ensureMediaColumns(db);
+  await ensureProviderTaskUnique(db);
   schemaReady = true;
 }
 
@@ -468,25 +497,55 @@ export async function claimQueuedJob(db, jobId) {
   return changesOf(result) === 1;
 }
 
+function uniqueTaskConstraint(err) {
+  return /unique constraint failed/i.test(errorText(err));
+}
+
+async function otherTaskOwner(db, task, jobId) {
+  return db.prepare(`SELECT id FROM jobs WHERE provider_task_id = ? AND id <> ?`).bind(task, jobId).first();
+}
+
+/**
+ * Attach a Bailian task id to this job and leave it running.
+ * An id already stored on a different job is refused. A queued row is accepted
+ * so a submit that finishes after a stale requeue can still store the id.
+ * Failed and ready rows are left unchanged.
+ */
 export async function saveProviderTask(db, jobId, taskId) {
   const id = cleanId(jobId);
   const task = cleanTaskId(taskId);
   if (!id || !task) throw fail('storage_error');
   await ensureSchema(db);
+  if (await otherTaskOwner(db, task, id)) throw fail('provider_task_taken');
   const now = new Date().toISOString();
-  const result = await db
-    .prepare(
-      `UPDATE jobs
-       SET provider_task_id = ?,
-           error_code = NULL,
-           note_en = ?,
-           note_zh = ?,
-           updated_at = ?
-       WHERE id = ? AND status = 'running' AND provider_task_id IS NULL`,
-    )
-    .bind(task, RUNNING_NOTE_EN, RUNNING_NOTE_ZH, now, id)
-    .run();
-  if (changesOf(result) !== 1) throw fail('storage_error');
+  let result;
+  try {
+    result = await db
+      .prepare(
+        `UPDATE jobs
+         SET status = 'running',
+             provider_task_id = ?,
+             error_code = NULL,
+             note_en = ?,
+             note_zh = ?,
+             updated_at = ?
+         WHERE id = ?
+           AND status IN ('queued', 'running')
+           AND provider_task_id IS NULL
+           AND NOT EXISTS (
+             SELECT 1 FROM jobs AS other
+             WHERE other.provider_task_id = ? AND other.id <> ?
+           )`,
+      )
+      .bind(task, RUNNING_NOTE_EN, RUNNING_NOTE_ZH, now, id, task, id)
+      .run();
+  } catch (err) {
+    if (uniqueTaskConstraint(err)) throw fail('provider_task_taken');
+    throw err;
+  }
+  if (changesOf(result) === 1) return;
+  if (await otherTaskOwner(db, task, id)) throw fail('provider_task_taken');
+  throw fail('storage_error');
 }
 
 /** Upload failed before a task existed. Safe to try again. */

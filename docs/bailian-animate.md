@@ -53,13 +53,13 @@ JOB_PROCESS_SECRET=at-least-16-characters
 
 ## Database
 
-`jobs.provider_task_id` stores the DashScope task id. `migrations/0003_bailian_task.sql` adds it. The Pages Function also adds the column on first use (`ensureMediaColumns`), so a deploy works before the remote migration runs.
+`jobs.provider_task_id` stores the DashScope task id. One id belongs to one job. `migrations/0003_bailian_task.sql` adds the column. `migrations/0005_provider_task_unique.sql` adds a unique index. SQLite allows many NULL ids, so queued jobs stay valid. The migration does not rewrite existing rows. The Pages Function adds the column on first use (`ensureMediaColumns`) and creates the index on first use (`ensureSchema`), so a deploy works before the remote migration runs. A later job that tries to store an id already kept on a different job fails as `provider_task_taken` and does not poll that task.
 
 ```bash
 npx wrangler d1 migrations apply viral-templates --remote
 ```
 
-If the column already exists, that `ALTER` reports a duplicate column. The index in the same file is also created on first Function use.
+If the column already exists, that `ALTER` reports a duplicate column. The status index in `0003` and the unique task index in `0005` are also created on first Function use. If a duplicate task id is still stored, `0005` fails and the Function logs `provider_task_unique` without rewriting rows. `saveProviderTask` still refuses the duplicate.
 
 ## What one process call does
 
@@ -89,6 +89,8 @@ Use the same `JOB_PROCESS_SECRET` as Pages. Optional text var `PAGES_ORIGIN` (de
 Ops can still call `POST /api/jobs/process` by hand. That remains the way to drain every user, not only the person who has the account page open.
 
 Generation usually takes several minutes. One process call submits or polls once. Repeat the call, or let the drain Worker do it. `wait_ms` (max 90000) polls again inside that request. `limit` is 1–5 (default 1).
+
+A running job with no `provider_task_id` is still in submit. That clock starts when the job is claimed. Each temporary upload times out at 60 seconds and synthesis at 30 seconds. The reference download, before claim, times out at 60 seconds. That work can run past three minutes. `SUBMIT_STALE_MS` is 8 minutes. Until then, continue and the drain leave the row `running`. After that, if the task id is still empty, the worker moves the job back to `queued` (`action` `retry`, `error` `submit_stale`) so a later pass can submit again. That wait does not mark the job `failed` and does not refund it. A Bailian task might already exist even though the row has no id. Do not assume that task is gone.
 
 Body:
 
@@ -154,7 +156,8 @@ npm run smoke:bailian
 | `no_reference_video` | Template has no demo MP4 (soon looks) |
 | `photo_too_large` | Photo is over 5 MB |
 | `bailian_*` | Provider code, such as `InvalidApiKey` or `InternalError` |
-| `submit_interrupted` | Claimed, then the isolate died before a task id was saved. Queue a new job. Do not assume the first task is absent; check the Bailian console before spending another run. |
+| `submit_stale` | Running for 8 minutes with no saved task id. The job is `queued` again, not `failed`. A Bailian task might already exist. The unique `provider_task_id` index stops another job from taking that id. |
+| `provider_task_taken` | This job tried to store a task id that already belongs to a different job. The id stays on the first job. This job is `failed` and is not polled. |
 
 Customer notes do not include the API key. The process JSON `detail` is redacted.
 

@@ -254,7 +254,10 @@ const broke = await queueJobWithMedia({
   (err) => err,
 );
 assert(broke && broke.code === 'insufficient_credits', `expected insufficient_credits, got ${broke && broke.code}`);
-assert(broke.needed === 10 && broke.balance === 0, 'credit error details');
+const bbyCost = getTemplate('bby-wow').creditCost;
+const kissCost = getTemplate('kiss-cam').creditCost;
+assert(bbyCost === 6 && kissCost === 6, `source credits ${bbyCost}/${kissCost}`);
+assert(broke.needed === bbyCost && broke.balance === 0, 'credit error details');
 await appendLedger(db, user, {
   delta: 100,
   kind: 'topup',
@@ -298,9 +301,9 @@ const queued = await queueJobWithMedia({
 });
 assert(queued.job.status === 'queued' && queued.job.result_url == null, 'stored job still queued');
 assert(queued.media.stored === true && queued.media.photos === 1 && queued.media.r2_configured === true, 'stored flag');
-assert(queued.media.credits === 10, 'bby cost');
+assert(queued.media.credits === bbyCost, 'bby cost');
 const afterCharge = await getCredits(db, user, { includeLedger: false });
-assert(afterCharge.balance === 90, `charged balance ${afterCharge.balance}`);
+assert(afterCharge.balance === 100 - bbyCost, `charged balance ${afterCharge.balance}`);
 assert(!('upload_key' in queued.job), 'key leaked on job json');
 const storedRow = sqlite.prepare(`SELECT upload_key, upload_url, upload_key_2, status, result_url FROM jobs WHERE id = ?`).get(queued.job.id);
 assert(storedRow.status === 'queued' && storedRow.result_url == null, 'db status');
@@ -324,7 +327,7 @@ const pairRow = sqlite.prepare(`SELECT upload_key, upload_key_2 FROM jobs WHERE 
 assert(pairRow.upload_key.endsWith('/0.jpg') && pairRow.upload_key_2.endsWith('/1.png'), 'two keys');
 assert(pair.job.status === 'queued', 'kiss cam queued');
 const afterPair = await getCredits(db, user, { includeLedger: false });
-assert(afterPair.balance === 78, `kiss balance ${afterPair.balance}`);
+assert(afterPair.balance === 100 - bbyCost - kissCost, `kiss balance ${afterPair.balance}`);
 
 let puts = 0;
 const flakyObjects = new Map();

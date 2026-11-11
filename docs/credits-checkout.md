@@ -4,13 +4,15 @@ Customer pages never name the payment provider, the bucket, or the model. This f
 
 ## Credits
 
-One credit is about one second of a clip.
+One credit is one second of that look’s source MP4. The charge is `Math.round(durationSeconds)`, and at least 1. `durationSeconds` is the only price input on the server catalog (`functions/_lib/templates.js`). `creditCost` is derived from it, and the pages read that same number. A look with no `durationSeconds` is not charged. Do not store a separate credit cost.
 
-| Look | Credits |
-|------|---------|
-| Bby Wow | 10 |
-| Kiss Cam | 12 |
-| Ceiling Fan | 15 |
+Current demo files, rounded:
+
+| Look | Source | Credits |
+|------|--------|---------|
+| Bby Wow | 6.041667s | 6 |
+| Kiss Cam | 6.041667s | 6 |
+| Ceiling Fan | 15.278005s | 15 |
 
 `POST /api/jobs` deducts that amount when the photo is stored and the job row is queued. The ledger id is `deduct_{jobId}`. A second charge for the same job does not move the balance again.
 
@@ -86,4 +88,4 @@ Test charges use card `4576 7500 0000 0110` (any future expiry, any CVC). `4576 
 
 A provider refund of a pack does not remove credits. The signed-in credits page can store a short note (`POST /api/account/support`) for a missing top-up or a missing job refund.
 
-`FAL_KEY` / `FAL_MODEL` stay unused. The default generator remains Bailian `wan2.2-animate-move`.
+`FAL_KEY` / `FAL_MODEL` stay unused. The default generator remains Bailian `wan2.2-animate-mix`.

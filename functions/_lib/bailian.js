@@ -1,5 +1,5 @@
 /**
- * HTTP client for Alibaba Bailian / DashScope wan2.2-animate-move.
+ * HTTP client for Alibaba Bailian / DashScope wan2.2-animate-mix.
  * No CLI. Pages Functions call the async image2video API only.
  *
  * Submit: POST {base}/services/aigc/image2video/video-synthesis
@@ -11,13 +11,13 @@
  * to override. The classic host remains the fallback for the temporary-file
  * credential API if the workspace host does not serve /uploads.
  *
- * Docs: https://help.aliyun.com/zh/model-studio/wan-animate-move-api
+ * Docs: https://help.aliyun.com/zh/model-studio/wan-animate-mix-api
  *       https://help.aliyun.com/zh/model-studio/get-temporary-file-url
  */
 
 import { fail } from './account-db.js';
 
-export const DEFAULT_MODEL = 'wan2.2-animate-move';
+export const DEFAULT_MODEL = 'wan2.2-animate-mix';
 export const DEFAULT_MODE = 'wan-std';
 export const WORKSPACE_DASHSCOPE_BASE =
   'https://llm-g1ozpdi7y5eyp1mh.cn-beijing.maas.aliyuncs.com/api/v1';

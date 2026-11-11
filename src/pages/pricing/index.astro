@@ -1,9 +1,14 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { SITE } from '../../lib/site';
+import { LIVE_TEMPLATES } from '../../lib/templates';
 import PricingGrid from '../../design/components/PricingGrid.astro';
 
 const { packs } = SITE.pricing;
+const costs = LIVE_TEMPLATES.map((t) => t.creditCost ?? 0).filter((n) => n > 0);
+const low = Math.min(...costs);
+const high = Math.max(...costs);
+const clipCredits = low === high ? String(low) : `${low}–${high}`;
 ---
 <Layout
   title={`Pricing · ${SITE.name}`}
@@ -18,12 +23,12 @@ const { packs } = SITE.pricing;
   <section class="section wrap">
     <PricingGrid
       oneShotLabel="A clip"
-      oneShotAmount="10–15"
-      oneShotMeta="credits, depending on the look"
+      oneShotAmount={clipCredits}
+      oneShotMeta="credits · one per second of the source"
       packs={packs}
       packMeta="credits"
       creditUnit="credits"
-      note="Bby Wow uses 10 credits, Kiss Cam 12, Ceiling Fan 15. A clip that does not finish returns those credits. Buy a pack from your account."
+      note="A clip costs one credit per second of that look’s source, rounded to the nearest second. A clip that does not finish returns those credits. Buy a pack from your account."
     />
   </section>
 </Layout>

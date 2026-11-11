@@ -47,7 +47,9 @@ assert(WORKSPACE_DASHSCOPE_BASE.includes(WORKSPACE_HOST), 'workspace host');
 assert(resolveDashScopeBase({ BAILIAN_DASHSCOPE_BASE_URL: CLASSIC_DASHSCOPE_BASE }) === CLASSIC_DASHSCOPE_BASE, 'classic override');
 assert(resolveBailianApiKey({ DASHSCOPE_API_KEY: 'legacy-key' }) === 'legacy-key', 'legacy key');
 assert(resolveBailianApiKey({ BAILIAN_API_KEY: 'primary', DASHSCOPE_API_KEY: 'legacy-key' }) === 'primary', 'primary key wins');
+assert(DEFAULT_MODEL === 'wan2.2-animate-mix', DEFAULT_MODEL);
 assert(bailianRuntime({ BAILIAN_API_KEY: API_KEY }).model === DEFAULT_MODEL, 'model');
+assert(bailianRuntime({ BAILIAN_API_KEY: API_KEY, BAILIAN_MODEL: 'wan2.2-animate-move' }).model === 'wan2.2-animate-move', 'model override');
 assert(bailianRuntime({ BAILIAN_API_KEY: API_KEY }).mode === DEFAULT_MODE, 'mode');
 assert(bailianRuntime({ BAILIAN_API_KEY: API_KEY }).configured === true, 'configured');
 assert(bailianRuntime({}).configured === false, 'missing key');
@@ -62,7 +64,7 @@ const pro = buildSynthesisRequest(
   { ...bailianRuntime({ BAILIAN_API_KEY: API_KEY, BAILIAN_MODE: 'wan-pro' }), apiKey: API_KEY },
   { imageUrl: 'oss://dashscope-instant/a/subject.jpg', videoUrl: 'oss://dashscope-instant/a/reference.mp4' },
 );
-assert(pro.body.model === 'wan2.2-animate-move', pro.body.model);
+assert(pro.body.model === 'wan2.2-animate-mix', pro.body.model);
 assert(pro.body.parameters.mode === 'wan-pro', pro.body.parameters.mode);
 assert(pro.body.input.watermark === false, 'watermark default');
 assert(pro.headers['X-DashScope-Async'] === 'enable', 'async header');
@@ -424,9 +426,11 @@ assert(synthesisBody.input.image_url.startsWith('oss://'), synthesisBody.input.i
 assert(synthesisBody.input.video_url.startsWith('oss://'), synthesisBody.input.video_url);
 assert(!JSON.stringify(synthesisBody).includes('pages.dev'), 'synthesis body contains pages.dev');
 
+const bbyCost = getTemplate('bby-wow').creditCost;
+assert(bbyCost === 6, `bby credits ${bbyCost}`);
 const credits = await getCredits(db, user);
-assert(credits.balance === 490, `success kept the charge (${credits.balance})`);
-assert(credits.ledger.some((row) => row.kind === 'deduction' && row.job_id === queued.job.id && row.delta === -10), 'bby deduction');
+assert(credits.balance === 500 - bbyCost, `success kept the charge (${credits.balance})`);
+assert(credits.ledger.some((row) => row.kind === 'deduction' && row.job_id === queued.job.id && row.delta === -bbyCost), 'bby deduction');
 
 sqlite.prepare(
   `UPDATE jobs SET status = 'running', provider_task_id = ?, error_code = NULL, result_url = NULL, result_key = NULL WHERE id = ?`,
@@ -450,7 +454,7 @@ assert(failedRow.status === 'failed' && failedRow.result_url == null, 'failed ro
 assert(failedRow.error_code === 'bailian_InternalError', failedRow.error_code);
 assert(!String(failedRow.note_en).includes(API_KEY), 'note leaked key');
 const afterFail = await getCredits(db, user);
-assert(afterFail.balance === 490, `unbilled failure moved credits (${afterFail.balance})`);
+assert(afterFail.balance === 500 - bbyCost, `unbilled failure moved credits (${afterFail.balance})`);
 assert(!afterFail.ledger.some((row) => row.job_id === bare.job.id), 'unbilled job wrote a ledger row');
 
 const noPhoto = await queueJobWithMedia({
@@ -492,7 +496,7 @@ const hugeRes = await onRequestPost({
 const hugeBody = await hugeRes.json();
 assert(hugeBody.processed[0].error === 'photo_too_large', JSON.stringify(hugeBody.processed[0]));
 const afterHuge = await getCredits(db, user);
-assert(afterHuge.balance === 490, `huge refund balance ${afterHuge.balance}`);
+assert(afterHuge.balance === 500 - bbyCost, `huge refund balance ${afterHuge.balance}`);
 assert(afterHuge.ledger.some((row) => row.kind === 'refund' && row.job_id === hugeJob.job.id && row.delta === 15), 'fan refund');
 
 const kissMissing = await queueJobWithMedia({

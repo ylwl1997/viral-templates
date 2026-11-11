@@ -1,8 +1,20 @@
 import { packPriceList } from './site';
 import type { LivePack } from './templates';
+import { getTemplate as sourceTemplate } from '../../functions/_lib/templates.js';
 
 const packsEn = packPriceList('en');
 const packsZh = packPriceList('zh');
+
+function sourceCredits(slug: string): number {
+  const row = sourceTemplate(slug);
+  const credits = row && row.creditCost;
+  if (!credits) throw new Error(`Missing source duration for ${slug}`);
+  return credits;
+}
+
+const bbyCredits = sourceCredits('bby-wow');
+const kissCredits = sourceCredits('kiss-cam');
+const fanCredits = sourceCredits('ceiling-fan');
 
 const photo = '/brand/templates';
 
@@ -28,9 +40,9 @@ export const BBY_LIVE: LivePack = {
       titleEn: 'You have the photo. Not the dance floor.',
       titleZh: '你有照片，没有舞池。',
       bodyEn:
-        'A party clip usually means filming it again: a friend, a song, a room with the lights down. Bby Wow starts from one adult-consent photo and makes a short vertical dance in that frame.',
+        'A party clip usually means filming it again: a friend, a song, a room with the lights down. Bby Wow starts from one adult-consent photo and places that person in the template dance. The clip keeps the template’s scene, motion, and outfit.',
       bodyZh:
-        '派对短片通常还要再拍一次：朋友、一首歌、把灯调暗的房间。Bby Wow 从一张成人同意的照片开始，做成一条竖屏热舞。',
+        '派对短片通常还要再拍一次：朋友、一首歌、把灯调暗的房间。Bby Wow 从一张成人同意的照片开始，把这个人放进模板的舞里。成片保留模板的场景、动作和衣服。',
     },
     support: {
       eyebrowEn: 'One photo',
@@ -84,8 +96,8 @@ export const BBY_LIVE: LivePack = {
       qEn: 'What is Bby Wow AI?',
       qZh: 'Bby Wow AI 是什么？',
       aEn:
-        'Bby Wow AI turns one adult-consent photo into a short vertical party-dance clip, about 10 seconds. It is an independent remix look.',
-      aZh: 'Bby Wow AI 用一张成人同意的照片，做成大约 10 秒的竖屏派对舞短片。这是独立的 remix 效果。',
+        `Bby Wow AI turns one adult-consent photo into a short vertical party-dance clip, about ${bbyCredits} seconds. It is an independent remix look.`,
+      aZh: `Bby Wow AI 用一张成人同意的照片，做成大约 ${bbyCredits} 秒的竖屏派对舞短片。这是独立的 remix 效果。`,
     },
     {
       id: 'photo',
@@ -108,23 +120,23 @@ export const BBY_LIVE: LivePack = {
       qEn: 'How long is the video?',
       qZh: '视频有多长？',
       aEn:
-        'About 10 seconds, vertical. This look uses 10 credits. The clip shows on your account when it is ready.',
-      aZh: '大约 10 秒，竖屏。这个效果扣 10 积分。完成后，成片会出现在你的账户里。',
+        `About ${bbyCredits} seconds, vertical. This look uses ${bbyCredits} credits, one per second of its source clip. The clip shows on your account when it is ready.`,
+      aZh: `大约 ${bbyCredits} 秒，竖屏。这个效果扣 ${bbyCredits} 积分，按素材每秒 1 积分。完成后，成片会出现在你的账户里。`,
     },
     {
       id: 'credits',
       qEn: 'How are credits calculated?',
       qZh: '积分怎么计算？',
-      aEn: `This look uses 10 credits, about one per second. Packs are ${packsEn}. A failed clip returns the 10 credits.`,
-      aZh: `这个效果扣 10 积分，大约每秒 1 积分。套餐为 ${packsZh}。短片失败会退回这 10 积分。`,
+      aEn: `This look uses ${bbyCredits} credits, one per second of its source clip. Packs are ${packsEn}. A failed clip returns the ${bbyCredits} credits.`,
+      aZh: `这个效果扣 ${bbyCredits} 积分，按素材每秒 1 积分。套餐为 ${packsZh}。短片失败会退回这 ${bbyCredits} 积分。`,
     },
     {
       id: 'free',
       qEn: 'Is Bby Wow AI free?',
       qZh: 'Bby Wow AI 免费吗？',
       aEn:
-        `No. This look uses 10 credits. Packs are ${packsEn}. Buying a pack charges a card.`,
-      aZh: `不免费。这个效果扣 10 积分。套餐为 ${packsZh}。购买套餐会扣银行卡。`,
+        `No. This look uses ${bbyCredits} credits. Packs are ${packsEn}. Buying a pack charges a card.`,
+      aZh: `不免费。这个效果扣 ${bbyCredits} 积分。套餐为 ${packsZh}。购买套餐会扣银行卡。`,
     },
     {
       id: 'kids',
@@ -145,8 +157,8 @@ export const BBY_LIVE: LivePack = {
       qEn: 'What if generate fails? Is there a refund?',
       qZh: '生成失败会退款吗？',
       aEn:
-        'The 10 credits return to your account, and no clip is kept. A card is charged only after a pack purchase completes.',
-      aZh: '这 10 积分会退回账户，也不会留下成片。只有积分包付款完成后才会扣银行卡。',
+        `The ${bbyCredits} credits return to your account, and no clip is kept. A card is charged only after a pack purchase completes.`,
+      aZh: `这 ${bbyCredits} 积分会退回账户，也不会留下成片。只有积分包付款完成后才会扣银行卡。`,
     },
   ],
 };
@@ -226,8 +238,8 @@ export const KISS_LIVE: LivePack = {
       qEn: 'What is Coldplay Kiss Cam AI?',
       qZh: 'Coldplay Kiss Cam AI 是什么？',
       aEn:
-        'Two adult-consent photos become a short vertical clip, about 11–12 seconds, styled like a jumbotron kiss cam. It is a fan-made look.',
-      aZh: '两张成人同意的照片，做成大约 11–12 秒的竖屏短片，看起来像球场大屏上的 kiss cam。这是粉丝向的效果。',
+        `Two adult-consent photos become a short vertical clip, about ${kissCredits} seconds, styled like a jumbotron kiss cam. It is a fan-made look.`,
+      aZh: `两张成人同意的照片，做成大约 ${kissCredits} 秒的竖屏短片，看起来像球场大屏上的 kiss cam。这是粉丝向的效果。`,
     },
     {
       id: 'why-two',
@@ -263,23 +275,23 @@ export const KISS_LIVE: LivePack = {
       qEn: 'How long is the clip?',
       qZh: '短片有多长？',
       aEn:
-        'About 11–12 seconds. This look uses 12 credits. The clip shows on your account when it is ready.',
-      aZh: '大约 11–12 秒。这个效果扣 12 积分。完成后，成片会出现在你的账户里。',
+        `About ${kissCredits} seconds. This look uses ${kissCredits} credits, one per second of its source clip. The clip shows on your account when it is ready.`,
+      aZh: `大约 ${kissCredits} 秒。这个效果扣 ${kissCredits} 积分，按素材每秒 1 积分。完成后，成片会出现在你的账户里。`,
     },
     {
       id: 'price',
       qEn: 'How much does it cost?',
       qZh: '怎么收费？',
       aEn:
-        `This look uses 12 credits, about one per second. Packs are ${packsEn}. A failed clip returns the 12 credits.`,
-      aZh: `这个效果扣 12 积分，大约每秒 1 积分。套餐为 ${packsZh}。短片失败会退回这 12 积分。`,
+        `This look uses ${kissCredits} credits, one per second of its source clip. Packs are ${packsEn}. A failed clip returns the ${kissCredits} credits.`,
+      aZh: `这个效果扣 ${kissCredits} 积分，按素材每秒 1 积分。套餐为 ${packsZh}。短片失败会退回这 ${kissCredits} 积分。`,
     },
     {
       id: 'free',
       qEn: 'Is Coldplay Kiss Cam AI free?',
       qZh: 'Coldplay Kiss Cam AI 免费吗？',
-      aEn: `No. This look uses 12 credits. Packs are ${packsEn}. Buying a pack charges a card.`,
-      aZh: `不免费。这个效果扣 12 积分。套餐为 ${packsZh}。购买套餐会扣银行卡。`,
+      aEn: `No. This look uses ${kissCredits} credits. Packs are ${packsEn}. Buying a pack charges a card.`,
+      aZh: `不免费。这个效果扣 ${kissCredits} 积分。套餐为 ${packsZh}。购买套餐会扣银行卡。`,
     },
     {
       id: 'kids',
@@ -293,9 +305,9 @@ export const KISS_LIVE: LivePack = {
       qEn: 'What if generate fails? Is there a refund?',
       qZh: '生成失败会退款吗？',
       aEn:
-        'The 12 credits return to your account, and no clip is kept. A card is charged only after a pack purchase completes.',
+        `The ${kissCredits} credits return to your account, and no clip is kept. A card is charged only after a pack purchase completes.`,
       aZh:
-        '这 12 积分会退回账户，也不会留下成片。只有积分包付款完成后才会扣银行卡。',
+        `这 ${kissCredits} 积分会退回账户，也不会留下成片。只有积分包付款完成后才会扣银行卡。`,
     },
   ],
 };
@@ -330,8 +342,8 @@ export const FAN_LIVE: LivePack = {
     support: {
       eyebrowEn: 'The transition',
       eyebrowZh: '转场',
-      titleEn: 'Later outfits from the photo you’re already in.',
-      titleZh: '后面的衣服来自你已经在的那张照片。',
+      titleEn: 'Later outfits stay with the template.',
+      titleZh: '后面的衣服留在模板里。',
       bodyEn:
         'One adult-consent photo goes in. The sample is an ordinary everyday photo in casual clothes, with no fan in the frame. The generated clip wipes through ceiling-fan blades into later outfits, including a maid look and a more revealing final look. Those blades exist only in the result.',
       bodyZh:
@@ -379,8 +391,8 @@ export const FAN_LIVE: LivePack = {
       qEn: 'What is Ceiling Fan Transition AI?',
       qZh: 'Ceiling Fan Transition AI 是什么？',
       aEn:
-        'A one-photo outfit change, about 15 seconds, with a ceiling-fan wipe as the cut. The fan is generated. You do not film a fan.',
-      aZh: '一张照片的换装效果，大约 15 秒，用吊扇扫过作为转场。风扇是生成的。你不需要去拍一台风扇。',
+        `A one-photo outfit change, about ${fanCredits} seconds, with a ceiling-fan wipe as the cut. The fan is generated. You do not film a fan.`,
+      aZh: `一张照片的换装效果，大约 ${fanCredits} 秒，用吊扇扫过作为转场。风扇是生成的。你不需要去拍一台风扇。`,
     },
     {
       id: 'fan-in-photo',
@@ -413,22 +425,22 @@ export const FAN_LIVE: LivePack = {
       qEn: 'How long is the video?',
       qZh: '视频有多长？',
       aEn:
-        'About 15 seconds. This look uses 15 credits. The clip shows on your account when it is ready.',
-      aZh: '大约 15 秒。这个效果扣 15 积分。完成后，成片会出现在你的账户里。',
+        `About ${fanCredits} seconds. This look uses ${fanCredits} credits, one per second of its source clip. The clip shows on your account when it is ready.`,
+      aZh: `大约 ${fanCredits} 秒。这个效果扣 ${fanCredits} 积分，按素材每秒 1 积分。完成后，成片会出现在你的账户里。`,
     },
     {
       id: 'credits',
       qEn: 'How are credits calculated?',
       qZh: '积分怎么计算？',
-      aEn: `This look uses 15 credits, about one per second. Packs are ${packsEn}. A failed clip returns the 15 credits.`,
-      aZh: `这个效果扣 15 积分，大约每秒 1 积分。套餐为 ${packsZh}。短片失败会退回这 15 积分。`,
+      aEn: `This look uses ${fanCredits} credits, one per second of its source clip. Packs are ${packsEn}. A failed clip returns the ${fanCredits} credits.`,
+      aZh: `这个效果扣 ${fanCredits} 积分，按素材每秒 1 积分。套餐为 ${packsZh}。短片失败会退回这 ${fanCredits} 积分。`,
     },
     {
       id: 'free',
       qEn: 'Is Ceiling Fan Transition AI free?',
       qZh: 'Ceiling Fan Transition AI 免费吗？',
-      aEn: `No. This look uses 15 credits. Packs are ${packsEn}. Buying a pack charges a card.`,
-      aZh: `不免费。这个效果扣 15 积分。套餐为 ${packsZh}。购买套餐会扣银行卡。`,
+      aEn: `No. This look uses ${fanCredits} credits. Packs are ${packsEn}. Buying a pack charges a card.`,
+      aZh: `不免费。这个效果扣 ${fanCredits} 积分。套餐为 ${packsZh}。购买套餐会扣银行卡。`,
     },
     {
       id: 'kids',
@@ -451,8 +463,8 @@ export const FAN_LIVE: LivePack = {
       qEn: 'What if generate fails? Is there a refund?',
       qZh: '生成失败会退款吗？',
       aEn:
-        'The 15 credits return to your account, and no clip is kept. A card is charged only after a pack purchase completes.',
-      aZh: '这 15 积分会退回账户，也不会留下成片。只有积分包付款完成后才会扣银行卡。',
+        `The ${fanCredits} credits return to your account, and no clip is kept. A card is charged only after a pack purchase completes.`,
+      aZh: `这 ${fanCredits} 积分会退回账户，也不会留下成片。只有积分包付款完成后才会扣银行卡。`,
     },
   ],
 };

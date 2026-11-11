@@ -1,8 +1,20 @@
 import { SITE, packPriceList } from './site';
 import type { FaqEntry } from './templates';
+import { getTemplate as sourceTemplate } from '../../functions/_lib/templates.js';
 
 const packsEn = packPriceList('en');
 const packsZh = packPriceList('zh');
+
+function sourceCredits(slug: string): number {
+  const row = sourceTemplate(slug);
+  const credits = row && row.creditCost;
+  if (!credits) throw new Error(`Missing source duration for ${slug}`);
+  return credits;
+}
+
+const bbyCredits = sourceCredits('bby-wow');
+const kissCredits = sourceCredits('kiss-cam');
+const fanCredits = sourceCredits('ceiling-fan');
 
 /** Hub-level questions. Brand pages keep their own keyword sets. */
 export const HUB_FAQ: readonly FaqEntry[] = [
@@ -28,24 +40,24 @@ export const HUB_FAQ: readonly FaqEntry[] = [
     qEn: 'What is Bby Wow AI?',
     qZh: 'Bby Wow AI 是什么？',
     aEn:
-      'One adult photo becomes a party-dance clip of about 10 seconds. The sample photo, the clip, and questions for that look are on the Bby Wow page.',
-    aZh: '一张成人照片做成大约 10 秒的派对舞。示例照片、短片和这个效果自己的问题，在 Bby Wow 页面上。',
+      `One adult photo becomes a party-dance clip of about ${bbyCredits} seconds. The sample photo, the clip, and questions for that look are on the Bby Wow page.`,
+    aZh: `一张成人照片做成大约 ${bbyCredits} 秒的派对舞。示例照片、短片和这个效果自己的问题，在 Bby Wow 页面上。`,
   },
   {
     id: 'kiss',
     qEn: 'What is Coldplay Kiss Cam AI?',
     qZh: 'Coldplay Kiss Cam AI 是什么？',
     aEn:
-      'Two adult photos become a jumbotron-style clip of about 11–12 seconds. It uses no concert footage and is not official Coldplay.',
-    aZh: '两张成人照片做成大约 11–12 秒的大屏风格短片。不含演唱会素材，也不是 Coldplay 官方。',
+      `Two adult photos become a jumbotron-style clip of about ${kissCredits} seconds. It uses no concert footage and is not official Coldplay.`,
+    aZh: `两张成人照片做成大约 ${kissCredits} 秒的大屏风格短片。不含演唱会素材，也不是 Coldplay 官方。`,
   },
   {
     id: 'fan',
     qEn: 'What is Ceiling Fan Transition AI?',
     qZh: 'Ceiling Fan Transition AI 是什么？',
     aEn:
-      'One adult photo becomes an outfit-change wipe of about 15 seconds. The fan is generated. Never strap a phone to a real fan.',
-    aZh: '一张成人照片做成大约 15 秒的换装转场。风扇是生成的。切勿把手机绑在真风扇上。',
+      `One adult photo becomes an outfit-change wipe of about ${fanCredits} seconds. The fan is generated. Never strap a phone to a real fan.`,
+    aZh: `一张成人照片做成大约 ${fanCredits} 秒的换装转场。风扇是生成的。切勿把手机绑在真风扇上。`,
   },
   {
     id: 'photos',
@@ -76,15 +88,15 @@ export const HUB_FAQ: readonly FaqEntry[] = [
     qEn: 'How long does a clip run?',
     qZh: '短片有多长？',
     aEn:
-      'About 10 seconds for Bby Wow, 11–12 seconds for Kiss Cam, and about 15 seconds for Ceiling Fan. Those are the lengths of the looks. The file shows on your account when the job is ready.',
-    aZh: 'Bby Wow 大约 10 秒，Kiss Cam 大约 11–12 秒，Ceiling Fan 大约 15 秒。这是效果的时长。任务完成后，成片会出现在你的账户里。',
+      `About ${bbyCredits} seconds for Bby Wow, ${kissCredits} seconds for Kiss Cam, and about ${fanCredits} seconds for Ceiling Fan. Those are the lengths of the source clips. The file shows on your account when the job is ready.`,
+    aZh: `Bby Wow 大约 ${bbyCredits} 秒，Kiss Cam 大约 ${kissCredits} 秒，Ceiling Fan 大约 ${fanCredits} 秒。这是素材的时长。任务完成后，成片会出现在你的账户里。`,
   },
   {
     id: 'credits',
     qEn: 'How do credits work?',
     qZh: '积分怎么计算？',
-    aEn: `One credit is about one second. Bby Wow uses 10, Kiss Cam 12, and Ceiling Fan 15. Packs are ${packsEn}. A new account starts at 0 credits.`,
-    aZh: `1 积分大约 1 秒。Bby Wow 扣 10，Kiss Cam 扣 12，Ceiling Fan 扣 15。套餐为 ${packsZh}。新账户从 0 积分开始。`,
+    aEn: `One credit is one second of that look’s source clip, rounded to the nearest second. Packs are ${packsEn}. A new account starts at 0 credits.`,
+    aZh: `1 积分是该效果素材的 1 秒，按秒四舍五入。套餐为 ${packsZh}。新账户从 0 积分开始。`,
   },
   {
     id: 'free',

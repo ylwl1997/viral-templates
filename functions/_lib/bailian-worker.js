@@ -1,5 +1,5 @@
 /**
- * Process queued remake jobs through Bailian wan2.2-animate-move.
+ * Process queued remake jobs through Bailian wan2.2-animate-mix.
  *
  * One pass submits new tasks and polls tasks already running. Video generation
  * takes minutes. Create starts a pass with waitUntil. Pages Functions have
@@ -8,9 +8,10 @@
  * repeat POST /api/jobs/process (see scripts/smoke-bailian.mjs). wait_ms can
  * poll inside one request for a short window.
  *
- * Subject image is R2 upload_key (slot 0). wan2.2-animate-move takes one image.
- * Kiss Cam's second photo stays in R2 and is not sent.
- * The reference clip is the template demo MP4, read from the Pages ASSETS
+ * Subject image is R2 upload_key (slot 0). wan2.2-animate-mix takes one image
+ * and replaces that person in the template video. The template keeps its scene,
+ * motion, lighting, and outfits. Kiss Cam's second photo stays in R2 and is not sent.
+ * The template demo MP4 is video_url, read from the Pages ASSETS
  * binding (or this deployment). Both files are uploaded to DashScope temporary
  * storage. image_url and video_url sent to Bailian are oss:// only.
  * Never pass *.pages.dev, *.workers.dev, or *.r2.dev. Aliyun cannot fetch them
@@ -231,7 +232,7 @@ async function prepareQueued(ctx, row) {
   }
   let image;
   try {
-    // Slot 0 only. wan2.2-animate-move takes one subject image.
+    // Slot 0 only. wan2.2-animate-mix takes one subject image.
     image = await readSubject(ctx.bucket, row);
   } catch (err) {
     const code = err && err.code ? err.code : 'no_photo';

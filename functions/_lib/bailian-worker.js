@@ -4,16 +4,19 @@
  * Primary path is Agnes Video 2.5 reference mode when VIDEO_PROVIDER is agnes
  * (the default) and PUBLIC_SITE_APEX is a public custom domain. A template
  * that fits in 2–12s is one job. A longer template is cut into 4–12s pieces,
- * each piece is its own job, and the results are joined here. wan2.2-animate-mix
+ * every piece is submitted together, and the results are joined here.
+ * wan2.2-animate-mix
  * is the fallback only when a split cannot make every piece fit, or for fps,
  * size, format, a missing public origin, or an Agnes refusal before a task exists.
  *
  * One pass submits new tasks and polls tasks already running. Video generation
- * takes minutes. Create starts a pass with waitUntil. Pages Functions have
- * no cron, so workers/job-drain posts /api/jobs/process every two minutes,
- * and the signed-in account page can post /api/jobs/continue. Ops can still
- * repeat POST /api/jobs/process (see scripts/smoke-bailian.mjs). wait_ms can
- * poll inside one request. Agnes polls wait at least 6s and back off after 429.
+ * takes minutes. Create starts a pass with waitUntil and keeps polling that
+ * job for a short follow window. Pages Functions have no cron, so
+ * workers/job-drain posts /api/jobs/process every minute and that call keeps
+ * polling while work is in flight. The browser only reads job status from
+ * this app. It does not call the provider. Ops can still repeat
+ * POST /api/jobs/process (see scripts/smoke-bailian.mjs). wait_ms can poll
+ * inside one request. Agnes polls wait at least 6s and back off after 429.
  *
  * Subject image is R2 upload_key (slot 0). Both models take one image and
  * replace that person in the template video. The template keeps its scene,
@@ -27,6 +30,7 @@
  */
 
 import {
+  claimProviderPoll,
   claimQueuedJob,
   clearProviderTask,
   deferQueuedJob,
@@ -36,10 +40,12 @@ import {
   noteIdleBackoff,
   noteRunningBackoff,
   refundOutstandingFailures,
+  replaceProviderTask,
   revertQueuedJob,
   saveProviderTask,
 } from './account-db.js';
 import {
+  AGNES_POLL_MIN_MS,
   AGNES_VIDEO_MAX_BYTES,
   agnesInputUrls,
   agnesMediaDecision,
@@ -49,6 +55,7 @@ import {
   downloadAgnesVideo,
   getAgnesVideo,
   packAgnesTaskId,
+  packAgnesTaskSet,
   probeReferenceMp4,
   redactAgnesDetail,
   unpackAgnesTaskId,
@@ -389,7 +396,129 @@ async function submitAgnesSegment(ctx, row, prepared, index) {
   }
 }
 
+function createFailureKind(err) {
+  if (!err) return 'hard';
+  if (err.httpStatus === 429) return 'rate';
+  if (err.rejected || err.code === 'agnes_submit_uncertain' || (err.transient && err.httpStatus !== 429)) return 'outage';
+  return 'hard';
+}
+
+function rateLimitResult(row, wait, queued) {
+  return {
+    id: row.id,
+    status: queued ? 'queued' : 'running',
+    action: 'retry',
+    error: 'retry_later',
+    retry_after_ms: wait,
+    provider: 'agnes',
+  };
+}
+
+async function createPiece(ctx, inputs, segment) {
+  try {
+    const created = await createReferenceVideo(ctx.agnes, ctx.fetchImpl, {
+      imageUrl: inputs.imageUrl,
+      videoUrl: inputs.videoUrl,
+      seconds: segment.seconds,
+    });
+    return { videoId: created.videoId };
+  } catch (err) {
+    return { err };
+  }
+}
+
+async function rememberSlots(ctx, row, slots) {
+  let packed;
+  try {
+    packed = packAgnesTaskSet(slots);
+  } catch (err) {
+    console.error('agnes_create', row.id, 'agnes_bad_task');
+    return failJob(ctx.db, row, 'agnes_submit_uncertain', {
+      note_en: 'Video generation did not start. Please try again from Create.',
+      note_zh: '视频生成没有开始。请在创作页再试一次。',
+    });
+  }
+  try {
+    if (!row.provider_task_id) {
+      await saveProviderTask(ctx.db, row.id, packed);
+    } else if (row.provider_task_id !== packed) {
+      const replaced = await replaceProviderTask(ctx.db, row.id, row.provider_task_id, packed);
+      if (!replaced) return { id: row.id, status: 'running', action: 'busy', provider: 'agnes' };
+    }
+  } catch (err) {
+    if (err && err.code === 'provider_task_taken') return failJob(ctx.db, row, 'provider_task_taken');
+    if (err && err.code === 'storage_error') {
+      console.error('agnes_create', row.id, 'task_not_saved');
+      return { id: row.id, status: 'running', action: 'submit_unsaved', error: 'storage_error', provider: 'agnes' };
+    }
+    throw err;
+  }
+  row.provider_task_id = packed;
+  return null;
+}
+
+async function submitAgnesParallel(ctx, row, prepared) {
+  const { db } = ctx;
+  const segments = prepared.selection.segments;
+  const inputs = [];
+  try {
+    for (const segment of segments) {
+      const one = await segmentInputs(ctx, row, prepared, segment);
+      if (!one) return { fallback: true };
+      inputs.push(one);
+    }
+  } catch (err) {
+    console.error('agnes_input', row.id, err && err.code ? err.code : 'error');
+    return { fallback: true };
+  }
+  const created = await Promise.all(segments.map((segment, index) => createPiece(ctx, inputs[index], segment)));
+  const slots = created.map((item) => (item && item.videoId ? item.videoId : ''));
+  const kinds = created.map((item) => (item && item.videoId ? 'ok' : createFailureKind(item && item.err)));
+  const anyId = slots.some(Boolean);
+  const anyRate = kinds.includes('rate');
+  const anyOutage = kinds.includes('outage');
+  const anyHard = kinds.includes('hard');
+  if (!anyId) {
+    if (anyOutage || (!anyRate && !anyHard)) return { fallback: true };
+    if (anyRate && !anyHard) {
+      const wait = agnesPollDelayMs(prepared.backoffMs);
+      const deferred = await deferQueuedJob(db, row.id, `retry_later_${wait}`);
+      if (!deferred) return { id: row.id, status: 'running', action: 'busy', provider: 'agnes' };
+      return rateLimitResult(row, wait, true);
+    }
+    const failed = created.find((item) => item && item.err);
+    const code = failed && failed.err && failed.err.code === 'agnes_submit_uncertain'
+      ? 'agnes_submit_uncertain'
+      : failed && failed.err && failed.err.providerCode
+        ? `agnes_${failed.err.providerCode}`
+        : 'agnes_submit_uncertain';
+    return failJob(db, row, code, {
+      detail: redactAgnesDetail(failed && failed.err && failed.err.providerMessage, ctx.agnes && ctx.agnes.apiKey),
+      note_en: 'Video generation did not start. Please try again from Create.',
+      note_zh: '视频生成没有开始。请在创作页再试一次。',
+    });
+  }
+  if (anyHard || anyOutage) {
+    const failed = created.find((item) => item && item.err && !item.videoId);
+    const code = failed && failed.err && failed.err.providerCode ? `agnes_${failed.err.providerCode}` : 'agnes_submit_uncertain';
+    console.error('agnes_create', row.id, code);
+    return failJob(db, row, code, {
+      detail: redactAgnesDetail(failed && failed.err && failed.err.providerMessage, ctx.agnes && ctx.agnes.apiKey),
+    });
+  }
+  const saved = await rememberSlots(ctx, row, slots);
+  if (saved) return saved;
+  if (anyRate) {
+    const wait = agnesPollDelayMs(prepared.backoffMs);
+    await noteRunningBackoff(db, row.id, `retry_later_${wait}`);
+    return rateLimitResult(row, wait, false);
+  }
+  return { id: row.id, status: 'running', action: 'submitted', task_id: row.provider_task_id, provider: 'agnes' };
+}
+
 async function submitAgnes(ctx, row, prepared) {
+  const segments = prepared.selection && prepared.selection.segments;
+  if (segments && segments.length > 1) return submitAgnesParallel(ctx, row, prepared);
   return submitAgnesSegment(ctx, row, prepared, 0);
 }
 
@@ -493,6 +622,16 @@ async function readPartBytes(bucket, userId, jobId, count) {
   return parts;
 }
 
+async function readPartMap(bucket, userId, jobId, count) {
+  const parts = [];
+  for (let index = 0; index < count; index += 1) {
+    const obj = await getMedia(bucket, partObjectKey(userId, jobId, index));
+    const bytes = await readStoredBytes(obj);
+    parts.push(bytes || null);
+  }
+  return parts;
+}
+
 async function discardSplitObjects(bucket, userId, jobId, count) {
   for (let index = 0; index < count; index += 1) {
     try {
@@ -520,7 +659,7 @@ async function stitchParts(ctx, row, parts) {
     joined = concatMp4(parts);
   } catch (err) {
     console.error('segment_join', row.id, err && err.code ? err.code : 'error');
-    return failJob(ctx.db, row, 'failed');
+    return failJob(ctx.db, row, 'segment_join');
   }
   const stored = await persistVideo(ctx, row, joined);
   if (stored && stored.status === 'ready') await discardSplitObjects(ctx.bucket, row.user_id, row.id, parts.length);
@@ -605,9 +744,211 @@ async function resumeSplit(ctx, row) {
   return submitAgnesSegment(ctx, row, { ...plan, backoffMs: 0 }, parts.length);
 }
 
+async function storeOnePart(ctx, row, index, videoUrl) {
+  let bytes;
+  try {
+    bytes = await downloadAgnesVideo(ctx.fetchImpl, videoUrl, VIDEO_MAX_BYTES);
+  } catch (err) {
+    const permanent =
+      err &&
+      (err.code === 'video_too_large' ||
+        err.code === 'agnes_bad_result' ||
+        err.rejected ||
+        err.httpStatus === 404 ||
+        err.httpStatus === 410);
+    if (!permanent && err && (err.transient || err.code === 'agnes_error')) {
+      return {
+        status: 'retry',
+        id: row.id,
+        action: 'retry_download',
+        error: agnesCode(err),
+        detail: redactAgnesDetail(err.providerMessage, ctx.agnes && ctx.agnes.apiKey),
+        retry_after_ms: err.httpStatus === 429 ? agnesPollDelayMs(0) : 0,
+        provider: 'agnes',
+      };
+    }
+    return failJob(ctx.db, row, err && err.code === 'agnes_error' ? agnesCode(err) : (err && err.code) || 'failed');
+  }
+  if (!sniffMp4(bytes)) return failJob(ctx.db, row, 'bad_video');
+  await putMedia(ctx.bucket, partObjectKey(row.user_id, row.id, index), bytes, {
+    contentType: 'video/mp4',
+    customMetadata: { kind: 'part', job_id: row.id },
+  });
+  return { status: 'stored', bytes };
+}
+
+async function pollAgnesParallel(ctx, row, info) {
+  const { db, agnes, fetchImpl } = ctx;
+  if (!agnes || !agnes.configured) {
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'retry_poll',
+      error: 'retry_later',
+      retry_after_ms: AGNES_POLL_MIN_MS,
+      provider: 'agnes',
+    };
+  }
+  const claimed = await claimProviderPoll(db, row.id, row.updated_at, AGNES_POLL_MIN_MS);
+  if (!claimed) {
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'retry_poll',
+      error: 'retry_later',
+      retry_after_ms: AGNES_POLL_MIN_MS,
+      provider: 'agnes',
+    };
+  }
+  let plan;
+  try {
+    plan = await loadSplitPlan(ctx, row);
+  } catch (err) {
+    if (err && err.code === 'reference_fetch') {
+      return { id: row.id, status: 'running', action: 'retry', error: 'reference_fetch', provider: 'agnes' };
+    }
+    return failJob(db, row, 'failed');
+  }
+  if (!plan || !plan.selection.segments || plan.selection.segments.length !== info.count) {
+    return failJob(db, row, 'failed');
+  }
+  const parts = await readPartMap(ctx.bucket, row.user_id, row.id, info.count);
+  if (parts.every(Boolean)) return stitchParts(ctx, row, parts);
+  const slots = info.slots.slice();
+  const missing = [];
+  for (let index = 0; index < slots.length; index += 1) {
+    if (!slots[index] && !parts[index]) missing.push(index);
+  }
+  if (missing.length) {
+    const inputs = [];
+    try {
+      for (const index of missing) {
+        const one = await segmentInputs(ctx, row, plan, plan.selection.segments[index]);
+        if (!one) return failJob(db, row, 'failed');
+        inputs.push(one);
+      }
+    } catch (err) {
+      console.error('agnes_input', row.id, err && err.code ? err.code : 'error');
+      return failJob(db, row, 'failed');
+    }
+    const created = await Promise.all(missing.map((index, pos) => createPiece(ctx, inputs[pos], plan.selection.segments[index])));
+    let rate = false;
+    for (let pos = 0; pos < missing.length; pos += 1) {
+      const item = created[pos];
+      if (item && item.videoId) {
+        slots[missing[pos]] = item.videoId;
+        continue;
+      }
+      if (createFailureKind(item && item.err) === 'rate') {
+        rate = true;
+        continue;
+      }
+      const code = item && item.err && item.err.providerCode ? `agnes_${item.err.providerCode}` : 'agnes_submit_uncertain';
+      console.error('agnes_create', row.id, code);
+      return failJob(db, row, code, {
+        detail: redactAgnesDetail(item && item.err && item.err.providerMessage, agnes.apiKey),
+      });
+    }
+    const saved = await rememberSlots(ctx, row, slots);
+    if (saved) return saved;
+    if (rate || slots.some((id, index) => !id && !parts[index])) {
+      const previous = /^retry_later_(\d+)$/.exec(row.error_code || '');
+      const wait = agnesPollDelayMs(previous ? Number(previous[1]) : 0);
+      await noteRunningBackoff(db, row.id, `retry_later_${wait}`);
+      return rateLimitResult(row, wait, false);
+    }
+  }
+  const pending = [];
+  for (let index = 0; index < slots.length; index += 1) {
+    if (slots[index] && !parts[index]) pending.push(index);
+  }
+  if (!pending.length) return stitchParts(ctx, row, parts);
+  const polls = await Promise.all(
+    pending.map(async (index) => {
+      try {
+        const task = await getAgnesVideo(agnes, fetchImpl, slots[index]);
+        return { index, task };
+      } catch (err) {
+        return { index, err };
+      }
+    }),
+  );
+  if (polls.some((item) => item.err && item.err.httpStatus === 429)) {
+    const previous = /^retry_later_(\d+)$/.exec(row.error_code || '');
+    const wait = agnesPollDelayMs(previous ? Number(previous[1]) : 0);
+    await noteRunningBackoff(db, row.id, `retry_later_${wait}`);
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'retry_poll',
+      error: 'retry_later',
+      retry_after_ms: wait,
+      provider: 'agnes',
+    };
+  }
+  const transient = polls.find((item) => item.err);
+  if (transient) {
+    console.error('agnes_poll', row.id, transient.err.providerCode || transient.err.code);
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'retry_poll',
+      error: agnesCode(transient.err),
+      detail: redactAgnesDetail(transient.err.providerMessage, agnes.apiKey),
+      retry_after_ms: AGNES_POLL_MIN_MS,
+      provider: 'agnes',
+    };
+  }
+  let stillRunning = false;
+  for (const item of polls) {
+    const status = String((item.task && item.task.status) || '').toLowerCase();
+    if (status === 'queued' || status === 'in_progress' || !status) {
+      stillRunning = true;
+      continue;
+    }
+    if (status === 'failed') {
+      const message = item.task.error && typeof item.task.error === 'object' ? item.task.error.message : item.task.error;
+      console.error('agnes_task', row.id, 'failed');
+      return failJob(db, row, 'agnes_failed', { detail: redactAgnesDetail(message, agnes.apiKey) });
+    }
+    if (status !== 'completed') {
+      stillRunning = true;
+      continue;
+    }
+    const videoUrl = typeof item.task.url === 'string' ? item.task.url : '';
+    if (!videoUrl) return failJob(db, row, 'agnes_no_result');
+    const stored = await storeOnePart(ctx, row, item.index, videoUrl);
+    if (!stored || stored.status !== 'stored') {
+      if (stored && stored.status === 'retry') {
+        return {
+          id: row.id,
+          status: 'running',
+          action: stored.action,
+          error: stored.error,
+          detail: stored.detail,
+          retry_after_ms: stored.retry_after_ms,
+          provider: 'agnes',
+        };
+      }
+      return stored;
+    }
+    parts[item.index] = stored.bytes;
+  }
+  if (parts.every(Boolean)) return stitchParts(ctx, row, parts);
+  if (stillRunning) await noteRunningBackoff(db, row.id, `retry_later_${AGNES_POLL_MIN_MS}`);
+  return {
+    id: row.id,
+    status: 'running',
+    action: 'polling',
+    provider: 'agnes',
+    retry_after_ms: AGNES_POLL_MIN_MS,
+  };
+}
+
 async function pollAgnes(ctx, row) {
   const { db, agnes, fetchImpl } = ctx;
   const info = unpackAgnesTaskId(row.provider_task_id);
+  if (info && info.parallel) return pollAgnesParallel(ctx, row, info);
   const videoId = info && info.videoId;
   if (!videoId || !agnes || !agnes.configured) {
     return {
@@ -616,6 +957,17 @@ async function pollAgnes(ctx, row) {
       action: 'retry_poll',
       error: 'retry_later',
       retry_after_ms: agnesPollDelayMs(0),
+      provider: 'agnes',
+    };
+  }
+  const claimed = await claimProviderPoll(db, row.id, row.updated_at, AGNES_POLL_MIN_MS);
+  if (!claimed) {
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'retry_poll',
+      error: 'retry_later',
+      retry_after_ms: AGNES_POLL_MIN_MS,
       provider: 'agnes',
     };
   }
@@ -649,7 +1001,15 @@ async function pollAgnes(ctx, row) {
   }
   const status = String(task.status || '').toLowerCase();
   if (status === 'queued' || status === 'in_progress') {
-    return { id: row.id, status: 'running', action: 'polling', task_status: status, provider: 'agnes' };
+    await noteRunningBackoff(db, row.id, `retry_later_${AGNES_POLL_MIN_MS}`);
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'polling',
+      task_status: status,
+      retry_after_ms: AGNES_POLL_MIN_MS,
+      provider: 'agnes',
+    };
   }
   if (status === 'completed') {
     const videoUrl = typeof task.url === 'string' ? task.url : '';
@@ -922,7 +1282,10 @@ export async function processRemakeJobs({
     const pending = processed.some((row) => row.status === 'running' || row.action === 'retry');
     if (!pending) break;
     const backoff = processed.reduce((max, row) => Math.max(max, row && row.retry_after_ms ? row.retry_after_ms : 0), 0);
-    const delay = Math.min(Math.max(pollIntervalMs, backoff), Math.max(0, deadline - Date.now()));
+    const remaining = Math.max(0, deadline - Date.now());
+    const waiting = processed.every((row) => row && (row.status === 'ready' || row.status === 'failed' || row.retry_after_ms));
+    if (waiting && backoff > remaining) break;
+    const delay = Math.min(Math.max(pollIntervalMs, backoff), remaining);
     if (delay > 0) await sleepImpl(delay);
     ctx.pollOnly = true;
     ctx.onlyIds = watched;

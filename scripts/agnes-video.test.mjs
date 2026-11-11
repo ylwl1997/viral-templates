@@ -13,10 +13,14 @@ import {
   assertAgnesInputUrl,
   buildReferenceRequest,
   customMediaOrigin,
+  packAgnesTaskSet,
   planAgnesSegments,
   probeReferenceMp4,
+  unpackAgnesTaskId,
 } from '../functions/_lib/agnes.js';
-import { cutReferenceMp4 } from '../functions/_lib/mp4-segments.js';
+import { concatMp4, cutReferenceMp4 } from '../functions/_lib/mp4-segments.js';
+import { onRequestPost as onContinue } from '../functions/api/jobs/continue.js';
+import { issueSessionCookie } from '../functions/_lib/session.js';
 import { probeImage } from '../functions/_lib/image-precheck.js';
 import { queueJobWithMedia } from '../functions/_lib/job-media.js';
 import { ensureSchema } from '../functions/_lib/account-db.js';
@@ -344,8 +348,14 @@ function installFetch() {
       assert(init.method === 'POST', 'create method');
       assert((init.headers || {}).Authorization === `Bearer ${AGNES_KEY}`, 'create auth');
       script.creates += 1;
+      const requestBody = JSON.parse(init.body || '{}');
       if (script.create === 'reject') return jsonResponse(400, { error: { message: 'Invalid reference media' } });
-      if (script.create === 'rate') return jsonResponse(429, { message: 'too many' });
+      if (script.create === 'rate' || (script.create === 'rate-8' && String(requestBody.seconds) === '8')) {
+        return jsonResponse(429, { message: 'too many' });
+      }
+      if (script.create === 'reject-8' && String(requestBody.seconds) === '8') {
+        return jsonResponse(400, { error: { message: 'Invalid reference media' } });
+      }
       if (script.create === 'down') return jsonResponse(500, { message: `bad ${AGNES_KEY}` });
       const videoId = `task_bby${String(script.creates).padStart(6, '0')}`;
       return jsonResponse(200, {
@@ -418,6 +428,29 @@ function installFetch() {
     throw new Error(`unexpected fetch ${href}`);
   }
   return { fetchImpl, calls };
+}
+
+function bitrateBoxes(bytes) {
+  const found = [];
+  for (let i = 0; i < bytes.length - 16; i += 1) {
+    if (bytes[i] === 0x62 && bytes[i + 1] === 0x74 && bytes[i + 2] === 0x72 && bytes[i + 3] === 0x74) {
+      found.push(Buffer.from(bytes.subarray(i, i + 16)).toString('hex'));
+    }
+  }
+  return found.join(',');
+}
+
+function visualSample(bytes) {
+  for (let i = 0; i < bytes.length - 48; i += 1) {
+    if (bytes[i] !== 0x73 || bytes[i + 1] !== 0x74 || bytes[i + 2] !== 0x73 || bytes[i + 3] !== 0x64) continue;
+    const type = String.fromCharCode(bytes[i + 16], bytes[i + 17], bytes[i + 18], bytes[i + 19]);
+    if (type === 'avc1' || type === 'avc3') return i + 12;
+  }
+  return -1;
+}
+
+function sniffJoin(bytes) {
+  return bytes instanceof Uint8Array && bytes.length > 32 && bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70;
 }
 
 function createBody(calls) {
@@ -501,8 +534,12 @@ const hidden = await run(bby.job.id);
 assert(hidden.processed[0].status === 'running', JSON.stringify(hidden.processed[0]));
 assert(hidden.processed[0].action === 'polling', hidden.processed[0].action);
 assert(!calls.some((call) => call.url.includes('cdn.example.com')), 'internal_status completed was treated as done');
+const pollsAfterHide = calls.filter((call) => call.url.includes('/agnesapi')).length;
+const rushed = await run(bby.job.id);
+assert(calls.filter((call) => call.url.includes('/agnesapi')).length === pollsAfterHide, 'in-progress was polled again inside 6s');
+assert(rushed.processed[0].status === 'running', JSON.stringify(rushed.processed[0]));
 script.poll = 'completed';
-const ready = await run(bby.job.id);
+const ready = await run(bby.job.id, Date.now() + 8000);
 assert(ready.processed[0].status === 'ready', JSON.stringify(ready.processed[0]));
 assert(calls.some((call) => call.url === 'https://cdn.example.com/out.mp4'), 'downloaded top-level url');
 assert(script.creates === createsBeforePoll, 'poll created another Agnes task');
@@ -525,38 +562,184 @@ assert(kissPayload.videos[0].url === 'https://swaystill.com/brand/templates/kiss
 assert(!JSON.stringify(kissPayload).includes('photo-2'), 'second photo url sent');
 
 const fanCuts = fanDecision.segments.map((segment) => cutReferenceMp4(fanFile, segment.start, segment.end));
+const sameSourceJoin = concatMp4(fanCuts);
+assert(sniffJoin(sameSourceJoin), 'same-source cuts did not join');
+
+// Stream-copied prefixes of two real 720x1280 outputs whose stsd boxes differ in btrt.
+const piece0 = fs.readFileSync(new URL('./fixtures/compatible-join/p0.mp4', import.meta.url));
+const piece1 = fs.readFileSync(new URL('./fixtures/compatible-join/p1.mp4', import.meta.url));
+assert(bitrateBoxes(piece0) !== bitrateBoxes(piece1), 'fixture stsd bitrate boxes match; it does not exercise the joiner');
+const compatible = concatMp4([new Uint8Array(piece0), new Uint8Array(piece1)]);
+const compatibleProbe = probeReferenceMp4(compatible);
+assert(compatibleProbe.durationSeconds > 0.8 && compatibleProbe.durationSeconds < 2, `short join ${compatibleProbe.durationSeconds}`);
+const tall = new Uint8Array(piece1);
+const visual = visualSample(tall);
+assert(visual > 0, 'fixture has no video sample entry');
+tall[visual + 34] = 0x02;
+tall[visual + 35] = 0x00;
+let mismatched = false;
+try {
+  concatMp4([new Uint8Array(piece0), tall]);
+} catch (err) {
+  mismatched = err && err.code === 'segment_media';
+}
+assert(mismatched, 'different frame size was joined');
+
+const packedSlots = packAgnesTaskSet(['task_piece_0001', '']);
+const unpackedSlots = unpackAgnesTaskId(packedSlots);
+assert(unpackedSlots.parallel && unpackedSlots.count === 2, JSON.stringify(unpackedSlots));
+assert(unpackedSlots.slots[0] === 'task_piece_0001' && unpackedSlots.slots[1] === '', JSON.stringify(unpackedSlots.slots));
+assert(unpackAgnesTaskId('ag1_task_piece_0001').parallel === false, 'legacy piece id was treated as parallel');
+
 script.downloads = fanCuts.slice();
 script.poll = 'completed';
 const bailianBeforeFan = script.bailianTasks;
+const createsBeforeFan = script.creates;
 const fan = await queue('ceiling-fan', onePhoto);
 const fanStart = await run(fan.job.id);
 assert(fanStart.processed[0].provider === 'agnes', JSON.stringify(fanStart.processed[0]));
 assert(fanStart.processed[0].status === 'running', JSON.stringify(fanStart.processed[0]));
-const fanCreates = calls.filter((call) => call.url.startsWith('https://api.agnes-ai.cn/v1/videos'));
-const firstPiece = JSON.parse(fanCreates[fanCreates.length - 1].init.body);
-assert(firstPiece.seconds === '8', firstPiece.seconds);
-assert(firstPiece.videos[0].start_seconds === 0, JSON.stringify(firstPiece.videos[0]));
-assert(firstPiece.videos[0].url.includes(`/seg0?`), firstPiece.videos[0].url);
-assert(!firstPiece.videos[0].url.includes('ceiling-fan-demo.mp4'), 'full 15s file was sent');
-assert(firstPiece.videos[0].url.startsWith('https://swaystill.com/'), firstPiece.videos[0].url);
-const fanNext = await run(fan.job.id);
-assert(fanNext.processed[0].status === 'running', JSON.stringify(fanNext.processed[0]));
-const fanCreates2 = calls.filter((call) => call.url.startsWith('https://api.agnes-ai.cn/v1/videos'));
-const secondPiece = JSON.parse(fanCreates2[fanCreates2.length - 1].init.body);
-assert(secondPiece.seconds === '7', secondPiece.seconds);
-assert(secondPiece.videos[0].url.includes('/seg1?'), secondPiece.videos[0].url);
-assert(fanCreates2.length === fanCreates.length + 1, 'second piece was not submitted');
+const fanCreates = calls.filter((call) => call.url.startsWith('https://api.agnes-ai.cn/v1/videos')).slice(createsBeforeFan);
+assert(fanCreates.length === 2, `parallel submit count ${fanCreates.length}`);
+const fanBodies = fanCreates.map((call) => JSON.parse(call.init.body));
+const eight = fanBodies.find((body) => body.seconds === '8');
+const seven = fanBodies.find((body) => body.seconds === '7');
+assert(eight && eight.videos[0].url.includes('/seg0?') && eight.videos[0].start_seconds === 0, JSON.stringify(eight));
+assert(seven && seven.videos[0].url.includes('/seg1?'), JSON.stringify(seven));
+assert(fanBodies.every((body) => body.videos[0].url.startsWith('https://swaystill.com/')), 'segment input host');
+assert(fanBodies.every((body) => !body.videos[0].url.includes('ceiling-fan-demo.mp4')), 'full 15s file was sent');
+assert(!fanBodies.some((body) => /pages\.dev|workers\.dev|r2\.dev/.test(body.videos[0].url)), 'blocked host sent as segment input');
+const fanPack = unpackAgnesTaskId(sqlite.prepare(`SELECT provider_task_id FROM jobs WHERE id = ?`).get(fan.job.id).provider_task_id);
+assert(fanPack.parallel && fanPack.slots.every(Boolean), JSON.stringify(fanPack));
+const pollsBeforeFan = calls.filter((call) => call.url.includes('/agnesapi')).length;
+const cookie = (await issueSessionCookie(new Request(`${requestOrigin}/api/jobs/continue`, { method: 'POST' }), env, user)).split(';')[0];
+const continued = await onContinue({
+  env,
+  request: new Request(`${requestOrigin}/api/jobs/continue`, { method: 'POST', headers: { cookie } }),
+});
+assert(continued.status === 200, `continue ${continued.status}`);
+const continuedBody = await continued.json();
+assert(continuedBody.processed.some((row) => row.id === fan.job.id && row.status === 'running'), JSON.stringify(continuedBody));
+assert(calls.filter((call) => call.url.includes('/agnesapi')).length === pollsBeforeFan, 'continue polled the provider');
+assert(script.creates === createsBeforeFan + 2, 'continue submitted another piece');
+assert(!JSON.stringify(continuedBody).includes(AGNES_KEY), 'continue leaked the key');
 const fanReady = await run(fan.job.id);
 assert(fanReady.processed[0].status === 'ready', JSON.stringify(fanReady.processed[0]));
 assert(script.bailianTasks === bailianBeforeFan, 'ceiling fan fell back to mix');
-const fanRow = sqlite.prepare(`SELECT status, note_en, provider_task_id FROM jobs WHERE id = ?`).get(fan.job.id);
+assert(script.creates === createsBeforeFan + 2, 'join created another task');
+const fanRow = sqlite.prepare(`SELECT status, note_en, provider_task_id, error_code FROM jobs WHERE id = ?`).get(fan.job.id);
 assert(fanRow.status === 'ready', fanRow.status);
-assert(String(fanRow.provider_task_id).startsWith('ag1_'), fanRow.provider_task_id);
+assert(String(fanRow.provider_task_id).startsWith('m2_'), fanRow.provider_task_id);
+assert(!fanRow.error_code, fanRow.error_code);
 assert(!/agnes|bailian|waffo/i.test(fanRow.note_en), fanRow.note_en);
 const afterFan = await getCredits(db, user);
 assert(afterFan.balance === 494 - 6 - 15, `fan balance ${afterFan.balance}`);
 assert(afterFan.ledger.filter((row) => row.job_id === fan.job.id).map((row) => row.kind).join() === 'deduction', 'fan charged once');
+
+script.create = 'rate';
+const rateSplit = await queue('ceiling-fan', onePhoto);
+const rateSplitRun = await run(rateSplit.job.id);
+assert(rateSplitRun.processed[0].status === 'queued', JSON.stringify(rateSplitRun.processed[0]));
+assert(rateSplitRun.processed[0].error === 'retry_later', rateSplitRun.processed[0].error);
+assert(script.bailianTasks === bailianBeforeFan, 'split 429 fell back to mix');
+const rateSplitCreates = script.creates;
+const rateSplitHeld = await run(rateSplit.job.id, Date.now() + 1000);
+assert(rateSplitHeld.processed[0].status === 'queued', JSON.stringify(rateSplitHeld.processed[0]));
+assert(script.creates === rateSplitCreates, 'split 429 retried inside the backoff');
+script.create = 'ok';
+const rateSplitGo = await run(rateSplit.job.id, Date.now() + 8000);
+assert(rateSplitGo.processed[0].status === 'running', JSON.stringify(rateSplitGo.processed[0]));
+assert(script.creates === rateSplitCreates + 2, 'split retry did not submit both pieces');
+assert(String(sqlite.prepare(`SELECT provider_task_id FROM jobs WHERE id = ?`).get(rateSplit.job.id).provider_task_id).startsWith('m2_'), 'split retry was not packed');
+
+script.create = 'rate-8';
+script.downloads = fanCuts.slice();
+const partial = await queue('ceiling-fan', onePhoto);
+const partialStart = await run(partial.job.id);
+assert(partialStart.processed[0].status === 'running', JSON.stringify(partialStart.processed[0]));
+assert(partialStart.processed[0].error === 'retry_later', partialStart.processed[0].error);
+assert(script.bailianTasks === bailianBeforeFan, 'partial 429 fell back to mix');
+const partialPack = unpackAgnesTaskId(sqlite.prepare(`SELECT provider_task_id FROM jobs WHERE id = ?`).get(partial.job.id).provider_task_id);
+assert(partialPack.parallel && partialPack.slots[1] && !partialPack.slots[0], JSON.stringify(partialPack.slots));
+const partialCreates = script.creates;
+const partialHeld = await run(partial.job.id, Date.now() + 1000);
+assert(script.creates === partialCreates, 'missing piece was retried inside the backoff');
+assert(partialHeld.processed[0].status === 'running', JSON.stringify(partialHeld.processed[0]));
+script.create = 'ok';
+const partialReady = await run(partial.job.id, Date.now() + 8000);
+assert(script.creates === partialCreates + 1, `missing piece creates ${script.creates - partialCreates}`);
+assert(partialReady.processed[0].status === 'ready', JSON.stringify(partialReady.processed[0]));
+assert(
+  (await getCredits(db, user)).ledger.filter((row) => row.job_id === partial.job.id).map((row) => row.kind).join() === 'deduction',
+  'partial split charged twice',
+);
+
+script.create = 'reject-8';
+script.poll = 'completed';
+const refused = await queue('ceiling-fan', onePhoto);
+const refusedRun = await run(refused.job.id);
+assert(refusedRun.processed[0].status === 'failed', JSON.stringify(refusedRun.processed[0]));
+assert(script.bailianTasks === bailianBeforeFan, 'a created piece fell back to mix');
+const refusedCreates = script.creates;
+const refusedAgain = await run(refused.job.id);
+assert(script.creates === refusedCreates, 'failed split was generated again');
+assert(refusedAgain.processed[0].status === 'failed', JSON.stringify(refusedAgain.processed[0]));
+const refusedLedger = (await getCredits(db, user)).ledger.filter((row) => row.job_id === refused.job.id).map((row) => row.kind).sort().join();
+assert(refusedLedger === 'deduction,refund', `refused split ledger ${refusedLedger}`);
+const refusedNote = sqlite.prepare(`SELECT note_en, error_code FROM jobs WHERE id = ?`).get(refused.job.id);
+assert(!/agnes|bailian|waffo/i.test(refusedNote.note_en), refusedNote.note_en);
+
+script.create = 'ok';
+script.poll = 'fail';
+const splitFail = await queue('ceiling-fan', onePhoto);
+const splitFailStart = await run(splitFail.job.id);
+assert(splitFailStart.processed[0].status === 'running' && splitFailStart.processed[0].provider === 'agnes', JSON.stringify(splitFailStart.processed[0]));
+const splitFailCreates = script.creates;
+const splitFailed = await run(splitFail.job.id);
+assert(splitFailed.processed[0].status === 'failed', JSON.stringify(splitFailed.processed[0]));
+assert(script.creates === splitFailCreates, 'failed poll created another task');
+assert(script.bailianTasks === bailianBeforeFan, 'failed poll fell back to mix');
+const splitFailNote = sqlite.prepare(`SELECT error_code, note_en FROM jobs WHERE id = ?`).get(splitFail.job.id);
+assert(splitFailNote.error_code === 'agnes_failed', splitFailNote.error_code);
+assert(!/agnes|bailian|waffo/i.test(splitFailNote.note_en), splitFailNote.note_en);
+const splitFailLedger = (await getCredits(db, user)).ledger.filter((row) => row.job_id === splitFail.job.id).map((row) => row.kind).sort().join();
+assert(splitFailLedger === 'deduction,refund', `split fail ledger ${splitFailLedger}`);
+await run(splitFail.job.id);
+const splitFailLedgerAgain = (await getCredits(db, user)).ledger.filter((row) => row.job_id === splitFail.job.id && row.kind === 'refund');
+assert(splitFailLedgerAgain.length === 1, 'split failure refunded twice');
+
+script.poll = 'completed';
+script.downloads = [new Uint8Array(piece0), tall];
+const joinFail = await queue('ceiling-fan', onePhoto);
+const joinStart = await run(joinFail.job.id);
+assert(joinStart.processed[0].status === 'running', JSON.stringify(joinStart.processed[0]));
+const joinCreates = script.creates;
+const joinFailed = await run(joinFail.job.id);
+assert(joinFailed.processed[0].status === 'failed', JSON.stringify(joinFailed.processed[0]));
+assert(script.creates === joinCreates, 'join failure regenerated the pieces');
+assert(script.bailianTasks === bailianBeforeFan, 'join failure fell back to mix');
+const joinNote = sqlite.prepare(`SELECT error_code, note_en FROM jobs WHERE id = ?`).get(joinFail.job.id);
+assert(joinNote.error_code === 'segment_join', joinNote.error_code);
+assert(!/agnes|bailian|waffo/i.test(joinNote.note_en), joinNote.note_en);
+const joinLedger = (await getCredits(db, user)).ledger.filter((row) => row.job_id === joinFail.job.id).map((row) => row.kind).sort().join();
+assert(joinLedger === 'deduction,refund', `join ledger ${joinLedger}`);
+await run(joinFail.job.id);
+assert(
+  (await getCredits(db, user)).ledger.filter((row) => row.job_id === joinFail.job.id && row.kind === 'refund').length === 1,
+  'join failure refunded twice',
+);
+
+const studio = fs.readFileSync(new URL('../src/components/CreateStudio.astro', import.meta.url), 'utf8');
+const accountScript = fs.readFileSync(new URL('../public/scripts/account-data.js', import.meta.url), 'utf8');
+assert(!studio.includes('/api/jobs/continue'), 'create page still posts continue');
+assert(studio.includes('30 * 60 * 1000'), 'create page watch is still about 10 minutes');
+assert(!accountScript.includes('/api/jobs/continue'), 'account page still posts continue');
+const drainConfig = fs.readFileSync(new URL('../workers/job-drain/wrangler.toml', import.meta.url), 'utf8');
+assert(drainConfig.includes('crons = ["* * * * *"]'), drainConfig);
+
 script.downloads = null;
+script.poll = 'completed';
+script.create = 'ok';
 
 script.create = 'reject';
 const rejected = await queue('bby-wow', onePhoto);

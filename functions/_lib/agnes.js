@@ -361,9 +361,11 @@ export function agnesPollUrl(runtime, videoId) {
   return url.toString();
 }
 
+const AGNES_VIDEO_ID = /^[A-Za-z0-9_-]{8,76}$/;
+
 export function packAgnesTaskId(videoId, index = 0, count = 1) {
   const id = String(videoId || '').trim();
-  if (!/^[A-Za-z0-9_-]{8,76}$/.test(id)) throw fail('agnes_bad_task');
+  if (!AGNES_VIDEO_ID.test(id)) throw fail('agnes_bad_task');
   const prefix = count > 1 ? `ag${index}_` : AGNES_TASK_PREFIX;
   if (!/^agn_$|^ag[0-7]_$/.test(prefix)) throw fail('agnes_bad_task');
   const stored = `${prefix}${id}`;
@@ -371,8 +373,54 @@ export function packAgnesTaskId(videoId, index = 0, count = 1) {
   return stored;
 }
 
+/**
+ * Parallel split pieces share one jobs.provider_task_id.
+ * `m2_13task_example00` is piece 0 id `task_example` and piece 1 not created yet.
+ * Empty slots are `00`. Existing `agn_` / `agN_` ids stay valid for in-flight jobs.
+ */
+export function packAgnesTaskSet(videoIds) {
+  if (!Array.isArray(videoIds) || videoIds.length < 2 || videoIds.length > 8) throw fail('agnes_bad_task');
+  let body = '';
+  for (const raw of videoIds) {
+    const id = raw ? String(raw).trim() : '';
+    if (id && !AGNES_VIDEO_ID.test(id)) throw fail('agnes_bad_task');
+    body += String(id.length).padStart(2, '0') + id;
+  }
+  const stored = `m${videoIds.length}_${body}`;
+  if (!/^[A-Za-z0-9_-]{8,640}$/.test(stored)) throw fail('agnes_bad_task');
+  return stored;
+}
+
 export function unpackAgnesTaskId(stored) {
   if (typeof stored !== 'string') return null;
+  const parallel = /^m([2-8])_(.*)$/.exec(stored);
+  if (parallel) {
+    const count = Number(parallel[1]);
+    const body = parallel[2];
+    const slots = [];
+    let cursor = 0;
+    for (let index = 0; index < count; index += 1) {
+      if (cursor + 2 > body.length) return null;
+      const len = Number(body.slice(cursor, cursor + 2));
+      if (!Number.isInteger(len) || len < 0 || (len !== 0 && (len < 8 || len > 76))) return null;
+      cursor += 2;
+      const id = body.slice(cursor, cursor + len);
+      if (id.length !== len) return null;
+      if (len !== 0 && !AGNES_VIDEO_ID.test(id)) return null;
+      slots.push(id);
+      cursor += len;
+    }
+    if (cursor !== body.length) return null;
+    const index = slots.findIndex(Boolean);
+    return {
+      videoId: index >= 0 ? slots[index] : '',
+      index: index >= 0 ? index : 0,
+      multi: true,
+      parallel: true,
+      count,
+      slots,
+    };
+  }
   let index = 0;
   let multi = false;
   let id = '';
@@ -385,8 +433,8 @@ export function unpackAgnesTaskId(stored) {
     index = Number(match[1]);
     id = stored.slice(4);
   }
-  if (!/^[A-Za-z0-9_-]{8,76}$/.test(id)) return null;
-  return { videoId: id, index, multi };
+  if (!AGNES_VIDEO_ID.test(id)) return null;
+  return { videoId: id, index, multi, parallel: false, count: multi ? 0 : 1, slots: null };
 }
 
 export async function agnesSegmentInputs(env, jobId, index) {

@@ -12,6 +12,11 @@
 
 const DEFAULT_ORIGIN = 'https://viral-templates.pages.dev';
 
+/** One minute is the shortest cron. The request keeps polling while jobs are running. */
+export const DRAIN_LIMIT = 3;
+export const DRAIN_WAIT_MS = 45_000;
+export const DRAIN_POLL_INTERVAL_MS = 6_000;
+
 export function processUrl(env) {
   const raw = typeof env?.PAGES_ORIGIN === 'string' ? env.PAGES_ORIGIN.trim() : '';
   const base = raw || DEFAULT_ORIGIN;
@@ -38,7 +43,11 @@ export async function drainRemakeJobs(env, fetchImpl = fetch) {
       'content-type': 'application/json',
       accept: 'application/json',
     },
-    body: JSON.stringify({ limit: 3 }),
+    body: JSON.stringify({
+      limit: DRAIN_LIMIT,
+      wait_ms: DRAIN_WAIT_MS,
+      poll_interval_ms: DRAIN_POLL_INTERVAL_MS,
+    }),
   });
   return { ok: Boolean(res && res.ok), status: res ? res.status : 0 };
 }

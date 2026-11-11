@@ -26,7 +26,9 @@ Agnes reference limits are one video, duration 2–12 seconds, under 50 MB, and 
 
 A clip of 2–12s is one job. The reference file is the public template URL. A source inside that range that rounds below 4 requests `"4"`. The file is still sent whole.
 
-A longer clip is cut into the fewest pieces that each stay inside 4–12s. Pieces are as even as the keyframes allow, so each piece still starts on a sync sample and decodes. More than two pieces only when one pair cannot cover the clip (over 24s). Each piece is stored at `https://{PUBLIC_SITE_APEX}/api/media/jobs/{id}/seg{n}` and sent with `start_seconds` 0. The worker downloads each result and joins them into one MP4. The customer still sees one clip. Credits are still charged once, from the full source duration.
+A longer clip is cut into the fewest pieces that each stay inside 4–12s. Pieces are as even as the keyframes allow, so each piece still starts on a sync sample and decodes. More than two pieces only when one pair cannot cover the clip (over 24s). Each piece is stored at `https://{PUBLIC_SITE_APEX}/api/media/jobs/{id}/seg{n}` and sent with `start_seconds` 0. The pieces are submitted together. The worker downloads each result and joins them into one MP4 when every piece is stored. The customer still sees one clip. Credits are still charged once, from the full source duration.
+
+Two generated pieces are remuxed when they share a codec family, frame size, and timescale. Their stsd or avcC bytes do not have to match. If the join still fails, the job fails with internal `error_code` `segment_join`, site credits are refunded once, and generation is not started again.
 
 Mix runs only when a split cannot fix the problem:
 
@@ -37,13 +39,13 @@ Mix runs only when a split cannot fix the problem:
 - the photo is outside 256–5760 px or over 15 MB
 - Agnes refuses or cannot be reached on the first piece, before a `video_id` exists
 
-A 429 waits and retries that piece. It does not also start mix. After a `video_id` exists, a failed piece fails the job and refunds once. It does not start a second full generation. Joining stays in this worker. Hypit is not part of this change.
+A 429 waits and retries that piece. It does not also start mix. After any piece has a `video_id`, a failed piece fails the job and refunds once. It does not start a second full generation, and it does not fall through to mix for a poll or join failure. Joining stays in this worker. Hypit is not part of this change.
 
 Kiss Cam still stores two photos. Only the first is sent.
 
 ## Credits
 
-Unchanged. Generate deducts `Math.round(durationSeconds)` credits, at least 1, when the photo is stored. One deduction per job. A failed job refunds that charge once. Falling back to mix does not deduct again. A billed Agnes failure does not start a second Agnes create, and it does not start mix after a `video_id` exists. HTTP 429 on create waits and retries Agnes later. It does not also start mix. Do not poll faster than about 5–8 seconds. HTTP 429 backs off from 6s, doubling up to 60s.
+Unchanged. Generate deducts `Math.round(durationSeconds)` credits, at least 1, when the photo is stored. One deduction per job. A failed job refunds that charge once. Falling back to mix does not deduct again. A billed Agnes failure does not start a second Agnes create, and it does not start mix after a `video_id` exists. HTTP 429 on create waits and retries Agnes later. It does not also start mix. Provider polls wait at least 6 seconds and at most 60. HTTP 429 backs off from 6s, doubling up to 60s. The browser reads `/api/account/creations` and does not POST `/api/jobs/continue` to pull the provider. Create follows the job for about 45 seconds. `workers/job-drain` runs every minute and keeps polling while a job is still in flight. Pages Functions still have no cron.
 
 Provider list prices are not shown to customers.
 
@@ -65,7 +67,7 @@ Poll: `GET https://api.agnes-ai.cn/agnesapi?video_id=VIDEO_ID&model_name=agnes-v
 
 Docs: https://wiki.agnes-ai.cn/zh-Hans/docs/agnes-video-25
 
-The task id is stored in `jobs.provider_task_id`. One job uses an `agn_` prefix. A split piece uses `ag0_`, `ag1_`, and so on, so a later poll continues that piece instead of calling mix. Mix task ids are unchanged.
+The task id is stored in `jobs.provider_task_id`. One job uses an `agn_` prefix. A split that is still in flight one piece at a time uses `ag0_`, `ag1_`, and so on. A parallel split stores every piece in one `m2_` (or `m3_`, …) value, with an empty slot until that piece has a `video_id`. Mix task ids are unchanged.
 
 ## Secrets
 

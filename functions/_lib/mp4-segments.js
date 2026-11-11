@@ -1,9 +1,10 @@
 /**
  * Cut and join progressive MP4s without re-encoding.
  * A long template is cut on keyframes into 4–12s pieces. Each piece is its
- * own Agnes input. Finished pieces are joined back into one clip.
- * Fragmented files and 64-bit chunk offsets are refused so the caller can
- * fall back instead of shipping a broken segment.
+ * own Agnes input. Finished pieces are joined back into one clip when they
+ * share a codec family, frame size, and timescale. Byte-identical stsd or
+ * avcC is not required. Fragmented files and 64-bit chunk offsets are refused
+ * so the caller can fall back instead of shipping a broken segment.
  */
 
 const CONTAINERS = new Set(['moov', 'trak', 'mdia', 'minf', 'stbl', 'edts', 'dinf']);
@@ -179,6 +180,7 @@ function trackMeta(bytes, trak) {
   return {
     handler: handlerOf(bytes, trak),
     timescale: timing.scale,
+    editMediaTime: editMediaTime(bytes, trak),
     tkhd: sliceBox(bytes, tkhd),
     hdlr: sliceBox(bytes, hdlr),
     stsd: sliceBox(bytes, stsd),
@@ -186,6 +188,38 @@ function trackMeta(bytes, trak) {
     dinf: sliceBox(bytes, dinf),
     samples: trackSamples(bytes, trak),
   };
+}
+
+/** First edit-list media time, in this track's timescale. 0 when there is no edit. */
+function editMediaTime(bytes, trak) {
+  const edts = findChild(bytes, trak, 'edts');
+  const elst = edts ? findChild(bytes, edts, 'elst') : null;
+  if (!elst || elst.contentStart + 16 > elst.contentEnd) return 0;
+  const view = viewOf(bytes);
+  const version = bytes[elst.contentStart];
+  const count = view.getUint32(elst.contentStart + 4);
+  if (!count) return 0;
+  const at = elst.contentStart + 8;
+  if (version === 1) {
+    if (at + 20 > elst.contentEnd) return 0;
+    const mediaTime = Number(view.getBigInt64(at + 8));
+    return mediaTime > 0 ? mediaTime : 0;
+  }
+  if (at + 12 > elst.contentEnd) return 0;
+  const mediaTime = view.getInt32(at + 4);
+  return mediaTime > 0 ? mediaTime : 0;
+}
+
+/** Drop leading audio samples that an edit list marks as encoder delay. */
+function trimAudioPriming(samples, mediaTime) {
+  if (!mediaTime || mediaTime < 0) return samples;
+  let dropped = 0;
+  let index = 0;
+  while (index < samples.length && dropped + samples[index].delta <= mediaTime) {
+    dropped += samples[index].delta;
+    index += 1;
+  }
+  return index ? samples.slice(index) : samples;
 }
 
 function mediaTiming(bytes, box) {
@@ -428,23 +462,70 @@ export function cutReferenceMp4(bytes, startSec, endSec) {
   return assembled;
 }
 
-function sameDescription(a, b) {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i += 1) if (a[i] !== b[i]) return false;
-  return true;
+function codecFamily(type) {
+  if (type === 'avc1' || type === 'avc3') return 'avc';
+  if (type === 'hvc1' || type === 'hev1') return 'hevc';
+  if (type === 'mp4a') return 'aac';
+  return type || '';
 }
 
-/** Join generated pieces that share the same video (and audio) sample entry. */
+/** Sample entry fourcc inside an stsd box. */
+function sampleEntryType(stsd) {
+  if (!stsd || stsd.length < 24) return '';
+  const count = new DataView(stsd.buffer, stsd.byteOffset, stsd.byteLength).getUint32(12);
+  if (count !== 1) return '';
+  return typeAt(stsd, 20);
+}
+
+function videoSize(stsd) {
+  if (!stsd || stsd.length < 16 + 36) return null;
+  const view = new DataView(stsd.buffer, stsd.byteOffset, stsd.byteLength);
+  const width = view.getUint16(16 + 32);
+  const height = view.getUint16(16 + 34);
+  if (!width || !height) return null;
+  return { width, height };
+}
+
+function audioLayout(stsd) {
+  if (!stsd || stsd.length < 16 + 36) return null;
+  const view = new DataView(stsd.buffer, stsd.byteOffset, stsd.byteLength);
+  // Version 0 audio sample entry. Version 1/2 inserts extra fields.
+  if (view.getUint16(16 + 16) !== 0) return null;
+  const channels = view.getUint16(16 + 24);
+  const rate = view.getUint32(16 + 32) >>> 16;
+  if (!channels || !rate) return null;
+  return { channels, rate };
+}
+
+/**
+ * Two generated pieces can be remuxed when codec family, frame size, and
+ * timescale match. Independent encodes often differ in stsd/avcC bytes
+ * (bitrate boxes, parameter-set padding) and still concatenate.
+ */
+function tracksCompatible(a, b, kind) {
+  if (!a || !b || a.timescale !== b.timescale) return false;
+  const familyA = codecFamily(sampleEntryType(a.stsd));
+  const familyB = codecFamily(sampleEntryType(b.stsd));
+  if (!familyA || familyA !== familyB) return false;
+  if (kind === 'video') {
+    const sizeA = videoSize(a.stsd);
+    const sizeB = videoSize(b.stsd);
+    return Boolean(sizeA && sizeB && sizeA.width === sizeB.width && sizeA.height === sizeB.height);
+  }
+  const layoutA = audioLayout(a.stsd);
+  const layoutB = audioLayout(b.stsd);
+  return Boolean(layoutA && layoutB && layoutA.channels === layoutB.channels && layoutA.rate === layoutB.rate);
+}
+
+/** Join generated pieces that share codec family, size, and timescale. */
 export function concatMp4(parts) {
   if (!Array.isArray(parts) || parts.length < 2) throw segmentFail('segment_media');
   const movies = parts.map((part) => parseMovie(part));
   const first = movies[0];
   for (const movie of movies) {
-    if (!sameDescription(movie.video.stsd, first.video.stsd)) throw segmentFail('segment_media');
-    if (movie.video.timescale !== first.video.timescale) throw segmentFail('segment_media');
+    if (!tracksCompatible(movie.video, first.video, 'video')) throw segmentFail('segment_media');
     if (first.audio) {
-      if (!movie.audio || !sameDescription(movie.audio.stsd, first.audio.stsd)) throw segmentFail('segment_media');
-      if (movie.audio.timescale !== first.audio.timescale) throw segmentFail('segment_media');
+      if (!tracksCompatible(movie.audio, first.audio, 'audio')) throw segmentFail('segment_media');
     }
   }
   return assembleWithSources(first, movies);
@@ -456,8 +537,11 @@ function assembleWithSources(first, movies) {
   const audio = [];
   for (const movie of movies) {
     for (const sample of movie.video.samples) video.push({ ...sample, file: movie.bytes });
-    if (first.audio) {
-      for (const sample of movie.audio.samples) audio.push({ ...sample, file: movie.bytes });
+    if (first.audio && movie.audio) {
+      // Each generated piece hides one AAC priming frame in its edit list.
+      // Keeping both would put a silent frame at the junction.
+      const trimmed = trimAudioPriming(movie.audio.samples, movie.audio.editMediaTime);
+      for (const sample of trimmed) audio.push({ ...sample, file: movie.bytes });
     }
   }
   const joined = [

@@ -44,8 +44,8 @@ export const HUB_FAQ: readonly FaqEntry[] = [
     qEn: 'What is Ceiling Fan Transition AI?',
     qZh: 'Ceiling Fan Transition AI 是什么？',
     aEn:
-      'One adult photo becomes an outfit-change wipe of about 12–15 seconds. The fan is generated. Never strap a phone to a real fan.',
-    aZh: '一张成人照片做成大约 12–15 秒的换装转场。风扇是生成的。切勿把手机绑在真风扇上。',
+      'One adult photo becomes an outfit-change wipe of about 15 seconds. The fan is generated. Never strap a phone to a real fan.',
+    aZh: '一张成人照片做成大约 15 秒的换装转场。风扇是生成的。切勿把手机绑在真风扇上。',
   },
   {
     id: 'photos',
@@ -76,8 +76,8 @@ export const HUB_FAQ: readonly FaqEntry[] = [
     qEn: 'How long does a clip run?',
     qZh: '短片有多长？',
     aEn:
-      'About 10 seconds for Bby Wow, 11–12 seconds for Kiss Cam, and 12–15 seconds for Ceiling Fan. Those are the lengths of the looks. The file shows on your account when the job is ready.',
-    aZh: 'Bby Wow 大约 10 秒，Kiss Cam 大约 11–12 秒，Ceiling Fan 大约 12–15 秒。这是效果的时长。任务完成后，成片会出现在你的账户里。',
+      'About 10 seconds for Bby Wow, 11–12 seconds for Kiss Cam, and about 15 seconds for Ceiling Fan. Those are the lengths of the looks. The file shows on your account when the job is ready.',
+    aZh: 'Bby Wow 大约 10 秒，Kiss Cam 大约 11–12 秒，Ceiling Fan 大约 15 秒。这是效果的时长。任务完成后，成片会出现在你的账户里。',
   },
   {
     id: 'credits',

@@ -303,14 +303,15 @@ export const KISS_LIVE: LivePack = {
 export const FAN_LIVE: LivePack = {
   cases: [
     {
-      id: 'plain-portrait',
-      labelEn: 'Plain portrait',
-      labelZh: '普通肖像',
+      id: 'first-look',
+      labelEn: 'First look',
+      labelZh: '第一套造型',
       sources: [`${photo}/ceiling-fan-source.jpg`],
       resultPoster: `${photo}/ceiling-fan-poster.jpg`,
       resultVideo: `${photo}/ceiling-fan-demo.mp4`,
-      noteEn: 'This portrait is the upload. The fan appears in the clip.',
-      noteZh: '这张肖像是上传图。风扇出现在成片里。',
+      noteEn:
+        'The upload is the first look: a formal pale dress, reclining on a sofa. The clip wipes through the blades into later outfits.',
+      noteZh: '上传图是第一套造型：浅色礼服，斜躺在沙发上。短片用扇叶扫过，换到后面的几套衣服。',
     },
   ],
   story: {
@@ -328,11 +329,12 @@ export const FAN_LIVE: LivePack = {
     support: {
       eyebrowEn: 'The transition',
       eyebrowZh: '转场',
-      titleEn: 'An outfit change from the photo you’re already in.',
-      titleZh: '换装来自你已经在的那张照片。',
+      titleEn: 'Later outfits from the photo you’re already in.',
+      titleZh: '后面的衣服来自你已经在的那张照片。',
       bodyEn:
-        'One adult-consent photo goes in. The clip wipes through the blades into another outfit. The second look and the fan stay inside the video.',
-      bodyZh: '上传一张成人同意的照片。短片用扇叶一扫，换到另一套衣服。第二套造型和风扇都留在视频里。',
+        'One adult-consent photo goes in. The sample is the first look: a formal pale dress, reclining on a sofa. The clip wipes through ceiling-fan blades into several later outfits, including a maid look and a more revealing final look. The blades are part of the motion.',
+      bodyZh:
+        '上传一张成人同意的照片。示例是第一套造型：浅色礼服，斜躺在沙发上。短片用吊扇扇叶扫过，换到后面的几套衣服，包括女仆造型和更露的最后一套。扇叶是动作的一部分。',
     },
     beats: [
       {
@@ -348,10 +350,11 @@ export const FAN_LIVE: LivePack = {
         bodyZh: '不用在镜头前换衣服。',
       },
       {
-        titleEn: 'No fan in the photo',
-        titleZh: '照片里不必有风扇',
-        bodyEn: 'A plain portrait is enough. The sample upload is one.',
-        bodyZh: '普通肖像就可以。示例的上传图就是这样。',
+        titleEn: 'You don’t film a fan',
+        titleZh: '不用实拍风扇',
+        bodyEn:
+          'One adult-consent photo is enough. The sample upload is the first look: a formal pale dress, reclining on a sofa.',
+        bodyZh: '一张成人同意的照片就够。示例的上传图是第一套造型：浅色礼服，斜躺在沙发上。',
       },
     ],
     diy: {
@@ -363,10 +366,10 @@ export const FAN_LIVE: LivePack = {
       hardTitleZh: '手机绑上扇叶',
       hardEn: 'A mount, a spinning fan, and a recording you hope stays attached.',
       hardZh: '一个固定架、一台转着的风扇、一段你希望手机别飞出去的录像。',
-      easyTitleEn: 'One photo, fan stays in the clip',
-      easyTitleZh: '一张照片，风扇留在片子里',
-      easyEn: 'Upload a portrait. The wipe happens in the video. You stay off the ladder.',
-      easyZh: '上传一张肖像。转场在视频里完成。人不用爬梯子。',
+      easyTitleEn: 'One photo, the wipe stays in the clip',
+      easyTitleZh: '一张照片，转场留在片子里',
+      easyEn: 'Upload one adult-consent photo. The wipe happens in the video. You stay off the ladder.',
+      easyZh: '上传一张成人同意的照片。转场在视频里完成。人不用爬梯子。',
     },
   },
   faq: [
@@ -375,16 +378,17 @@ export const FAN_LIVE: LivePack = {
       qEn: 'What is Ceiling Fan Transition AI?',
       qZh: 'Ceiling Fan Transition AI 是什么？',
       aEn:
-        'A one-photo outfit change, about 12–15 seconds, with a ceiling-fan wipe as the cut. The fan is generated. You do not film a fan.',
-      aZh: '一张照片的换装效果，大约 12–15 秒，用吊扇扫过作为转场。风扇是生成的。你不需要去拍一台风扇。',
+        'A one-photo outfit change, about 15 seconds, with a ceiling-fan wipe as the cut. The fan is generated. You do not film a fan.',
+      aZh: '一张照片的换装效果，大约 15 秒，用吊扇扫过作为转场。风扇是生成的。你不需要去拍一台风扇。',
     },
     {
       id: 'fan-in-photo',
       qEn: 'Does the photo need a ceiling fan?',
       qZh: '照片里一定要有吊扇吗？',
       aEn:
-        'No. The sample upload is a plain portrait with no fan in frame. The blades and the second outfit show up in the clip.',
-      aZh: '不用。示例的上传图是一张普通肖像，画面里没有风扇。扇叶和第二套衣服出现在成片里。',
+        'No. You do not film a fan. The sample upload is the first look: a formal pale dress, reclining on a sofa. The clip wipes through ceiling-fan blades into several later outfits. Those blades are part of the motion, and they show in the demo and the poster.',
+      aZh:
+        '不用。你不需要去拍一台风扇。示例的上传图是第一套造型：浅色礼服，斜躺在沙发上。短片用吊扇扇叶扫过，换到后面的几套衣服。扇叶是动作的一部分，示例视频和海报里都能看到。',
     },
     {
       id: 'safety',
@@ -399,16 +403,17 @@ export const FAN_LIVE: LivePack = {
       qEn: 'What photo works best?',
       qZh: '什么样的照片效果最好？',
       aEn:
-        'One adult, face visible, ordinary indoor light. The sample is a portrait in a white T-shirt. The outfit change happens in the clip.',
-      aZh: '一位成人，脸部清楚，室内普通光线。示例是白 T 恤的肖像。换装发生在短片里。',
+        'One adult, face visible, ordinary indoor light. The sample upload is the first look: a formal pale dress, reclining on a sofa. The clip then wipes through the blades into later outfits, including a maid look and a more revealing final look.',
+      aZh:
+        '一位成人，脸部清楚，室内普通光线。示例的上传图是第一套造型：浅色礼服，斜躺在沙发上。短片再用扇叶扫过，换到后面的几套衣服，包括女仆造型和更露的最后一套。',
     },
     {
       id: 'length',
       qEn: 'How long is the video?',
       qZh: '视频有多长？',
       aEn:
-        'About 12–15 seconds. This look uses 15 credits. The clip shows on your account when it is ready.',
-      aZh: '大约 12–15 秒。这个效果扣 15 积分。完成后，成片会出现在你的账户里。',
+        'About 15 seconds. This look uses 15 credits. The clip shows on your account when it is ready.',
+      aZh: '大约 15 秒。这个效果扣 15 积分。完成后，成片会出现在你的账户里。',
     },
     {
       id: 'credits',
@@ -433,10 +438,12 @@ export const FAN_LIVE: LivePack = {
     },
     {
       id: 'capcut',
-      qEn: 'Is this a CapCut template?',
-      qZh: '这是 CapCut 模板吗？',
-      aEn: 'No. Not affiliated with CapCut. You do not need a CapCut account, and this does not export a CapCut project.',
-      aZh: '不是。与 CapCut 无关。不需要 CapCut 账号，也不会导出 CapCut 工程。',
+      qEn: 'Is this official CapCut, HoYoverse, miHoYo, or Genshin Impact?',
+      qZh: '这是 CapCut、HoYoverse、miHoYo 或 Genshin Impact 官方吗？',
+      aEn:
+        'No. Fan-made AI remix — not official CapCut, HoYoverse, miHoYo, or Genshin Impact. You do not need a CapCut account, and this does not export a CapCut project.',
+      aZh:
+        '不是。粉丝向 AI remix — 非 CapCut、HoYoverse、miHoYo 或 Genshin Impact 官方。不需要 CapCut 账号，也不会导出 CapCut 工程。',
     },
     {
       id: 'refund',

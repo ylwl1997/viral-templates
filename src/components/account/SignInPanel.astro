@@ -29,6 +29,21 @@ const backLabel = template
     <p class="sign-in-error" id="sign-in-error" hidden></p>
     <div id="google-wrap" hidden></div>
     <p class="sign-in-divider" id="sign-in-or" hidden></p>
+    <div id="password-wrap" hidden>
+      <form id="password-form" class="preview-form" method="post" action="/api/auth/password">
+        <label>
+          <span>{label('Email', '邮箱')}</span>
+          <input name="email" type="email" autocomplete="username" maxlength="200" required />
+        </label>
+        <label>
+          <span>{label('Password', '密码')}</span>
+          <input name="password" type="password" autocomplete="current-password" maxlength="1024" required />
+        </label>
+        <button class="btn btn-primary" type="submit" style="width:100%">
+          {label('Sign in', '登录')}
+        </button>
+      </form>
+    </div>
     <div id="preview-wrap" hidden>
       <form id="preview-form" class="preview-form">
         <label>

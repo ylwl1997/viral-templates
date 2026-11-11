@@ -102,7 +102,7 @@ Acceptance: three brand homes side-by-side are obviously different sites, not lo
 4. **Live templates require a 9:16 media slot** (still or loop poster). Gradient+icon alone is not enough for Live.
 5. **One ink primary CTA per viewport.** Secondary actions are text. Disabled controls stay quiet — never a filled primary.
 6. Signed-in Generate queues a job and spends the look’s credits when the photo is stored. A failed job returns those credits. Unsigned Generate opens the sign-in dialog on the current page. Buy credits stays quiet until checkout can run, and it never pretends a payment succeeded. One ink primary per view.
-7. Unsigned account: centered Sign-in card only — do not expose Creations/Credits/Settings shell. Sign-in: no fake Google button if OAuth unwired; Preview only when available. Header and account **Sign in** open that card in a dialog on the current page. `/account/sign-in/` stays a working bookmark.
+7. Unsigned account: centered Sign-in card only — do not expose Creations/Credits/Settings shell. Sign-in: no fake Google button if OAuth unwired; Preview only when available; owner email and password only when that test path is configured (keep **Continue with Google**). Header and account **Sign in** open that card in a dialog on the current page. `/account/sign-in/` stays a working bookmark.
 8. EN + ZH for all chrome strings.
 9. Do not fork ShrimpReel / switch frameworks; visual bar only (RicoFast / PowerAI density).
 10. **Forbidden:** new site with only `logo` + `accent` changed. Fill every `BrandTheme` field and pick a distinct preset combo.

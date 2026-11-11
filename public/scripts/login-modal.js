@@ -21,12 +21,18 @@ import {
       close: 'Close',
       lede: 'Use your Google account to continue.',
       ledeBoth: 'Use your Google account, or the preview sign-in below.',
+      ledePassword: 'Use your Google account, or the owner test sign-in below.',
+      ledePasswordOnly: 'Owner test sign-in. This is not a public account.',
       ledePreview: 'Continue with Preview sign-in (demo).',
       ledeSoon: 'Sign-in coming soon.',
       ledeOff: 'Sign-in is not available on this site yet.',
       google: 'Continue with Google',
       or: 'or',
       email: 'Email',
+      password: 'Password',
+      passwordSubmit: 'Sign in',
+      invalidCredentials: 'Invalid email or password.',
+      passwordUnavailable: 'Password sign-in is not available.',
       name: 'Display name',
       previewName: 'Preview User',
       preview: 'Preview sign-in',
@@ -50,12 +56,18 @@ import {
       close: '关闭',
       lede: '使用你的 Google 账户继续。',
       ledeBoth: '使用你的 Google 账户，或使用下方的预览登录。',
+      ledePassword: '使用你的 Google 账户，或使用下方的站主测试登录。',
+      ledePasswordOnly: '站主测试登录。这不是公开注册。',
       ledePreview: '使用预览登录继续（演示）。',
       ledeSoon: '登录即将开放。',
       ledeOff: '登录暂时还不能用。',
       google: '使用 Google 继续',
       or: '或',
       email: '邮箱',
+      password: '密码',
+      passwordSubmit: '登录',
+      invalidCredentials: '邮箱或密码不正确。',
+      passwordUnavailable: '邮箱登录暂时不可用。',
       name: '显示名',
       previewName: '预览用户',
       preview: '预览登录',
@@ -365,25 +377,29 @@ import {
     }
     var googleReady = !!(data && data.google && data.auth_secret);
     var previewOk = !!(data && data.preview);
+    var passwordOk = !!(data && data.password);
     if (ui.googleWrap) {
       if (googleReady) wireGoogle(ui);
       else ui.googleWrap.replaceChildren();
       ui.googleWrap.hidden = !googleReady;
     }
+    if (ui.passwordWrap) ui.passwordWrap.hidden = !passwordOk;
     if (ui.previewWrap) ui.previewWrap.hidden = !previewOk;
     if (ui.or) {
-      ui.or.hidden = !(googleReady && previewOk);
+      ui.or.hidden = !(googleReady && (passwordOk || previewOk));
       ui.or.textContent = text(ui.lang, 'or');
     }
     if (ui.lede) {
-      if (googleReady && previewOk) ui.lede.textContent = text(ui.lang, 'ledeBoth');
+      if (googleReady && passwordOk) ui.lede.textContent = text(ui.lang, 'ledePassword');
+      else if (googleReady && previewOk) ui.lede.textContent = text(ui.lang, 'ledeBoth');
       else if (googleReady) ui.lede.textContent = text(ui.lang, 'lede');
+      else if (passwordOk) ui.lede.textContent = text(ui.lang, 'ledePasswordOnly');
       else if (previewOk) ui.lede.textContent = text(ui.lang, 'ledePreview');
       else if (data && data.google && !data.auth_secret) ui.lede.textContent = text(ui.lang, 'ledeOff');
       else ui.lede.textContent = text(ui.lang, 'ledeSoon');
     }
     if (ui.soon) {
-      var showSoon = !googleReady && !previewOk;
+      var showSoon = !googleReady && !previewOk && !passwordOk;
       ui.soon.hidden = !showSoon;
       if (showSoon) {
         ui.soon.textContent =
@@ -391,7 +407,7 @@ import {
       }
     }
     if (ui.status) {
-      ui.status.textContent = previewOk && !googleReady ? text(ui.lang, 'previewStatus') : '';
+      ui.status.textContent = previewOk && !googleReady && !passwordOk ? text(ui.lang, 'previewStatus') : '';
     }
   }
 
@@ -404,9 +420,61 @@ import {
         paintAvailability(ui, data || {});
       })
       .catch(function () {
+        if (ui.passwordWrap) ui.passwordWrap.hidden = true;
         if (ui.soon) ui.soon.hidden = false;
         setUiStatus(ui, text(ui.lang, 'loadError'));
       });
+  }
+
+  function wirePassword(ui) {
+    if (!ui.passwordForm || ui.passwordForm.dataset.wired) return;
+    ui.passwordForm.dataset.wired = '1';
+    ui.passwordForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      showUiError(ui, '');
+      var fd = new FormData(ui.passwordForm);
+      var payload = {
+        email: String(fd.get('email') || '').trim(),
+        password: String(fd.get('password') || ''),
+        next: ui.next,
+      };
+      var btn = ui.passwordForm.querySelector('[type="submit"]');
+      if (btn) btn.disabled = true;
+      fetch('/api/auth/password', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then(function (r) {
+          return r.json().then(function (j) {
+            return { ok: r.ok, j: j };
+          });
+        })
+        .then(function (res) {
+          if (!res.ok || !res.j || !res.j.ok) {
+            var code = res.j && res.j.error;
+            showUiError(
+              ui,
+              code === 'password_unavailable' ? text(ui.lang, 'passwordUnavailable') : text(ui.lang, 'invalidCredentials'),
+            );
+            if (btn) btn.disabled = false;
+            return;
+          }
+          var dest = safeNext(res.j.next, ui.next);
+          if (res.j.user) publishSession(res.j.user);
+          if (ui.mode === 'modal' && !isSignInPath(location.pathname)) {
+            if (!res.j.user) refreshSession();
+            closeModal({ focusAccount: true });
+            return;
+          }
+          location.replace(dest);
+        })
+        .catch(function () {
+          showUiError(ui, text(ui.lang, 'network'));
+          if (btn) btn.disabled = false;
+        });
+    });
   }
 
   function wirePreview(ui) {
@@ -477,6 +545,8 @@ import {
       err: document.getElementById('sign-in-error'),
       status: document.getElementById('sign-in-status'),
       googleWrap: document.getElementById('google-wrap'),
+      passwordWrap: document.getElementById('password-wrap'),
+      passwordForm: document.getElementById('password-form'),
       previewWrap: document.getElementById('preview-wrap'),
       previewForm: document.getElementById('preview-form'),
       or: document.getElementById('sign-in-or'),
@@ -486,6 +556,7 @@ import {
     var errorKey = params.get('error') || '';
     var errorCopy = authErrorCopy(lang, errorKey);
     if (errorCopy) showUiError(ui, errorCopy);
+    wirePassword(ui);
     wirePreview(ui);
     loadAvailability(ui);
   }
@@ -545,6 +616,34 @@ import {
     or.className = 'sign-in-divider';
     or.hidden = true;
 
+    var passwordWrap = document.createElement('div');
+    passwordWrap.hidden = true;
+    var passwordForm = document.createElement('form');
+    passwordForm.className = 'preview-form';
+    passwordForm.method = 'post';
+    passwordForm.action = '/api/auth/password';
+    var passwordEmail = document.createElement('input');
+    passwordEmail.name = 'email';
+    passwordEmail.type = 'email';
+    passwordEmail.autocomplete = 'username';
+    passwordEmail.maxLength = 200;
+    passwordEmail.required = true;
+    var passwordInput = document.createElement('input');
+    passwordInput.name = 'password';
+    passwordInput.type = 'password';
+    passwordInput.autocomplete = 'current-password';
+    passwordInput.maxLength = 1024;
+    passwordInput.required = true;
+    var passwordSubmit = document.createElement('button');
+    passwordSubmit.className = 'btn btn-primary';
+    passwordSubmit.type = 'submit';
+    passwordSubmit.style.width = '100%';
+    passwordSubmit.textContent = text(lang, 'passwordSubmit');
+    passwordForm.appendChild(field(text(lang, 'email'), passwordEmail));
+    passwordForm.appendChild(field(text(lang, 'password'), passwordInput));
+    passwordForm.appendChild(passwordSubmit);
+    passwordWrap.appendChild(passwordForm);
+
     var previewWrap = document.createElement('div');
     previewWrap.hidden = true;
     var form = document.createElement('form');
@@ -585,6 +684,7 @@ import {
     dialog.appendChild(err);
     dialog.appendChild(googleWrap);
     dialog.appendChild(or);
+    dialog.appendChild(passwordWrap);
     dialog.appendChild(previewWrap);
     dialog.appendChild(status);
     dialog.appendChild(soon);
@@ -604,6 +704,8 @@ import {
       err: err,
       status: status,
       googleWrap: googleWrap,
+      passwordWrap: passwordWrap,
+      passwordForm: passwordForm,
       previewWrap: previewWrap,
       previewForm: form,
       or: or,
@@ -701,6 +803,8 @@ import {
   function focusPageSignIn() {
     var panel = document.getElementById('sign-in-panel');
     var btn = document.getElementById('sign-in-google');
+    var email = document.querySelector('#password-form input[name="email"]');
+    if (!btn && email && email.closest && !email.closest('[hidden]')) btn = email;
     if (btn) {
       try {
         btn.focus();
@@ -734,11 +838,14 @@ import {
         err: built.err,
         status: built.status,
         googleWrap: built.googleWrap,
+        passwordWrap: built.passwordWrap,
+        passwordForm: built.passwordForm,
         previewWrap: built.previewWrap,
         previewForm: built.previewForm,
         or: built.or,
         soon: built.soon,
       };
+      wirePassword(built.ui);
       wirePreview(built.ui);
     }
     var ui = built.ui;
@@ -758,6 +865,7 @@ import {
       built.googleWrap.hidden = true;
       built.googleWrap.replaceChildren();
     }
+    if (built.passwordWrap) built.passwordWrap.hidden = true;
     if (built.previewWrap) built.previewWrap.hidden = true;
     if (built.or) built.or.hidden = true;
     if (built.soon) built.soon.hidden = true;

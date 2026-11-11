@@ -1,10 +1,12 @@
 # Google sign-in
 
-Overseas accounts use Google only. There is no GitHub, Apple, Microsoft, or email/password sign-in. The first successful Google sign-in creates the D1 user with a credit balance of 0. It does not add or spend credits. Only an allowlisted address gets that far. Any other Google account is rejected before `ensureUser` and before `vt_session`.
+Overseas accounts use Google only. There is no consumer email/password registration, and no GitHub, Apple, or Microsoft sign-in. The first successful Google sign-in creates the D1 user with a credit balance of 0. It does not add or spend credits. Only an allowlisted address gets that far. Any other Google account is rejected before `ensureUser` and before `vt_session`.
+
+An optional owner test sign-in (`POST /api/auth/password`) lets the owner exercise checkout without Google. It is not a public account product. Customers do not get a password, and there is no registration form. The email and password fields stay hidden unless the path is configured. **Continue with Google** stays on the sign-in dialog.
 
 The same Google account maps to the same `user_id` on every host (`stableUserId('google', sub)`). Credits, the ledger, and jobs are that row in the shared D1 database. Each host still has its own `vt_session` cookie. Signing in on the apex does not by itself sign the person in on a brand hostname. The account pages stay on the host they started on (`/account/…` or `/t/{slug}/account/…`).
 
-Preview email sign-in (`POST /api/auth/preview`) does not prove the address in the JSON body. It is off on every public host, including `viral-templates.pages.dev` and branch `*.pages.dev` URLs. `AUTH_PREVIEW_LOGIN=1` does not turn it back on there. On `localhost` it still runs when Google is not configured, or when `AUTH_PREVIEW_LOGIN=1`, and the posted email must be on the same allowlist. `AUTH_PREVIEW_LOGIN=0` turns it off everywhere.
+Preview email sign-in (`POST /api/auth/preview`) does not prove the address in the JSON body. It is off on every public host, including `viral-templates.pages.dev` and branch `*.pages.dev` URLs. `AUTH_PREVIEW_LOGIN=1` does not turn it back on there. On `localhost` it still runs when Google is not configured, or when `AUTH_PREVIEW_LOGIN=1`, and the posted email must be on the same allowlist. `AUTH_PREVIEW_LOGIN=0` turns it off everywhere. Setting `AUTH_TEST_EMAIL` or `AUTH_TEST_PASSWORD` does not enable preview login.
 
 ## Routes
 
@@ -12,6 +14,7 @@ Preview email sign-in (`POST /api/auth/preview`) does not prove the address in t
 | --- | --- |
 | `GET /api/auth/google/start?next=&from=&popup=` | Sends the browser to Google. `next` is where to land after sign-in. `from` is the sign-in page to return to if it fails. Both are relative paths only. `popup=1` stores a flag in the state cookie. |
 | `GET /api/auth/google/callback` | Google redirects here. Exchanges the code, reads the profile, and, if that verified email is allowlisted, creates the user and sets `vt_session`. Otherwise it redirects (or the popup posts) `error=email_not_allowed` and sets no session cookie. |
+| `POST /api/auth/password` | Owner test sign-in. JSON `{ email, password, next? }`. See below. |
 
 The session cookie is the same shape as preview login, with `providers: ['google']`. The profile stores email (only if Google says it is verified), name, and picture. Google access tokens are not stored.
 
@@ -102,12 +105,14 @@ Set these on **Production** for the `viral-templates` Pages project. Do not comm
 
 | Name | Notes |
 | --- | --- |
-| `AUTH_SECRET` | 16+ random characters. Signs `vt_session` and the short-lived OAuth state cookie. Required for Google. The public localhost / `*.pages.dev` fallback is not used for Google sign-in. |
+| `AUTH_SECRET` | 16+ random characters. Signs `vt_session` and the short-lived OAuth state cookie. Required for Google and for the owner test password. The public localhost / `*.pages.dev` fallback is not used for either. |
 | `GOOGLE_CLIENT_ID` | Web client id from Google. |
 | `GOOGLE_CLIENT_SECRET` | Web client secret from Google. |
 | `AUTH_ALLOWED_EMAILS` | Comma-separated allowlist. Production value: `1316805445@qq.com`. Plaintext is fine. See below. |
+| `AUTH_TEST_EMAIL` | Optional. The one address that may use the owner test password. It must also pass the allowlist. Secret or plaintext is fine. Do not commit it. Leave unset to hide the password form. |
+| `AUTH_TEST_PASSWORD` | Optional. Owner test secret. Type **Secret**. Compared as stored (not trimmed) once it contains a non-whitespace character. Do not commit it. Leave unset to hide the password form. |
 
-Dashboard: **Workers & Pages → viral-templates → Settings → Variables and Secrets → Add**. Type **Secret** (not plain text) for `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET`. Environment **Production**. Add each name. `AUTH_ALLOWED_EMAILS` is the plaintext allowlist in the next section.
+Dashboard: **Workers & Pages → viral-templates → Settings → Variables and Secrets → Add**. Type **Secret** (not plain text) for `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `AUTH_TEST_PASSWORD`. Environment **Production**. Add each name. `AUTH_ALLOWED_EMAILS` is the plaintext allowlist in the next section. `AUTH_TEST_EMAIL` is the single owner test address, not a customer list.
 
 CLI (the command prompts for the value; do not put the secret in the command line). Choose Production when asked:
 
@@ -115,11 +120,35 @@ CLI (the command prompts for the value; do not put the secret in the command lin
 npx wrangler pages secret put AUTH_SECRET --project-name viral-templates
 npx wrangler pages secret put GOOGLE_CLIENT_ID --project-name viral-templates
 npx wrangler pages secret put GOOGLE_CLIENT_SECRET --project-name viral-templates
+npx wrangler pages secret put AUTH_TEST_EMAIL --project-name viral-templates
+npx wrangler pages secret put AUTH_TEST_PASSWORD --project-name viral-templates
 ```
+
+Skip the last two commands on any environment that should stay Google-only. Do not pass the secret as an argument.
 
 Redeploy or wait for the next deployment so the Functions see the new secrets.
 
-If Google credentials are set but `AUTH_SECRET` is missing, the sign-in page does not offer Google or preview login on that host.
+If Google credentials are set but `AUTH_SECRET` is missing, the sign-in page does not offer Google, preview login, or the owner password form on that host.
+
+## Owner test password
+
+`POST /api/auth/password` is for the owner to test checkout when Google is awkward. It is not a second product. There is no sign-up, no password reset, and no list of customer passwords.
+
+The route and the email/password fields are on only when all three are set:
+
+- `AUTH_SECRET` is a real secret. The public localhost / `*.pages.dev` fallback does not count, and copying that fallback string into `AUTH_SECRET` does not count.
+- `AUTH_TEST_EMAIL` is one non-empty email.
+- `AUTH_TEST_PASSWORD` is a non-empty secret.
+
+If any of those is missing, the route is unavailable and `GET /api/auth/session` reports `password: false`. That status boolean does not include `AUTH_TEST_EMAIL`.
+
+A success needs a timing-safe password match and an email that matches both `AUTH_TEST_EMAIL` (trim, case-insensitive) and `authEmailAllowed` (the same allowlist as Google). The password is hashed to a fixed length and compared with `crypto.subtle.timingSafeEqual` when the runtime has it. `next` is a relative path, the same rule as the other sign-in routes.
+
+Anything else — wrong password, a different email, an address that is not allowlisted, or a body that is not JSON — returns the same `invalid_credentials` error. The response does not say which check failed. The password is not logged.
+
+When the email already has a `users` row, including a row created by Google (`stableUserId('google', sub)`), the session uses that `user_id`. Credits and jobs stay on that row. When no row exists, the route creates one user at **0** credits. Google sign-in itself is unchanged.
+
+`AUTH_PREVIEW_LOGIN` does not enable this route, and this route does not enable preview login. Preview login stays refused on every public host, including `*.pages.dev`.
 
 ## Who can sign in
 

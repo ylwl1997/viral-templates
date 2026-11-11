@@ -304,14 +304,15 @@ export const FAN_LIVE: LivePack = {
   cases: [
     {
       id: 'first-look',
-      labelEn: 'First look',
-      labelZh: '第一套造型',
-      sources: [`${photo}/ceiling-fan-source.jpg`],
+      labelEn: 'Everyday photo',
+      labelZh: '日常照片',
+      sources: [`${photo}/ceiling-fan-source-v3.jpg`],
       resultPoster: `${photo}/ceiling-fan-poster.jpg`,
       resultVideo: `${photo}/ceiling-fan-demo.mp4`,
       noteEn:
-        'The upload is the first look: a formal pale dress, reclining on a sofa. The clip wipes through the blades into later outfits.',
-      noteZh: '上传图是第一套造型：浅色礼服，斜躺在沙发上。短片用扇叶扫过，换到后面的几套衣服。',
+        'The upload is an ordinary everyday photo: casual clothes, no fan in the frame. The generated clip wipes through ceiling-fan blades into later outfits, including a maid look and a more revealing final look.',
+      noteZh:
+        '上传的是一张普通的日常照片：便装，画面里没有风扇。生成的短片用吊扇扇叶扫过，换到后面的几套衣服，包括女仆造型和更露的最后一套。',
     },
   ],
   story: {
@@ -332,9 +333,9 @@ export const FAN_LIVE: LivePack = {
       titleEn: 'Later outfits from the photo you’re already in.',
       titleZh: '后面的衣服来自你已经在的那张照片。',
       bodyEn:
-        'One adult-consent photo goes in. The sample is the first look: a formal pale dress, reclining on a sofa. The clip wipes through ceiling-fan blades into several later outfits, including a maid look and a more revealing final look. The blades are part of the motion.',
+        'One adult-consent photo goes in. The sample is an ordinary everyday photo in casual clothes, with no fan in the frame. The generated clip wipes through ceiling-fan blades into later outfits, including a maid look and a more revealing final look. Those blades exist only in the result.',
       bodyZh:
-        '上传一张成人同意的照片。示例是第一套造型：浅色礼服，斜躺在沙发上。短片用吊扇扇叶扫过，换到后面的几套衣服，包括女仆造型和更露的最后一套。扇叶是动作的一部分。',
+        '上传一张成人同意的照片。示例是一张便装的普通日常照，画面里没有风扇。生成的短片用吊扇扇叶扫过，换到后面的几套衣服，包括女仆造型和更露的最后一套。扇叶只存在于成片里。',
     },
     beats: [
       {
@@ -353,8 +354,8 @@ export const FAN_LIVE: LivePack = {
         titleEn: 'You don’t film a fan',
         titleZh: '不用实拍风扇',
         bodyEn:
-          'One adult-consent photo is enough. The sample upload is the first look: a formal pale dress, reclining on a sofa.',
-        bodyZh: '一张成人同意的照片就够。示例的上传图是第一套造型：浅色礼服，斜躺在沙发上。',
+          'One adult-consent photo is enough. The sample is an ordinary everyday photo in casual clothes, with no fan in the frame.',
+        bodyZh: '一张成人同意的照片就够。示例是一张便装日常照，画面里没有风扇。',
       },
     ],
     diy: {
@@ -386,9 +387,9 @@ export const FAN_LIVE: LivePack = {
       qEn: 'Does the photo need a ceiling fan?',
       qZh: '照片里一定要有吊扇吗？',
       aEn:
-        'No. You do not film a fan. The sample upload is the first look: a formal pale dress, reclining on a sofa. The clip wipes through ceiling-fan blades into several later outfits. Those blades are part of the motion, and they show in the demo and the poster.',
+        'No. The sample upload is an ordinary everyday photo of this person in casual clothes, and there is no fan in that photo. You do not film a fan. The generated clip wipes through ceiling-fan blades into later outfits, including a maid look and a more revealing final look. Those blades appear only in the result, in the demo and the poster.',
       aZh:
-        '不用。你不需要去拍一台风扇。示例的上传图是第一套造型：浅色礼服，斜躺在沙发上。短片用吊扇扇叶扫过，换到后面的几套衣服。扇叶是动作的一部分，示例视频和海报里都能看到。',
+        '不用。示例上传的是这个人的普通日常照片：便装，照片里没有风扇。你不需要去拍一台风扇。生成的短片用吊扇扇叶扫过，换到后面的几套衣服，包括女仆造型和更露的最后一套。扇叶只出现在成片里，示例视频和海报都能看到。',
     },
     {
       id: 'safety',
@@ -403,9 +404,9 @@ export const FAN_LIVE: LivePack = {
       qEn: 'What photo works best?',
       qZh: '什么样的照片效果最好？',
       aEn:
-        'One adult, face visible, ordinary indoor light. The sample upload is the first look: a formal pale dress, reclining on a sofa. The clip then wipes through the blades into later outfits, including a maid look and a more revealing final look.',
+        'One adult, face visible, ordinary indoor light. The sample upload is an ordinary everyday photo in casual clothes, with no fan in the frame. The generated clip then wipes through the blades into later outfits, including a maid look and a more revealing final look.',
       aZh:
-        '一位成人，脸部清楚，室内普通光线。示例的上传图是第一套造型：浅色礼服，斜躺在沙发上。短片再用扇叶扫过，换到后面的几套衣服，包括女仆造型和更露的最后一套。',
+        '一位成人，脸部清楚，室内普通光线。示例的上传图是一张便装日常照，画面里没有风扇。生成的短片再用扇叶扫过，换到后面的几套衣服，包括女仆造型和更露的最后一套。',
     },
     {
       id: 'length',

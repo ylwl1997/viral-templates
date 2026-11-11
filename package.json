@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
+    "@waffo/pancake-ts": "0.28.0",
     "astro": "^5.14.0"
   },
   "devDependencies": {

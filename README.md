@@ -203,12 +203,12 @@ Details and env names: [`docs/credits-checkout.md`](docs/credits-checkout.md).
 | `PUBLIC_SITE_APEX` | Apex hostname for Host / subdomain mapping (default `viral-templates.pages.dev`) |
 | `FAL_KEY` / `FAL_API_KEY` | Optional unused hook. Not the default generator |
 | `FAL_MODEL` | Optional unused model id. Default generation stays `wan2.2-animate-move` |
-| `WAFFO_API_KEY` | Checkout API key. With the three keys below, Buy can start. Missing any of them keeps Buy closed |
-| `WAFFO_MERCHANT_ID` | Merchant id sent with each order |
-| `WAFFO_PRIVATE_KEY` | Merchant RSA private key (PEM PKCS8 or PKCS1) used to sign create-order |
-| `WAFFO_PUBLIC_KEY` | Provider public key used to verify `X-SIGNATURE` on `POST /api/payments/waffo/webhook` |
-| `WAFFO_API_BASE` | Optional. Default `https://api-sandbox.waffo.com`. Production is `https://api.waffo.com` |
-| `WAFFO_CURRENCY` | Optional ISO currency. Default `USD`. The merchant account must accept it |
+| `WAFFO_MERCHANT_ID` | Pancake Merchant ID (`MER_`…). With the store id and private key, Buy can start. Missing any of them keeps Buy closed |
+| `WAFFO_PRIVATE_KEY` | Pancake API private key for the selected environment. Test key first. Do not commit it |
+| `WAFFO_PANCAKE_STORE_ID` | Pancake Store ID (`STO_`…). Dashboard → Settings → Store Profile |
+| `WAFFO_PANCAKE_ENVIRONMENT` | `test` (default) or `prod`. `live` means `prod`. Do not point this at live until a production key is set |
+| `WAFFO_CURRENCY` | Optional ISO currency. Default `USD` |
+| `WAFFO_WEBHOOK_TEST_PUBLIC_KEY` / `WAFFO_WEBHOOK_PROD_PUBLIC_KEY` / `WAFFO_WEBHOOK_PUBLIC_KEY` | Optional overrides. Unset uses the SDK’s built-in webhook keys |
 | `PUBLIC_GA4_MEASUREMENT_ID` | GA4 |
 | `PUBLIC_ADSTERRA_SOCIAL_BAR_ZONE` | Adsterra Social Bar |
 | `DB` | Pages D1 binding (not an env string). One database for accounts, jobs, and credit ledger |

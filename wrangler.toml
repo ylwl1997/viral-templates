@@ -11,6 +11,12 @@
 #   npm run deploy
 name = "viral-templates"
 compatibility_date = "2026-10-01"
+# @waffo/pancake-ts signs with Node's crypto. Pages Functions need this flag.
+compatibility_flags = ["nodejs_compat"]
+# Checkout secrets are Pages secrets, not values in this file:
+#   WAFFO_MERCHANT_ID  WAFFO_PRIVATE_KEY  WAFFO_PANCAKE_STORE_ID
+#   WAFFO_PANCAKE_ENVIRONMENT=test (default) or prod
+# See docs/credits-checkout.md.
 pages_build_output_dir = "dist"
 
 [[d1_databases]]

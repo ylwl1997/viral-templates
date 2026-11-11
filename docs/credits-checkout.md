@@ -51,29 +51,38 @@ Every MP4 written to `results/` gets an XMP `uuid` box (`trainedAlgorithmicMedia
 
 ## Checkout
 
-Required before Buy does anything:
+Waffo Pancake (merchant of record) via `@waffo/pancake-ts`. Both test and live use `https://api.waffo.ai`. The private key’s own environment is what the platform charges against.
+
+Required before Buy does anything. Set the test values first. Names match the SDK where it has them:
 
 | Key | Role |
 |-----|------|
-| `WAFFO_API_KEY` | `X-API-KEY` |
-| `WAFFO_MERCHANT_ID` | `merchantInfo.merchantId` |
-| `WAFFO_PRIVATE_KEY` | Signs `POST /api/v1/order/create` (PEM PKCS8 or PKCS1, SHA256withRSA) |
-| `WAFFO_PUBLIC_KEY` | Verifies webhook `X-SIGNATURE` |
+| `WAFFO_MERCHANT_ID` | Merchant ID (`MER_` + 22 characters). Dashboard → API & Development → Create an API Key |
+| `WAFFO_PRIVATE_KEY` | RSA private key for that environment (PEM PKCS8 or PKCS1, or the base64 form the SDK accepts). Test key first |
+| `WAFFO_PANCAKE_STORE_ID` | Store ID (`STO_` + 22 characters). Dashboard → Settings → Store Profile |
+
+Environment, test unless you opt in:
+
+| Key | Values |
+|-----|--------|
+| `WAFFO_PANCAKE_ENVIRONMENT` | `test` (default when unset) or `prod`. `live` is accepted as `prod`. Use `test` with the test private key. Set `prod` only with a production private key |
 
 Optional:
 
 | Key | Default |
 |-----|---------|
-| `WAFFO_API_BASE` | `https://api-sandbox.waffo.com` |
 | `WAFFO_CURRENCY` | `USD` |
+| `WAFFO_WEBHOOK_TEST_PUBLIC_KEY` | Unset. SDK built-in test key verifies `X-Waffo-Signature` |
+| `WAFFO_WEBHOOK_PROD_PUBLIC_KEY` | Unset. SDK built-in production key |
+| `WAFFO_WEBHOOK_PUBLIC_KEY` | Unset. One key for both environments, used only when the two keys above are unset |
 
-Set `WAFFO_API_BASE=https://api.waffo.com` for live charges. The merchant account must accept `WAFFO_CURRENCY`.
+`POST /api/payments/checkout` with `{ "pack": "starter" | "mid" | "large" }` looks up an active one-time product in that store priced at the pack amount (metadata `pack`, or the name `60 credits` / `180 credits` / `600 credits`). If none exists, it creates one (`digital_goods`, idempotency key `pack_starter_USD_5_99` — the dot in the amount is an underscore) and then calls `checkout.authenticated.create`: `POST /v1/actions/auth/issue-session-token` and `POST /v1/actions/checkout/create-session`, signed with `X-Merchant-Id`, `X-Timestamp`, and `X-Signature`. The response `url` is the hosted `checkoutUrl` including `#token=`. A pending `payment_orders` row is written only after a product id is known. The session sends `orderMerchantExternalId` (our order id), `currency`, `buyerIdentity` (the account id), `buyerEmail` when we have one, `allowPromotionCodes: false`, and `successUrl` `https://<host>/account/credits/?checkout=return`. It does not add credits.
 
-`POST /api/payments/checkout` with `{ "pack": "starter" | "mid" | "large" }` creates a pending `payment_orders` row and returns the provider redirect. It does not add credits.
+Register `https://<host>/api/payments/webhook` in Dashboard → Settings → Webhooks, channel `http`, event `order.completed`, `testMode: true` while the environment is test. `POST /api/payments/webhook` reads the raw body and checks `X-Waffo-Signature` (`t=<unix ms>,v1=<base64>`, signed over `${t}.${rawBody}`) with `verifyWebhook` for `WAFFO_PANCAKE_ENVIRONMENT`. Credits are added only for `order.completed` when `mode` and `storeId` match, `orderMerchantExternalId` is our pending order, and the pack amount matches `listPrice.subtotal`, `listPrice.total`, `listPrice.listTotal`, `amount`, or `chargedAmount` (a positive `listPrice.discountAmount`, or a `chargedAmount` below the pack price, does not credit). The ledger id is `topup_{orderId}`, so a repeat notice does not credit twice. Reply `OK`. A bad signature replies `Invalid signature` with HTTP 401 and does not credit. Other events, including `refund.succeeded`, reply `OK` and do not change the balance. A browser return to `/account/credits/?checkout=return` is not a payment. Closing the hosted page does not redirect back and does not send a webhook.
 
-`POST /api/payments/waffo/webhook` reads the raw body, checks `X-SIGNATURE`, and adds credits only for `PAYMENT_NOTIFICATION` + `orderStatus: PAY_SUCCESS` when `orderAmount` and `orderCurrency` match the stored order. The ledger id is `topup_{orderId}`, so a repeat notice does not credit twice. Reply `{"message":"success"}`. A bad signature replies `{"message":"failed"}` and does not credit. A browser return to `/account/credits/?checkout=return` is not a payment.
+If any required key is missing, or the environment value is not `test`, `prod`, or `live`, Buy responds `checkout_unavailable` and writes nothing.
 
-If any required key is missing, Buy responds `checkout_unavailable` and writes nothing.
+Test charges use card `4576 7500 0000 0110` (any future expiry, any CVC). `4576 7500 0000 0220` declines. No real money moves while the private key is a test key.
 
 A provider refund of a pack does not remove credits. The signed-in credits page can store a short note (`POST /api/account/support`) for a missing top-up or a missing job refund.
 

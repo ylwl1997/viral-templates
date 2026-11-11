@@ -16,11 +16,29 @@ function liveTiming(slug: string) {
   };
 }
 
+function livePhotoSlots(slug: string) {
+  const source = sourceTemplate(slug);
+  const slots = source && source.photoSlots;
+  if (!source || source.photoCount < 2) return undefined;
+  if (!slots || slots.length !== source.photoCount) {
+    throw new Error(`${slug} photo slots do not match photoCount`);
+  }
+  return slots;
+}
+
 const bbyTiming = liveTiming('bby-wow');
 const kissTiming = liveTiming('kiss-cam');
 const fanTiming = liveTiming('ceiling-fan');
 
 export type TemplateStatus = 'live' | 'soon';
+
+/** One upload slot. Create copy and the reference prompt both use these words. */
+export type PhotoSlot = {
+  labelEn: string;
+  labelZh: string;
+  replacesEn: string;
+  replacesZh: string;
+};
 
 /** Hero composition — must visibly differ across live brands. */
 export type HeroPreset = 'centered' | 'split' | 'editorial';
@@ -126,6 +144,8 @@ export type Template = {
   displayNameZh: string;
   status: TemplateStatus;
   photoCount: 1 | 2;
+  /** Who each photo replaces. Required when photoCount is 2. */
+  photoSlots?: readonly PhotoSlot[];
   /** Source clip length in seconds. Absent on unpublished looks. */
   durationSeconds?: number;
   /** Credits charged when a signed-in generate stores a photo. Derived from durationSeconds. */
@@ -197,6 +217,7 @@ export const TEMPLATES: readonly Template[] = [
     displayNameZh: 'Coldplay Kiss Cam AI',
     status: 'live',
     photoCount: 2,
+    photoSlots: livePhotoSlots('kiss-cam'),
     ...kissTiming,
     taglineEn: '2 photos → stadium kiss-cam remix (no concert footage)',
     taglineZh: '2 张照片 → 球场大屏风（无演唱会素材）',

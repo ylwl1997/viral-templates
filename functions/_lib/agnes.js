@@ -1,5 +1,5 @@
 /**
- * HTTP client for Agnes Video 2.5 reference mode (photo + template video).
+ * HTTP client for Agnes Video 2.5 reference mode (photos + template video).
  * China host. Create POST {base}/videos, then poll GET {origin}/agnesapi.
  * Docs: https://wiki.agnes-ai.cn/zh-Hans/docs/agnes-video-25
  *
@@ -35,11 +35,61 @@ export const AGNES_IMAGE_MIN_SIDE = 256;
 export const AGNES_IMAGE_MAX_SIDE = 5760;
 
 /**
- * Trial prompt. Placeholders are 1-based in each media array.
+ * One-person prompt. Placeholders are 1-based in each media array.
+ * Two-person templates use referencePrompt() so both images are named.
  * Keep the template motion and replace only the person.
  */
 export const REFERENCE_PROMPT =
   'Use <Image 1> as the person and follow <Video 1> motion/camera/timing/scene; keep the template setting and outfits; replace only the identity; photorealistic.';
+
+/**
+ * Official reference mode accepts an `images` array of up to 8 URLs.
+ * https://wiki.agnes-ai.cn/zh-Hans/docs/agnes-video-25 (checked 2026-11-11).
+ * The first five images are included in the video price.
+ */
+export const AGNES_MAX_REFERENCE_IMAGES = 8;
+
+/** Stored photo kinds this worker can sign, in slot order. */
+export const STORED_PHOTO_KINDS = ['photo', 'photo-2'];
+
+/** Reference images in one request must stay under 50 MB together. */
+export const AGNES_IMAGE_TOTAL_MAX_BYTES = 50 * 1024 * 1024;
+
+/**
+ * Kinds the worker can actually sign for this photo count.
+ * Null when a slot has no stored kind, so a template cannot pretend to send it.
+ */
+export function referencePhotoKinds(photoCount) {
+  const count = Number(photoCount);
+  if (!Number.isInteger(count) || count < 1 || count > STORED_PHOTO_KINDS.length) return null;
+  return STORED_PHOTO_KINDS.slice(0, count);
+}
+
+function promptSlotText(value, fallback) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!text || text.length > 80 || /[<>]/.test(text)) return fallback;
+  return text;
+}
+
+/**
+ * Prompt for the reference request. One photo keeps REFERENCE_PROMPT.
+ * More than one photo names every image from the template's photo slots
+ * and tells the model to replace every person, not a single "the person".
+ */
+export function referencePrompt(template) {
+  const count = Number(template && template.photoCount);
+  if (!Number.isInteger(count) || count <= 1) return REFERENCE_PROMPT;
+  const slots = template && Array.isArray(template.photoSlots) ? template.photoSlots : [];
+  const lines = [];
+  for (let index = 0; index < count; index += 1) {
+    const slot = slots[index] || {};
+    const label = promptSlotText(slot.labelEn, `Photo ${index + 1}`);
+    const replaces = promptSlotText(slot.replacesEn, `person ${index + 1}`);
+    lines.push(`<Image ${index + 1}> is ${label} and replaces ${replaces}`);
+  }
+  const who = count === 2 ? 'both people' : 'every person';
+  return `Replace ${who} in <Video 1>. ${lines.join('. ')}. Do not keep either face from the template video. Follow <Video 1> motion, camera, timing, and scene. Keep the template setting and outfits. Photorealistic.`;
+}
 
 const CONTAINERS = new Set(['moov', 'trak', 'mdia', 'minf', 'stbl']);
 
@@ -322,16 +372,25 @@ export function agnesMediaDecision({
   };
 }
 
-export function buildReferenceRequest(runtime, { imageUrl, videoUrl, seconds }) {
+export function buildReferenceRequest(runtime, input) {
   const origin = runtime && runtime.publicOrigin;
-  const image = assertAgnesInputUrl(imageUrl, origin);
-  const video = assertAgnesInputUrl(videoUrl, origin);
+  const source = input || {};
+  const listed = Array.isArray(source.imageUrls) && source.imageUrls.length ? source.imageUrls : [source.imageUrl];
+  if (listed.length < 1 || listed.length > AGNES_MAX_REFERENCE_IMAGES) throw fail('agnes_unreachable_input');
+  const images = listed.map((url) => assertAgnesInputUrl(url, origin));
+  const video = assertAgnesInputUrl(source.videoUrl, origin);
   const videoPath = new URL(video).pathname;
   const templatePath = /^\/brand\/templates\/[a-z0-9-]+-demo\.mp4$/.test(videoPath);
   const segmentPath = /^\/api\/media\/jobs\/[A-Za-z0-9_-]+\/seg[0-7]$/.test(videoPath);
   if (!templatePath && !segmentPath) throw fail('agnes_unreachable_input');
+  const seconds = source.seconds;
   const outputSeconds = typeof seconds === 'string' && /^([4-9]|1[0-2])$/.test(seconds) ? seconds : agnesOutputSeconds(seconds);
   if (!outputSeconds) throw fail('agnes_bad_seconds');
+  const prompt = source.prompt ? String(source.prompt).trim() : referencePrompt({ photoCount: images.length });
+  if (!prompt.includes('<Video 1>')) throw fail('agnes_bad_prompt');
+  for (let index = 1; index <= images.length; index += 1) {
+    if (!prompt.includes(`<Image ${index}>`)) throw fail('agnes_bad_prompt');
+  }
   return {
     url: `${runtime.base}/videos`,
     headers: {
@@ -340,12 +399,12 @@ export function buildReferenceRequest(runtime, { imageUrl, videoUrl, seconds }) 
     },
     body: {
       model: runtime.model || AGNES_MODEL,
-      prompt: REFERENCE_PROMPT,
+      prompt,
       seconds: outputSeconds,
       mode: 'reference',
       size: AGNES_SIZE,
       aspect_ratio: AGNES_ASPECT_RATIO,
-      images: [image],
+      images,
       videos: [{ url: video, start_seconds: 0, require_audio: false }],
     },
   };
@@ -437,23 +496,35 @@ export function unpackAgnesTaskId(stored) {
   return { videoId: id, index, multi, parallel: false, count: multi ? 0 : 1, slots: null };
 }
 
-export async function agnesSegmentInputs(env, jobId, index) {
+async function signedPhotoUrls(origin, secret, jobId, photoCount) {
+  const kinds = referencePhotoKinds(photoCount);
+  if (!kinds) return null;
+  const exp = Math.floor(Date.now() / 1000) + AGNES_INPUT_TTL_SEC;
+  const imageUrls = [];
+  for (const kind of kinds) {
+    const query = await signMediaQuery(secret, { jobId, kind, exp });
+    imageUrls.push(assertAgnesInputUrl(mediaDownloadUrl(origin, jobId, kind, query), origin));
+  }
+  return imageUrls;
+}
+
+export async function agnesSegmentInputs(env, jobId, index, photoCount = 1) {
   const origin = customMediaOrigin(env);
   if (!origin) return null;
   if (!Number.isInteger(index) || index < 0 || index > 7) return null;
   const host = new URL(origin).hostname;
   const secret = resolveAuthSecret(env, host).secret;
   if (!secret || String(secret).length < 16) return null;
+  const imageUrls = await signedPhotoUrls(origin, secret, jobId, photoCount);
+  if (!imageUrls || imageUrls.length !== Number(photoCount)) return null;
   const exp = Math.floor(Date.now() / 1000) + AGNES_INPUT_TTL_SEC;
   const kind = `seg${index}`;
-  const photoQuery = await signMediaQuery(secret, { jobId, kind: 'photo', exp });
   const segmentQuery = await signMediaQuery(secret, { jobId, kind, exp });
-  const imageUrl = assertAgnesInputUrl(mediaDownloadUrl(origin, jobId, 'photo', photoQuery), origin);
   const videoUrl = assertAgnesInputUrl(mediaDownloadUrl(origin, jobId, kind, segmentQuery), origin);
-  return { imageUrl, videoUrl };
+  return { imageUrl: imageUrls[0], imageUrls, videoUrl };
 }
 
-export async function agnesInputUrls(env, jobId, referenceVideo) {
+export async function agnesInputUrls(env, jobId, referenceVideo, photoCount = 1) {
   const origin = customMediaOrigin(env);
   if (!origin) return null;
   const reference = typeof referenceVideo === 'string' ? referenceVideo : '';
@@ -461,11 +532,10 @@ export async function agnesInputUrls(env, jobId, referenceVideo) {
   const host = new URL(origin).hostname;
   const secret = resolveAuthSecret(env, host).secret;
   if (!secret || String(secret).length < 16) return null;
-  const exp = Math.floor(Date.now() / 1000) + AGNES_INPUT_TTL_SEC;
-  const query = await signMediaQuery(secret, { jobId, kind: 'photo', exp });
-  const imageUrl = assertAgnesInputUrl(mediaDownloadUrl(origin, jobId, 'photo', query), origin);
+  const imageUrls = await signedPhotoUrls(origin, secret, jobId, photoCount);
+  if (!imageUrls || imageUrls.length !== Number(photoCount)) return null;
   const videoUrl = assertAgnesInputUrl(new URL(reference, origin).toString(), origin);
-  return { imageUrl, videoUrl };
+  return { imageUrl: imageUrls[0], imageUrls, videoUrl };
 }
 
 function providerCode(raw) {

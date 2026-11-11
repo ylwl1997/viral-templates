@@ -118,7 +118,8 @@ assert(getTemplate('kiss-cam').photoCount === 2, 'kiss cam still two photos');
 const workerSource = fs.readFileSync(new URL('../functions/_lib/bailian-worker.js', import.meta.url), 'utf8');
 const dbSource = fs.readFileSync(new URL('../functions/_lib/account-db.js', import.meta.url), 'utf8');
 assert(workerSource.includes('upload_key'), 'worker reads the subject photo');
-assert(!workerSource.includes('upload_key_2'), 'second photo is not sent');
+assert(workerSource.includes('upload_key_2'), 'worker reads the second photo');
+assert(workerSource.includes('reference_photos'), 'worker fails a path that would drop a photo');
 assert(!workerSource.includes('row.upload_url'), 'signed pages.dev url is not a Bailian input');
 assert(dbSource.includes('refundChargeById'), 'failed jobs refund');
 assert(dbSource.includes("kind: 'refund'"), 'refund kind named');
@@ -556,13 +557,41 @@ const stillQueued = sqlite.prepare(`SELECT status FROM jobs WHERE id = ?`).get(c
 assert(stillQueued.status === 'queued' || stillQueued.status === 'running', stillQueued.status);
 releaseFetch();
 await pending[0];
-const taskPolls = kickCalls.filter((call) => call.url.includes('/tasks/'));
+const kissKickCalls = kickCalls.filter((call) => call.url.includes('/video-synthesis') || call.url.includes('/tasks/'));
+assert(kissKickCalls.length === 0, 'two-photo create was sent to mix');
+const kicked = sqlite.prepare(`SELECT status, error_code, note_en, note_zh FROM jobs WHERE id = ?`).get(createdBody.job.id);
+assert(kicked.status === 'failed' && kicked.error_code === 'reference_photos', JSON.stringify(kicked));
+assert(/both photos/i.test(kicked.note_en), kicked.note_en);
+assert(!/agnes|bailian|waffo|dashscope/i.test(`${kicked.note_en} ${kicked.note_zh}`), kicked.note_en);
+const kissLedger = (await getCredits(db, user)).ledger.filter((row) => row.job_id === createdBody.job.id).map((row) => row.kind).sort().join();
+assert(kissLedger === 'deduction,refund', `kiss ledger ${kissLedger}`);
+
+const bbyForm = new FormData();
+bbyForm.set('template_slug', 'bby-wow');
+bbyForm.set('photo_0', new File([jpeg], 'a.jpg', { type: 'image/jpeg' }));
+const bbyPending = [];
+const bbyCallsBefore = kickCalls.length;
+const bbyCreated = await Promise.race([
+  onCreate({
+    env: { ...env, JOB_PROCESS_SECRET: '' },
+    request: new Request(`${origin}/api/jobs`, { method: 'POST', headers: { cookie }, body: bbyForm }),
+    waitUntil(promise) {
+      bbyPending.push(promise);
+    },
+  }),
+  new Promise((_, reject) => setTimeout(() => reject(new Error('create blocked on provider')), 500)),
+]);
+assert(bbyCreated.status === 201, `bby create ${bbyCreated.status}`);
+assert(bbyPending.length === 1, 'one-photo create registered waitUntil');
+await bbyPending[0];
+const bbyKickCalls = kickCalls.slice(bbyCallsBefore);
+const taskPolls = bbyKickCalls.filter((call) => call.url.includes('/tasks/'));
 assert(taskPolls.length === 1, `create kick should poll once, saw ${taskPolls.length}`);
-assert(kickCalls.some((call) => call.url.includes('/video-synthesis')), 'create kick submitted');
-assert(!kickCalls.some((call) => String(call.init && call.init.headers && call.init.headers.authorization || '').includes('job-process')), 'kick did not send the process secret');
-const kicked = sqlite.prepare(`SELECT status, error_code FROM jobs WHERE id = ?`).get(createdBody.job.id);
-assert(kicked.status === 'ready', `kick finished as ${kicked.status}`);
-assert(!kicked.error_code, kicked.error_code);
+assert(bbyKickCalls.some((call) => call.url.includes('/video-synthesis')), 'create kick submitted');
+assert(!bbyKickCalls.some((call) => String(call.init && call.init.headers && call.init.headers.authorization || '').includes('job-process')), 'kick did not send the process secret');
+const bbyKicked = sqlite.prepare(`SELECT status, error_code FROM jobs WHERE id = ?`).get((await bbyCreated.json()).job.id);
+assert(bbyKicked.status === 'ready', `kick finished as ${bbyKicked.status}`);
+assert(!bbyKicked.error_code, bbyKicked.error_code);
 
 globalThis.fetch = providerFetch;
 const bob = { user_id: 'u_bob', email: 'bob@example.com', name: 'Bob' };

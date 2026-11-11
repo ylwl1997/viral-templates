@@ -6,9 +6,9 @@
  * wan2.2-animate-mix. The switch does not change the credit charge.
  */
 
-import { agnesRuntime } from './agnes.js';
+import { AGNES_MAX_REFERENCE_IMAGES, agnesRuntime, referencePhotoKinds } from './agnes.js';
 import { fail } from './account-db.js';
-import { bailianRuntime } from './bailian.js';
+import { BAILIAN_MAX_REFERENCE_IMAGES, bailianRuntime } from './bailian.js';
 
 export function resolveVideoProvider(env) {
   const raw = env && typeof env.VIDEO_PROVIDER === 'string' ? env.VIDEO_PROVIDER.trim().toLowerCase() : '';
@@ -42,6 +42,26 @@ export function selectRemakeProvider(backends, decision) {
     seconds: decision.seconds,
     segments: decision.segments,
   };
+}
+
+/** How many reference images this provider's create call can carry. */
+export function providerReferenceLimit(provider) {
+  if (provider === 'agnes') return AGNES_MAX_REFERENCE_IMAGES;
+  if (provider === 'bailian') return BAILIAN_MAX_REFERENCE_IMAGES;
+  return 0;
+}
+
+/**
+ * Photo kinds the worker would put on this provider's create call.
+ * Null when that path would send fewer images than photoCount.
+ * Callers must fail the job instead of submitting a shorter list.
+ */
+export function plannedReferenceImages(template, provider) {
+  const count = template && Number(template.photoCount);
+  const kinds = referencePhotoKinds(count);
+  if (!kinds || kinds.length !== count) return null;
+  if (kinds.length > providerReferenceLimit(provider)) return null;
+  return kinds;
 }
 
 export function providerConfigured(backends) {

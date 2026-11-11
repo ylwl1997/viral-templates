@@ -438,7 +438,7 @@ function cleanTaskId(value) {
   return text;
 }
 
-const REMAKE_COLUMNS = `id, user_id, template_slug, status, upload_key, provider_task_id, error_code, updated_at`;
+const REMAKE_COLUMNS = `id, user_id, template_slug, status, upload_key, upload_key_2, provider_task_id, error_code, updated_at`;
 
 /**
  * Oldest running jobs first, then oldest queued jobs.

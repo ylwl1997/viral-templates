@@ -2,10 +2,12 @@ import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { appendLedger, getCredits } from '../functions/_lib/account-db.js';
 import {
+  AGNES_MAX_REFERENCE_IMAGES,
   AGNES_MODEL,
   AGNES_VIDEO_MAX_BYTES,
   DEFAULT_AGNES_BASE,
   REFERENCE_PROMPT,
+  agnesInputUrls,
   agnesMediaDecision,
   agnesOutputSeconds,
   agnesPollDelayMs,
@@ -16,6 +18,7 @@ import {
   packAgnesTaskSet,
   planAgnesSegments,
   probeReferenceMp4,
+  referencePrompt,
   unpackAgnesTaskId,
 } from '../functions/_lib/agnes.js';
 import { concatMp4, cutReferenceMp4 } from '../functions/_lib/mp4-segments.js';
@@ -25,8 +28,8 @@ import { probeImage } from '../functions/_lib/image-precheck.js';
 import { queueJobWithMedia } from '../functions/_lib/job-media.js';
 import { ensureSchema } from '../functions/_lib/account-db.js';
 import { processRemakeJobs } from '../functions/_lib/bailian-worker.js';
-import { getTemplate } from '../functions/_lib/templates.js';
-import { resolveVideoProvider, selectRemakeProvider } from '../functions/_lib/video-provider.js';
+import { getTemplate, TEMPLATE_CATALOG } from '../functions/_lib/templates.js';
+import { plannedReferenceImages, resolveVideoProvider, selectRemakeProvider } from '../functions/_lib/video-provider.js';
 import { CLASSIC_DASHSCOPE_BASE } from '../functions/_lib/bailian.js';
 
 function assert(cond, message) {
@@ -128,6 +131,7 @@ assert(shaped.body.videos[0].start_seconds === 0, 'start');
 assert(shaped.body.videos[0].require_audio === false, 'audio optional');
 assert(shaped.body.prompt === REFERENCE_PROMPT, shaped.body.prompt);
 assert(shaped.body.prompt.includes('<Image 1>') && shaped.body.prompt.includes('<Video 1>'), 'placeholders');
+assert(!shaped.body.prompt.includes('<Image 2>'), 'one-photo prompt names a second image');
 assert(!JSON.stringify(shaped.body).includes(AGNES_KEY), 'key in body');
 assert(!shaped.body.first_frame && !shaped.body.video_url, 'legacy media fields');
 assert(
@@ -135,6 +139,81 @@ assert(
     'https://api.agnes-ai.cn/agnesapi?video_id=task_bbywow0001&model_name=agnes-video-2.5',
   'poll url',
 );
+
+const kissTemplate = getTemplate('kiss-cam');
+const pairPrompt = referencePrompt(kissTemplate);
+const pairShaped = buildReferenceRequest(
+  {
+    apiKey: AGNES_KEY,
+    base: DEFAULT_AGNES_BASE,
+    model: AGNES_MODEL,
+    publicOrigin: 'https://swaystill.com',
+  },
+  {
+    imageUrls: [
+      'https://swaystill.com/api/media/jobs/job_abc/photo?exp=1&sig=ab',
+      'https://swaystill.com/api/media/jobs/job_abc/photo-2?exp=1&sig=cd',
+    ],
+    videoUrl: 'https://swaystill.com/brand/templates/kiss-cam-demo.mp4',
+    seconds: '6',
+    prompt: pairPrompt,
+  },
+);
+assert(pairShaped.body.images.length === 2, 'pair image count');
+assert(new URL(pairShaped.body.images[0]).pathname.endsWith('/photo'), 'pair image 1 path');
+assert(new URL(pairShaped.body.images[1]).pathname.endsWith('/photo-2'), 'pair image 2 path');
+assert(pairShaped.body.prompt.includes('<Image 1>') && pairShaped.body.prompt.includes('<Image 2>'), 'pair placeholders');
+assert(pairShaped.body.prompt.includes('both people'), 'pair replaces both');
+assert(pairShaped.body.prompt.includes('Photo A') && pairShaped.body.prompt.includes('Photo B'), 'pair slot labels');
+assert(pairShaped.body.prompt.includes('the person on the left') && pairShaped.body.prompt.includes('the person on the right'), 'pair roles');
+assert(pairShaped.body.prompt !== REFERENCE_PROMPT, 'pair kept the one-person prompt');
+assert(!pairShaped.body.prompt.includes('Use <Image 1> as the person'), 'pair singular person prompt');
+assert(pairShaped.body.videos.length === 1, 'pair still one video');
+
+const uiSource = fs.readFileSync(new URL('../src/lib/templates.ts', import.meta.url), 'utf8');
+const uiCounts = new Map();
+for (const match of uiSource.matchAll(/slug:\s*'([^']+)'[\s\S]*?photoCount:\s*(\d+)/g)) {
+  uiCounts.set(match[1], Number(match[2]));
+}
+assert(uiCounts.size === Object.keys(TEMPLATE_CATALOG).length, `ui catalog ${uiCounts.size}`);
+const signEnv = { AUTH_SECRET: 'media-test-secret-1', PUBLIC_SITE_APEX: 'swaystill.com' };
+for (const [slug, row] of Object.entries(TEMPLATE_CATALOG)) {
+  const template = getTemplate(slug);
+  assert(uiCounts.get(slug) === row.photoCount, `${slug} ui photoCount`);
+  assert(template.photoCount === row.photoCount, `${slug} worker photoCount`);
+  const kinds = plannedReferenceImages(template, 'agnes');
+  assert(
+    kinds && kinds.length === row.photoCount && kinds.length <= AGNES_MAX_REFERENCE_IMAGES,
+    `${slug} photoCount ${row.photoCount} but the primary path would send ${kinds ? kinds.length : 0}`,
+  );
+  const prompt = referencePrompt(template);
+  if (row.photoCount === 1) {
+    assert(prompt === REFERENCE_PROMPT, `${slug} one-photo prompt`);
+    assert(!prompt.includes('<Image 2>'), `${slug} names a second image`);
+  } else {
+    assert(prompt !== REFERENCE_PROMPT, `${slug} shipped the one-person prompt`);
+    assert(prompt.includes('both people') || prompt.includes('every person'), `${slug} prompt`);
+    assert(!prompt.includes('Use <Image 1> as the person'), `${slug} singular prompt`);
+    for (let index = 1; index <= row.photoCount; index += 1) {
+      assert(prompt.includes(`<Image ${index}>`), `${slug} image ${index}`);
+    }
+    assert(template.photoSlots && template.photoSlots.length === row.photoCount, `${slug} slots`);
+    for (const slot of template.photoSlots) {
+      assert(prompt.includes(slot.labelEn) && prompt.includes(slot.replacesEn), `${slug} slot meaning`);
+    }
+    assert(plannedReferenceImages(template, 'bailian') == null, `${slug} mix would accept a photo it cannot send`);
+  }
+  if (!template.referenceVideo) continue;
+  const signed = await agnesInputUrls(signEnv, 'job_catalogcheck0001', template.referenceVideo, template.photoCount);
+  assert(signed && signed.imageUrls.length === row.photoCount, `${slug} signed count`);
+  signed.imageUrls.forEach((url, index) => {
+    const parsed = new URL(url);
+    assert(parsed.origin === 'https://swaystill.com', `${slug} signed origin`);
+    assert(parsed.pathname.endsWith(`/${kinds[index]}`), `${slug} signed kind ${index}`);
+    assert(parsed.searchParams.has('exp') && parsed.searchParams.has('sig'), `${slug} signed query`);
+    assert(!/pages\.dev|workers\.dev|r2\.dev/.test(parsed.hostname), `${slug} blocked host`);
+  });
+}
 
 const bbyProbe = probeReferenceMp4(bbyFile);
 const kissProbe = probeReferenceMp4(kissFile);
@@ -520,10 +599,12 @@ assert(started.processed[0].provider === 'agnes', started.processed[0].provider)
 const bbyBody = createBody(calls);
 assert(bbyBody.seconds === '6', bbyBody.seconds);
 assert(bbyBody.mode === 'reference', bbyBody.mode);
-assert(bbyBody.images.length === 1, JSON.stringify(bbyBody.images));
-assert(bbyBody.images[0].startsWith(`https://swaystill.com/api/media/jobs/${bby.job.id}/photo?`), bbyBody.images[0]);
-assert(bbyBody.images[0].includes('exp=') && bbyBody.images[0].includes('sig='), bbyBody.images[0]);
-assert(!bbyBody.images[0].includes('photo-2'), bbyBody.images[0]);
+assert(bbyBody.images.length === 1, JSON.stringify(bbyBody.images.map((url) => new URL(url).pathname)));
+assert(bbyBody.prompt === REFERENCE_PROMPT, 'bby prompt');
+assert(new URL(bbyBody.images[0]).origin === 'https://swaystill.com', 'bby image origin');
+assert(new URL(bbyBody.images[0]).pathname.endsWith('/photo'), 'bby image kind');
+assert(new URL(bbyBody.images[0]).searchParams.has('sig'), 'bby image signed');
+assert(!bbyBody.images[0].includes('photo-2'), 'bby photo-2');
 assert(bbyBody.videos[0].url === 'https://swaystill.com/brand/templates/bby-wow-demo.mp4', bbyBody.videos[0].url);
 assert(bbyBody.videos[0].start_seconds === 0 && bbyBody.videos[0].require_audio === false, JSON.stringify(bbyBody.videos[0]));
 assert(!JSON.stringify(bbyBody).includes('pages.dev'), 'create body used the request host');
@@ -557,9 +638,34 @@ const kissBody = createBody(calls.filter((call) => call.url.includes('/v1/videos
 const kissCreates = calls.filter((call) => call.url.startsWith('https://api.agnes-ai.cn/v1/videos'));
 const kissPayload = JSON.parse(kissCreates[kissCreates.length - 1].init.body);
 assert(kissPayload.seconds === '6', kissPayload.seconds);
-assert(kissPayload.images.length === 1, 'kiss sent both photos');
-assert(kissPayload.videos[0].url === 'https://swaystill.com/brand/templates/kiss-cam-demo.mp4', kissPayload.videos[0].url);
-assert(!JSON.stringify(kissPayload).includes('photo-2'), 'second photo url sent');
+assert(kissPayload.images.length === 2, 'kiss image count');
+const kissKinds = kissPayload.images.map((url) => new URL(url).pathname.split('/').pop());
+assert(kissKinds.join(',') === 'photo,photo-2', `kiss kinds ${kissKinds.join(',')}`);
+assert(kissPayload.images.every((url) => new URL(url).origin === 'https://swaystill.com'), 'kiss image origin');
+assert(kissPayload.images.every((url) => new URL(url).searchParams.has('sig')), 'kiss images signed');
+assert(kissPayload.videos[0].url === 'https://swaystill.com/brand/templates/kiss-cam-demo.mp4', 'kiss video');
+assert(kissPayload.prompt.includes('<Image 1>') && kissPayload.prompt.includes('<Image 2>'), 'kiss prompt images');
+assert(kissPayload.prompt.includes('both people'), 'kiss prompt both');
+assert(kissPayload.prompt.includes('Photo A') && kissPayload.prompt.includes('the person on the left'), 'kiss photo A');
+assert(kissPayload.prompt.includes('Photo B') && kissPayload.prompt.includes('the person on the right'), 'kiss photo B');
+assert(!kissPayload.prompt.includes('Use <Image 1> as the person'), 'kiss singular prompt');
+assert(!JSON.stringify(kissPayload).includes('pages.dev'), 'kiss body used the request host');
+
+const bailianBeforeKissDrop = script.bailianTasks;
+script.create = 'reject';
+const kissDrop = await queue('kiss-cam', twoPhotos);
+const kissDropRun = await run(kissDrop.job.id);
+assert(kissDropRun.processed[0].status === 'failed', JSON.stringify(kissDropRun.processed[0]));
+assert(kissDropRun.processed[0].error === 'reference_photos', kissDropRun.processed[0].error);
+assert(script.bailianTasks === bailianBeforeKissDrop, 'two-photo refusal fell back to mix');
+const kissDropRow = sqlite.prepare(`SELECT status, error_code, note_en, note_zh FROM jobs WHERE id = ?`).get(kissDrop.job.id);
+assert(kissDropRow.status === 'failed' && kissDropRow.error_code === 'reference_photos', JSON.stringify(kissDropRow));
+assert(/both photos/i.test(kissDropRow.note_en) && /charge was returned/i.test(kissDropRow.note_en), kissDropRow.note_en);
+assert(kissDropRow.note_zh.includes('两张'), kissDropRow.note_zh);
+assert(!/agnes|bailian|waffo|dashscope/i.test(`${kissDropRow.note_en} ${kissDropRow.note_zh}`), kissDropRow.note_en);
+const kissDropLedger = (await getCredits(db, user)).ledger.filter((row) => row.job_id === kissDrop.job.id).map((row) => row.kind).sort().join();
+assert(kissDropLedger === 'deduction,refund', `kiss drop ledger ${kissDropLedger}`);
+script.create = 'ok';
 
 const fanCuts = fanDecision.segments.map((segment) => cutReferenceMp4(fanFile, segment.start, segment.end));
 const sameSourceJoin = concatMp4(fanCuts);
@@ -604,7 +710,9 @@ assert(fanCreates.length === 2, `parallel submit count ${fanCreates.length}`);
 const fanBodies = fanCreates.map((call) => JSON.parse(call.init.body));
 const eight = fanBodies.find((body) => body.seconds === '8');
 const seven = fanBodies.find((body) => body.seconds === '7');
-assert(eight && eight.videos[0].url.includes('/seg0?') && eight.videos[0].start_seconds === 0, JSON.stringify(eight));
+assert(fanBodies.every((body) => body.images.length === 1 && body.prompt === REFERENCE_PROMPT), 'fan still one image');
+assert(fanBodies.every((body) => !body.images[0].includes('photo-2')), 'fan photo-2');
+assert(eight && eight.videos[0].url.includes('/seg0?') && eight.videos[0].start_seconds === 0, 'fan first piece');
 assert(seven && seven.videos[0].url.includes('/seg1?'), JSON.stringify(seven));
 assert(fanBodies.every((body) => body.videos[0].url.startsWith('https://swaystill.com/')), 'segment input host');
 assert(fanBodies.every((body) => !body.videos[0].url.includes('ceiling-fan-demo.mp4')), 'full 15s file was sent');
@@ -733,6 +841,10 @@ const studio = fs.readFileSync(new URL('../src/components/CreateStudio.astro', i
 const accountScript = fs.readFileSync(new URL('../public/scripts/account-data.js', import.meta.url), 'utf8');
 assert(!studio.includes('/api/jobs/continue'), 'create page still posts continue');
 assert(studio.includes('30 * 60 * 1000'), 'create page watch is still about 10 minutes');
+assert(studio.includes('Both people in the clip are replaced'), 'create copy');
+assert(studio.includes('成片里的两个人都会被替换'), 'create copy zh');
+assert(studio.includes('photoSlots'), 'create uses slot meaning');
+assert(studio.includes('uploadCount === 1'), 'one-photo create still asks for one photo');
 assert(!accountScript.includes('/api/jobs/continue'), 'account page still posts continue');
 const drainConfig = fs.readFileSync(new URL('../workers/job-drain/wrangler.toml', import.meta.url), 'utf8');
 assert(drainConfig.includes('crons = ["* * * * *"]'), drainConfig);
@@ -841,6 +953,36 @@ const switchRun = await processRemakeJobs({
 assert(script.creates === createsBeforeSwitch, 'bailian switch called Agnes');
 assert(switchRun.processed[0].provider === 'bailian', JSON.stringify(switchRun.processed[0]));
 
+const switchedKiss = await queueJobWithMedia({
+  db,
+  env: switched,
+  request: new Request(`${requestOrigin}/api/jobs`, { method: 'POST' }),
+  user,
+  templateSlug: 'kiss-cam',
+  photos: twoPhotos,
+});
+const createsBeforeKissSwitch = script.creates;
+const bailianBeforeKissSwitch = script.bailianTasks;
+const kissSwitchRun = await processRemakeJobs({
+  db,
+  env: switched,
+  request: new Request(`${requestOrigin}/api/jobs/process`, { method: 'POST' }),
+  fetchImpl,
+  jobId: switchedKiss.job.id,
+});
+assert(script.creates === createsBeforeKissSwitch, 'two-photo bailian switch called Agnes');
+assert(script.bailianTasks === bailianBeforeKissSwitch, 'two-photo bailian switch sent one photo');
+assert(kissSwitchRun.processed[0].status === 'failed', JSON.stringify(kissSwitchRun.processed[0]));
+assert(kissSwitchRun.processed[0].error === 'reference_photos', kissSwitchRun.processed[0].error);
+const kissSwitchLedger = (await getCredits(db, user)).ledger
+  .filter((row) => row.job_id === switchedKiss.job.id)
+  .map((row) => row.kind)
+  .sort()
+  .join();
+assert(kissSwitchLedger === 'deduction,refund', `kiss switch ledger ${kissSwitchLedger}`);
+const kissSwitchNote = sqlite.prepare(`SELECT note_en FROM jobs WHERE id = ?`).get(switchedKiss.job.id);
+assert(!/agnes|bailian|waffo|dashscope/i.test(kissSwitchNote.note_en), kissSwitchNote.note_en);
+
 const pagesEnv = { ...env, PUBLIC_SITE_APEX: 'viral-templates.pages.dev' };
 const pagesJob = await queueJobWithMedia({
   db,
@@ -860,6 +1002,26 @@ const pagesRun = await processRemakeJobs({
 });
 assert(script.creates === createsBeforePages, 'pages.dev apex called Agnes');
 assert(pagesRun.processed[0].provider === 'bailian', JSON.stringify(pagesRun.processed[0]));
+const pagesKiss = await queueJobWithMedia({
+  db,
+  env: pagesEnv,
+  request: new Request(`${requestOrigin}/api/jobs`, { method: 'POST' }),
+  user,
+  templateSlug: 'kiss-cam',
+  photos: twoPhotos,
+});
+const bailianBeforePagesKiss = script.bailianTasks;
+const createsBeforePagesKiss = script.creates;
+const pagesKissRun = await processRemakeJobs({
+  db,
+  env: pagesEnv,
+  request: new Request(`${requestOrigin}/api/jobs/process`, { method: 'POST' }),
+  fetchImpl,
+  jobId: pagesKiss.job.id,
+});
+assert(script.creates === createsBeforePagesKiss, 'two-photo pages host called Agnes');
+assert(script.bailianTasks === bailianBeforePagesKiss, 'two-photo pages host fell back to mix');
+assert(pagesKissRun.processed[0].status === 'failed' && pagesKissRun.processed[0].error === 'reference_photos', JSON.stringify(pagesKissRun.processed[0]));
 assert(!calls.some((call) => /pages\.dev|workers\.dev|r2\.dev/.test(JSON.stringify(call.init && call.init.body || ''))), 'provider body contains a blocked host');
 
 console.log('agnes-video.test.mjs ok');

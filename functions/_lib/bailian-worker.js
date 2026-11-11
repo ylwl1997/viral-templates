@@ -18,9 +18,11 @@
  * POST /api/jobs/process (see scripts/smoke-bailian.mjs). wait_ms can poll
  * inside one request. Agnes polls wait at least 6s and back off after 429.
  *
- * Subject image is R2 upload_key (slot 0). Both models take one image and
- * replace that person in the template video. The template keeps its scene,
- * motion, lighting, and outfits. Kiss Cam's second photo stays in R2 and is not sent.
+ * Subject images are the stored R2 photos. Agnes reference mode sends every
+ * slot (`photo`, then `photo-2` when photoCount is 2) in `images`. The prompt
+ * names each slot. wan2.2-animate-mix takes one image_url. A template that
+ * needs more photos than the selected path can send fails with
+ * reference_photos and one refund. The second photo is never dropped.
  *
  * Bailian uploads the photo and the template demo to DashScope temporary
  * storage. image_url and video_url sent to Bailian are oss:// only.
@@ -45,6 +47,7 @@ import {
   saveProviderTask,
 } from './account-db.js';
 import {
+  AGNES_IMAGE_TOTAL_MAX_BYTES,
   AGNES_POLL_MIN_MS,
   AGNES_VIDEO_MAX_BYTES,
   agnesInputUrls,
@@ -58,6 +61,8 @@ import {
   packAgnesTaskSet,
   probeReferenceMp4,
   redactAgnesDetail,
+  referencePhotoKinds,
+  referencePrompt,
   unpackAgnesTaskId,
 } from './agnes.js';
 import { concatMp4, cutReferenceMp4 } from './mp4-segments.js';
@@ -85,7 +90,7 @@ import {
   sniffMp4,
   VIDEO_MAX_BYTES,
 } from './r2-media.js';
-import { providerConfigured, videoBackends, selectRemakeProvider } from './video-provider.js';
+import { plannedReferenceImages, providerConfigured, videoBackends, selectRemakeProvider } from './video-provider.js';
 
 // The stale clock starts at claim. After that the job is `running` with no
 // task id while two temp uploads (60s each) and synthesis (30s) run.
@@ -119,10 +124,31 @@ const NOTES = {
     en: 'The clip could not be finished with sound. Please try again from Create.',
     zh: '这条短片没能配上声音。请在创作页再试一次。',
   },
+  reference_photos: {
+    en: 'This look needs every uploaded photo in the clip. The clip was not generated, and the charge was returned.',
+    zh: '这个效果需要把上传的每张照片都用进成片。短片没有生成，积分已退回。',
+  },
 };
 
 function noteFor(code) {
   return NOTES[code] || NOTES.failed;
+}
+
+function referencePhotoNote(template) {
+  if (template && template.photoCount === 2) {
+    return {
+      note_en: 'This look needs both photos in the clip. The clip was not generated, and the charge was returned.',
+      note_zh: '这个效果需要把两张照片都放进成片。短片没有生成，积分已退回。',
+    };
+  }
+  return {
+    note_en: NOTES.reference_photos.en,
+    note_zh: NOTES.reference_photos.zh,
+  };
+}
+
+function failReferencePhotos(db, row, template) {
+  return failJob(db, row, 'reference_photos', referencePhotoNote(template));
 }
 
 function sleep(ms) {
@@ -203,6 +229,7 @@ function ageMs(updatedAt, nowMs) {
 
 async function submitBailian(ctx, row, prepared) {
   const { db, runtime, fetchImpl } = ctx;
+  if (!plannedReferenceImages(prepared.template, 'bailian')) return failReferencePhotos(db, row, prepared.template);
   if (!runtime || !runtime.configured) return failJob(db, row, 'failed');
   if (prepared.image.bytes.byteLength > BAILIAN_IMAGE_MAX_BYTES) return failJob(db, row, 'photo_too_large');
   let imageUrl = '';
@@ -255,13 +282,21 @@ async function submitBailian(ctx, row, prepared) {
   }
 }
 
-async function readSubject(bucket, row) {
-  if (!row.upload_key) throw fail('no_photo');
-  const obj = await getMedia(bucket, row.upload_key);
-  const bytes = await readStoredBytes(obj);
-  const sniffed = sniffImage(bytes);
-  if (!sniffed) throw fail('no_photo');
-  return { bytes, contentType: sniffed.contentType, filename: `subject.${sniffed.ext}` };
+async function readSubjects(bucket, row, photoCount) {
+  const kinds = referencePhotoKinds(photoCount);
+  if (!kinds) throw fail('reference_photos');
+  const keys = [row.upload_key, row.upload_key_2];
+  const images = [];
+  for (let index = 0; index < kinds.length; index += 1) {
+    if (!keys[index]) throw fail('no_photo');
+    const obj = await getMedia(bucket, keys[index]);
+    const bytes = await readStoredBytes(obj);
+    const sniffed = sniffImage(bytes);
+    if (!sniffed) throw fail('no_photo');
+    const filename = index === 0 ? `subject.${sniffed.ext}` : `subject-${index + 1}.${sniffed.ext}`;
+    images.push({ bytes, contentType: sniffed.contentType, filename });
+  }
+  return images;
 }
 
 function retryHoldMs(row, nowMs) {
@@ -274,16 +309,31 @@ function retryHoldMs(row, nowMs) {
   return delay - elapsed;
 }
 
-function chooseProvider(ctx, template, image, reference) {
+function imageDecision(template, image, reference) {
   const sniffed = sniffImage(image.bytes);
   const size = sniffed ? readImageSize(image.bytes, sniffed.ext) : null;
-  const decision = agnesMediaDecision({
+  return agnesMediaDecision({
     durationSeconds: template && template.durationSeconds,
     videoBytes: reference,
     imageBytes: image.bytes.byteLength,
     imageWidth: size ? size.width : 0,
     imageHeight: size ? size.height : 0,
   });
+}
+
+function chooseProvider(ctx, template, images, reference) {
+  const list = Array.isArray(images) ? images : [images];
+  let decision = null;
+  let total = 0;
+  for (const image of list) {
+    total += image.bytes.byteLength;
+    const next = imageDecision(template, image, reference);
+    if (!next.ok) return selectRemakeProvider(ctx.backends, next);
+    decision = next;
+  }
+  if (decision && decision.ok && total >= AGNES_IMAGE_TOTAL_MAX_BYTES) {
+    decision = { ok: false, reason: 'image_size', duration: decision.duration };
+  }
   return selectRemakeProvider(ctx.backends, decision);
 }
 
@@ -293,10 +343,21 @@ function agnesCode(err) {
   return err.code || 'failed';
 }
 
+function agnesCreateInput(template, inputs, seconds) {
+  if (!inputs || !Array.isArray(inputs.imageUrls) || inputs.imageUrls.length !== template.photoCount) return null;
+  return {
+    imageUrls: inputs.imageUrls,
+    videoUrl: inputs.videoUrl,
+    seconds,
+    prompt: referencePrompt(template),
+  };
+}
+
 async function segmentInputs(ctx, row, prepared, segment) {
   const segments = prepared.selection && prepared.selection.segments;
   const count = segments && segments.length ? segments.length : 1;
-  if (count < 2) return agnesInputUrls(ctx.env, row.id, prepared.template.referenceVideo);
+  const photoCount = prepared.template.photoCount;
+  if (count < 2) return agnesInputUrls(ctx.env, row.id, prepared.template.referenceVideo, photoCount);
   let cut;
   try {
     cut = cutReferenceMp4(prepared.reference, segment.start, segment.end);
@@ -313,7 +374,7 @@ async function segmentInputs(ctx, row, prepared, segment) {
     contentType: 'video/mp4',
     customMetadata: { kind: 'segment', job_id: row.id },
   });
-  return agnesSegmentInputs(ctx.env, row.id, segment.index);
+  return agnesSegmentInputs(ctx.env, row.id, segment.index, prepared.template.photoCount);
 }
 
 async function submitAgnesSegment(ctx, row, prepared, index) {
@@ -331,16 +392,17 @@ async function submitAgnesSegment(ctx, row, prepared, index) {
     if (index === 0) return { fallback: true };
     return failJob(db, row, 'failed');
   }
-  if (!inputs) return index === 0 ? { fallback: true } : failJob(db, row, 'failed');
+  const requestInput = agnesCreateInput(prepared.template, inputs, segment.seconds);
+  if (!requestInput) {
+    if (prepared.template.photoCount > 1) return failReferencePhotos(db, row, prepared.template);
+    return index === 0 ? { fallback: true } : failJob(db, row, 'failed');
+  }
   let created;
   try {
-    created = await createReferenceVideo(agnes, fetchImpl, {
-      imageUrl: inputs.imageUrl,
-      videoUrl: inputs.videoUrl,
-      seconds: segment.seconds,
-    });
+    created = await createReferenceVideo(agnes, fetchImpl, requestInput);
   } catch (err) {
-    // Refused or unreachable before a task id exists. Mix can still run, once.
+    // Refused or unreachable before a task id exists. Mix can still run for a
+    // one-photo look. A look that needs more photos than mix can take fails instead.
     const outage = err && (err.rejected || err.code === 'agnes_submit_uncertain' || (err.transient && err.httpStatus !== 429));
     if (outage && index === 0) return { fallback: true };
     if (err && err.httpStatus === 429) {
@@ -414,13 +476,11 @@ function rateLimitResult(row, wait, queued) {
   };
 }
 
-async function createPiece(ctx, inputs, segment) {
+async function createPiece(ctx, template, inputs, segment) {
+  const requestInput = agnesCreateInput(template, inputs, segment.seconds);
+  if (!requestInput) return { err: fail('reference_photos') };
   try {
-    const created = await createReferenceVideo(ctx.agnes, ctx.fetchImpl, {
-      imageUrl: inputs.imageUrl,
-      videoUrl: inputs.videoUrl,
-      seconds: segment.seconds,
-    });
+    const created = await createReferenceVideo(ctx.agnes, ctx.fetchImpl, requestInput);
     return { videoId: created.videoId };
   } catch (err) {
     return { err };
@@ -471,7 +531,7 @@ async function submitAgnesParallel(ctx, row, prepared) {
     console.error('agnes_input', row.id, err && err.code ? err.code : 'error');
     return { fallback: true };
   }
-  const created = await Promise.all(segments.map((segment, index) => createPiece(ctx, inputs[index], segment)));
+  const created = await Promise.all(segments.map((segment, index) => createPiece(ctx, prepared.template, inputs[index], segment)));
   const slots = created.map((item) => (item && item.videoId ? item.videoId : ''));
   const kinds = created.map((item) => (item && item.videoId ? 'ok' : createFailureKind(item && item.err)));
   const anyId = slots.some(Boolean);
@@ -487,6 +547,9 @@ async function submitAgnesParallel(ctx, row, prepared) {
       return rateLimitResult(row, wait, true);
     }
     const failed = created.find((item) => item && item.err);
+    if (failed && failed.err && failed.err.code === 'reference_photos') {
+      return failReferencePhotos(db, row, prepared.template);
+    }
     const code = failed && failed.err && failed.err.code === 'agnes_submit_uncertain'
       ? 'agnes_submit_uncertain'
       : failed && failed.err && failed.err.providerCode
@@ -500,6 +563,9 @@ async function submitAgnesParallel(ctx, row, prepared) {
   }
   if (anyHard || anyOutage) {
     const failed = created.find((item) => item && item.err && !item.videoId);
+    if (failed && failed.err && failed.err.code === 'reference_photos') {
+      return failReferencePhotos(db, row, prepared.template);
+    }
     const code = failed && failed.err && failed.err.providerCode ? `agnes_${failed.err.providerCode}` : 'agnes_submit_uncertain';
     console.error('agnes_create', row.id, code);
     return failJob(db, row, code, {
@@ -523,9 +589,15 @@ async function submitAgnes(ctx, row, prepared) {
 }
 
 async function submitRouted(ctx, row, prepared) {
+  if (!plannedReferenceImages(prepared.template, prepared.selection.provider)) {
+    return failReferencePhotos(ctx.db, row, prepared.template);
+  }
   if (prepared.selection.provider === 'agnes') {
     const agnesResult = await submitAgnes(ctx, row, prepared);
     if (agnesResult && agnesResult.fallback) {
+      if (!plannedReferenceImages(prepared.template, 'bailian')) {
+        return failReferencePhotos(ctx.db, row, prepared.template);
+      }
       if (!ctx.runtime || !ctx.runtime.configured) return failJob(ctx.db, row, 'failed');
       return submitBailian(ctx, row, prepared);
     }
@@ -541,7 +613,8 @@ async function prepareQueued(ctx, row) {
   }
   const template = getTemplate(row.template_slug);
   if (!template || !template.referenceVideo) return failJob(ctx.db, row, 'no_reference_video');
-  if (!row.upload_key) {
+  if (!referencePhotoKinds(template.photoCount)) return failReferencePhotos(ctx.db, row, template);
+  if (!row.upload_key || (template.photoCount > 1 && !row.upload_key_2)) {
     if (template.photoCount === 2) {
       return failJob(ctx.db, row, 'no_photo', {
         note_en: `${template.name} needs two saved photos. This job has no photo, so a clip cannot be generated.`,
@@ -550,15 +623,22 @@ async function prepareQueued(ctx, row) {
     }
     return failJob(ctx.db, row, 'no_photo');
   }
-  let image;
+  let images;
   try {
-    // Slot 0 only. wan2.2-animate-mix takes one subject image.
-    image = await readSubject(ctx.bucket, row);
+    images = await readSubjects(ctx.bucket, row, template.photoCount);
   } catch (err) {
     const code = err && err.code ? err.code : 'no_photo';
+    if (code === 'reference_photos') return failReferencePhotos(ctx.db, row, template);
+    if (code === 'no_photo' && template.photoCount === 2) {
+      return failJob(ctx.db, row, 'no_photo', {
+        note_en: `${template.name} needs two saved photos. This job has no photo, so a clip cannot be generated.`,
+        note_zh: `${template.nameZh} 需要两张已保存的照片。这个任务没有照片，无法生成短片。`,
+      });
+    }
     if (code === 'photo_too_large' || code === 'no_photo' || code === 'storage_error') return failJob(ctx.db, row, code);
     throw err;
   }
+  const image = images[0];
   let reference;
   try {
     reference = await loadReferenceVideo(ctx.env, ctx.origin, template.referenceVideo, ctx.fetchImpl);
@@ -568,7 +648,8 @@ async function prepareQueued(ctx, row) {
     }
     return failJob(ctx.db, row, 'no_reference_video');
   }
-  const selection = chooseProvider(ctx, template, image, reference);
+  const selection = chooseProvider(ctx, template, images, reference);
+  if (!plannedReferenceImages(template, selection.provider)) return failReferencePhotos(ctx.db, row, template);
   if (selection.provider === 'bailian' && image.bytes.byteLength > BAILIAN_IMAGE_MAX_BYTES) {
     return failJob(ctx.db, row, 'photo_too_large');
   }
@@ -577,6 +658,7 @@ async function prepareQueued(ctx, row) {
   if (!claimed) return { id: row.id, status: 'running', action: 'busy' };
   return submitRouted(ctx, row, {
     image,
+    images,
     reference,
     template,
     selection,
@@ -647,10 +729,10 @@ async function loadSplitPlan(ctx, row) {
   const template = getTemplate(row.template_slug);
   if (!template || !template.referenceVideo) return null;
   const reference = await loadReferenceVideo(ctx.env, ctx.origin, template.referenceVideo, ctx.fetchImpl);
-  const image = await readSubject(ctx.bucket, row);
-  const selection = chooseProvider(ctx, template, image, reference);
+  const images = await readSubjects(ctx.bucket, row, template.photoCount);
+  const selection = chooseProvider(ctx, template, images, reference);
   if (!selection || selection.provider !== 'agnes' || !selection.segments || selection.segments.length < 2) return null;
-  return { template, reference, selection, image };
+  return { template, reference, selection, image: images[0], images };
 }
 
 async function stitchParts(ctx, row, parts) {
@@ -831,7 +913,9 @@ async function pollAgnesParallel(ctx, row, info) {
       console.error('agnes_input', row.id, err && err.code ? err.code : 'error');
       return failJob(db, row, 'failed');
     }
-    const created = await Promise.all(missing.map((index, pos) => createPiece(ctx, inputs[pos], plan.selection.segments[index])));
+    const created = await Promise.all(
+      missing.map((index, pos) => createPiece(ctx, plan.template, inputs[pos], plan.selection.segments[index])),
+    );
     let rate = false;
     for (let pos = 0; pos < missing.length; pos += 1) {
       const item = created[pos];

@@ -12,7 +12,9 @@ const { template: t, lang = 'en' } = Astro.props;
 const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
 const home = keywordPath(lang, t.slug, '');
 const credits = t.creditCost ?? 0;
-const slots = t.photoCount === 2 ? [0, 1] : [0];
+const pairSlots = t.photoCount === 2 && t.photoSlots && t.photoSlots.length === 2 ? t.photoSlots : null;
+const uploadCount = pairSlots ? 2 : t.photoCount === 1 ? 1 : 0;
+const slots = uploadCount === 2 ? [0, 1] : uploadCount === 1 ? [0] : [];
 const uid = `cs-${t.slug}`;
 const signInBase = signInHref(lang);
 const creditsHref = accountHref(lang, 'credits');
@@ -22,6 +24,12 @@ const name = lang === 'zh' ? t.displayNameZh : t.displayName;
 const primaryCase = t.cases?.[0];
 const sources = primaryCase?.sources ?? [];
 const photoLabel = label('Your photo', '上传的照片');
+const pairReplaceEn = pairSlots
+  ? `${pairSlots[0].labelEn} replaces ${pairSlots[0].replacesEn}. ${pairSlots[1].labelEn} replaces ${pairSlots[1].replacesEn}. Both people in the clip are replaced.`
+  : '';
+const pairReplaceZh = pairSlots
+  ? `${pairSlots[0].labelZh} 会替换${pairSlots[0].replacesZh}。${pairSlots[1].labelZh} 会替换${pairSlots[1].replacesZh}。成片里的两个人都会被替换。`
+  : '';
 ---
 <section class="wrap create-studio" id={uid} data-r2-ready={SITE.r2Configured ? '1' : '0'}>
   <div class="credits-bar" data-credits-bar hidden>
@@ -41,21 +49,21 @@ const photoLabel = label('Your photo', '上传的照片');
       <div class="studio-step">
         <span class="step-index">1</span>
         <div>
-          <h3>{label('Your photo', '你的照片')}</h3>
-          {t.photoCount === 2 ? (
+          <h3>{pairSlots ? label('Your photos', '你的照片') : label('Your photo', '你的照片')}</h3>
+          {pairSlots ? (
             <div class="upload-slots" data-slots="2">
               {slots.map((i) => (
                 <label class="slot" data-slot={i}>
                   <input type="file" accept="image/jpeg,image/png,image/webp" class="slot-file" data-slot={i} />
                   <span class="slot-label">
-                    {label(`Photo ${i === 0 ? 'A' : 'B'}`, `照片 ${i === 0 ? 'A' : 'B'}`)}
+                    {label(pairSlots[i].labelEn, pairSlots[i].labelZh)}
                     <br /><small>JPG, PNG, WebP</small>
                   </span>
                   <img class="slot-preview" data-slot={i} alt="" hidden />
                 </label>
               ))}
             </div>
-          ) : (
+          ) : uploadCount === 1 ? (
             <label class="upload-zone" for={`${uid}-photo`}>
               <input id={`${uid}-photo`} class="slot-file" data-slot="0" type="file" accept="image/jpeg,image/png,image/webp" />
               <div id={`${uid}-ph`}>
@@ -64,7 +72,10 @@ const photoLabel = label('Your photo', '上传的照片');
               </div>
               <img id={`${uid}-preview`} class="preview-img slot-preview" data-slot="0" alt="" hidden />
             </label>
+          ) : (
+            <p class="hint">{label('This look is not available yet.', '这个效果还不能生成。')}</p>
           )}
+          {pairSlots ? <p class="hint">{label(pairReplaceEn, pairReplaceZh)}</p> : null}
           <div class="phone-handoff" data-phone-handoff hidden>
             <button type="button" class="btn btn-ghost" data-phone-start>
               {label('Upload from your phone', '用手机上传')}
@@ -104,8 +115,8 @@ const photoLabel = label('Your photo', '上传的照片');
             <input id={`${uid}-consent`} type="checkbox" />
             <span>
               {label(
-                `This photo is of me, or I have permission. ${t.photoCount === 2 ? 'Both people are' : 'They are'} 18 or older, or it is a pet with the owner’s permission.`,
-                `这是我本人，或我已获得授权。${t.photoCount === 2 ? '两人均' : '对方'}年满 18 岁，或为已获主人同意的宠物。`
+                `This photo is of me, or I have permission. ${pairSlots ? 'Both people are' : 'They are'} 18 or older, or it is a pet with the owner’s permission.`,
+                `这是我本人，或我已获得授权。${pairSlots ? '两人均' : '对方'}年满 18 岁，或为已获主人同意的宠物。`
               )}
             </span>
           </label>
@@ -127,10 +138,15 @@ const photoLabel = label('Your photo', '上传的照片');
         </a>
       </div>
       <div class="status-box" id={`${uid}-status`}>
-        {label(
-          'Add a photo and confirm consent to continue.',
-          '上传照片并确认授权后才能继续。'
-        )}
+        {pairSlots
+          ? label(
+              'Add both photos and confirm consent. Both people in the clip are replaced.',
+              '上传两张照片并确认授权。成片里的两个人都会被替换。',
+            )
+          : label(
+              'Add a photo and confirm consent to continue.',
+              '上传照片并确认授权后才能继续。',
+            )}
       </div>
       <p data-job-follow hidden>
         <a data-job-download hidden rel="noopener noreferrer"></a>
@@ -158,10 +174,10 @@ const photoLabel = label('Your photo', '上传的照片');
         alt={label(`${name} sample`, `${name} 示例`)}
         originalLabel={photoLabel}
         resultLabel={label('Result', '生成的视频')}
-        note={sources.length > 1
+        note={pairSlots
           ? label(
-              'These photos are the people in the clip. Your uploads replace them. Generate queues the job. The clip shows on your account when it is ready.',
-              '这两张照片就是成片里的人。上传后会换成你的照片。生成会把任务排进账户。完成后成片会出现在账户里。',
+              `${pairReplaceEn} Generate queues the job. The clip shows on your account when it is ready.`,
+              `${pairReplaceZh}生成会把任务排进账户。完成后成片会出现在账户里。`,
             )
           : label(
               'The photo matches the person in the clip. Your upload replaces it. Generate queues the job. The clip shows on your account when it is ready.',
@@ -173,7 +189,7 @@ const photoLabel = label('Your photo', '上传的照片');
   </div>
 </section>
 
-<script is:inline define:vars={{ photoCount: t.photoCount, uid, signInBase, lang, slug: t.slug }}>
+<script is:inline define:vars={{ photoCount: uploadCount, uid, signInBase, lang, slug: t.slug }}>
   (function () {
     const root = document.getElementById(uid);
     if (!root) return;
@@ -196,7 +212,7 @@ const photoLabel = label('Your photo', '上传的照片');
     }
     function syncGenerate() {
       if (!btn) return;
-      var ok = consent && consent.checked && readyCount() >= photoCount;
+      var ok = photoCount > 0 && consent && consent.checked && readyCount() >= photoCount;
       btn.disabled = !ok;
       if (ok) btn.removeAttribute('aria-disabled');
       else btn.setAttribute('aria-disabled', 'true');
@@ -522,6 +538,10 @@ const photoLabel = label('Your photo', '上传的照片');
             'err'
           );
           goSignIn();
+          return;
+        }
+        if (photoCount < 1) {
+          setStatus(lang === 'zh' ? '这个效果还不能生成。' : 'This look is not available yet.', 'err');
           return;
         }
         if (readyCount() < photoCount) {

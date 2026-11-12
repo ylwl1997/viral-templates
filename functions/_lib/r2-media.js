@@ -126,7 +126,7 @@ export function assertObjectKey(key) {
   if (typeof key !== 'string' || key.length > 240 || key.includes('..') || key.includes('\\')) {
     throw fail('storage_error');
   }
-  const photo = /^uploads\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/[01]\.(jpg|png|webp)$/;
+  const photo = /^uploads\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/[0-4]\.(jpg|png|webp)$/;
   const segment = /^uploads\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/s[0-7]\.mp4$/;
   const video = /^results\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\.mp4$/;
   const part = /^results\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/p[0-7]\.mp4$/;

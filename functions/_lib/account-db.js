@@ -387,7 +387,7 @@ function cleanMediaKey(value, prefix) {
   if (key.length > 240 || key.includes('..') || key.includes('\\') || !key.startsWith(prefix)) {
     throw fail('storage_error');
   }
-  const photo = /^uploads\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/[01]\.(jpg|png|webp)$/;
+  const photo = /^uploads\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/[0-4]\.(jpg|png|webp)$/;
   const video = /^results\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\.mp4$/;
   if (prefix === 'uploads/' && !photo.test(key)) throw fail('storage_error');
   if (prefix === 'results/' && !video.test(key)) throw fail('storage_error');

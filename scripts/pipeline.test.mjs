@@ -36,7 +36,11 @@ const evenFan = splitDurationEven(15.278005);
 assert.deepEqual(evenFan, [7.639, 7.639]);
 assert.equal(toPromptSeconds(evenFan[0]), 8);
 assert.equal(fan.generationSegments[0].promptSeconds, 8);
-assert.equal(fan.generationSegments[1].promptSeconds, 8);
+assert.equal(fan.generationSegments[1].promptSeconds, 7);
+assert.deepEqual(
+  fan.generationSegments.map((segment) => [segment.startSec, segment.endSec, segment.promptSeconds]),
+  [[0, 8, 8], [8, 15.279, 7]],
+);
 
 const customers = [
   { roleId: 'lead', url: 'https://swaystill.com/pet/1.jpg', label: 'the seal-point Siamese', appearance: { breed: 'Siamese cat', colors: ['seal-point'] } },
@@ -97,11 +101,20 @@ const bbyOne = await adaptPack(bby, [{ roleId: 'lead', url: 'https://swaystill.c
 assert.equal(bbyOne.segments[0].promptSeconds, 6);
 assert.match(bbyOne.segments[0].prompt, /<Image 1>/);
 assert.doesNotMatch(bbyOne.segments[0].prompt, /\bperson\b/i);
+assert.match(bbyOne.segments[0].prompt, /packed nightclub/i);
+assert.doesNotMatch(bbyOne.segments[0].prompt, /ordinary room/i);
 
 const fanOne = await adaptPack(fan, [{ roleId: 'lead', url: 'https://swaystill.com/pet/1.jpg' }]);
-assert.deepEqual(fanOne.segments.map((segment) => segment.promptSeconds), [8, 8]);
-assert.match(fanOne.segments[0].prompt, /no fan in the photo/i);
-assert.match(fanOne.segments[1].prompt, /plain raincoat/i);
+assert.deepEqual(fanOne.segments.map((segment) => segment.promptSeconds), [8, 7]);
+assert.match(fanOne.segments[0].prompt, /pale formal dress/i);
+assert.match(fanOne.segments[0].prompt, /maid dress/i);
+assert.match(fanOne.segments[0].prompt, /cream sofa/);
+assert.match(fanOne.segments[0].prompt, /ceiling-fan blades/i);
+assert.doesNotMatch(fanOne.segments[0].prompt, /ordinary room|no fan in the photo|raincoat/i);
+assert.match(fanOne.segments[1].prompt, /green zip tracksuit/i);
+assert.match(fanOne.segments[1].prompt, /cream cardigan/i);
+assert.match(fanOne.segments[1].prompt, /light-blue cropped hoodie/i);
+assert.doesNotMatch(fanOne.segments[1].prompt, /ordinary room|raincoat/i);
 
 const ui = fs.readFileSync(new URL('../src/lib/templates.ts', import.meta.url), 'utf8');
 assert.equal(ui.includes("slug: 'kiss-cam'"), false);

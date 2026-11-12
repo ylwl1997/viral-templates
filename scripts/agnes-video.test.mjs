@@ -419,7 +419,7 @@ function installFetch() {
       script.creates += 1;
       const requestBody = JSON.parse(init.body || '{}');
       if (script.create === 'reject') return jsonResponse(400, { error: { message: 'Invalid reference media' } });
-      if (script.create === 'rate' || (script.create === 'rate-8' && String(requestBody.seconds) === '8')) {
+      if (script.create === 'rate' || (script.create === 'rate-8' && (String(requestBody.seconds) === '8' || String(requestBody.seconds) === '7'))) {
         return jsonResponse(429, { message: 'too many' });
       }
       if (script.create === 'reject-8' && String(requestBody.seconds) === '8') {
@@ -671,7 +671,7 @@ assert(fanStart.processed[0].status === 'running', JSON.stringify(fanStart.proce
 const fanCreates = calls.filter((call) => call.url.startsWith('https://api.agnes-ai.cn/v1/videos')).slice(createsBeforeFan);
 assert(fanCreates.length === 2, `parallel submit count ${fanCreates.length}`);
 const fanBodies = fanCreates.map((call) => JSON.parse(call.init.body));
-assert(fanBodies.every((body) => body.seconds === '8'), JSON.stringify(fanBodies.map((body) => body.seconds)));
+assert(fanBodies.map((body) => body.seconds).join(',') === '8,7', JSON.stringify(fanBodies.map((body) => body.seconds)));
 assert(fanBodies.every((body) => body.images.length === 1 && body.prompt.includes('<Image 1>') && !/\bperson\b/i.test(body.prompt)), 'fan prompt');
 assert(fanBodies.every((body) => !body.videos), 'fan sent a reference video');
 assert(fanBodies.every((body) => !body.images[0].includes('photo-2')), 'fan photo-2');

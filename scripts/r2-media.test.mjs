@@ -80,6 +80,16 @@ await expectCode(() => assertObjectKey('templates/demo.mp4'), 'storage_error');
 await expectCode(() => assertObjectKey('uploads/u_a/job_a/../0.jpg'), 'storage_error');
 const key = photoObjectKey('u_alice', 'job_abc', 1, 'png');
 assert(key === 'uploads/u_alice/job_abc/1.png', key);
+const slot2 = photoObjectKey('u_alice', 'job_abc', 2, 'jpg');
+const slot3 = photoObjectKey('u_alice', 'job_abc', 3, 'png');
+const slot4 = photoObjectKey('u_alice', 'job_abc', 4, 'webp');
+assert(slot2 === 'uploads/u_alice/job_abc/2.jpg', slot2);
+assert(slot3 === 'uploads/u_alice/job_abc/3.png', slot3);
+assert(slot4 === 'uploads/u_alice/job_abc/4.webp', slot4);
+assert(assertObjectKey(slot2) === slot2 && assertObjectKey(slot3) === slot3 && assertObjectKey(slot4) === slot4, 'slots 2-4');
+await expectCode(() => photoObjectKey('u_alice', 'job_abc', 5, 'jpg'), 'bad_photo');
+await expectCode(() => assertObjectKey('uploads/u_alice/job_abc/5.jpg'), 'storage_error');
+await expectCode(() => assertObjectKey('uploads/u_alice/job_abc/../4.webp'), 'storage_error');
 assert(resultObjectKey('u_alice', 'job_abc') === 'results/u_alice/job_abc.mp4', 'result key');
 
 const secret = 'media-test-secret-1';
@@ -328,6 +338,40 @@ assert(pairRow.upload_key.endsWith('/0.jpg') && pairRow.upload_key_2.endsWith('/
 assert(pair.job.status === 'queued', 'tiny desk queued');
 const afterPair = await getCredits(db, user, { includeLedger: false });
 assert(afterPair.balance === 100 - bbyCost - tinyCost, `tiny balance ${afterPair.balance}`);
+
+const band = await queueJobWithMedia({
+  db,
+  env,
+  request,
+  user,
+  templateSlug: 'tiny-desk',
+  photos: [
+    { bytes: jpeg, contentType: 'image/jpeg', ext: 'jpg' },
+    { bytes: png, contentType: 'image/png', ext: 'png' },
+    { bytes: jpeg, contentType: 'image/jpeg', ext: 'jpg' },
+    { bytes: png, contentType: 'image/png', ext: 'png' },
+    { bytes: webp, contentType: 'image/webp', ext: 'webp' },
+  ],
+});
+assert(band.media.stored === true && band.media.photos === 5 && band.job.status === 'queued', 'five photo tiny desk');
+const bandRow = sqlite
+  .prepare(`SELECT upload_key, upload_key_2, extra_upload_keys FROM jobs WHERE id = ?`)
+  .get(band.job.id);
+assert(bandRow.upload_key.endsWith('/0.jpg') && bandRow.upload_key_2.endsWith('/1.png'), 'band slots 0-1');
+const extraKeys = JSON.parse(bandRow.extra_upload_keys);
+assert(
+  Array.isArray(extraKeys) &&
+    extraKeys.length === 3 &&
+    extraKeys[0].endsWith('/2.jpg') &&
+    extraKeys[1].endsWith('/3.png') &&
+    extraKeys[2].endsWith('/4.webp'),
+  `extra slots ${bandRow.extra_upload_keys}`,
+);
+for (const storedKey of [bandRow.upload_key, bandRow.upload_key_2, ...extraKeys]) {
+  assert(bucket.objects.has(storedKey), `missing ${storedKey}`);
+}
+const afterBand = await getCredits(db, user, { includeLedger: false });
+assert(afterBand.balance === 100 - bbyCost - tinyCost * 2, `five photo balance ${afterBand.balance}`);
 
 let puts = 0;
 const flakyObjects = new Map();

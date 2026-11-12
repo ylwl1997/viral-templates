@@ -14,6 +14,7 @@
     "test:account": "node --experimental-sqlite scripts/account-d1.test.mjs",
     "test:auth": "node --experimental-sqlite scripts/google-auth.test.mjs",
     "test:media": "node --experimental-sqlite scripts/r2-media.test.mjs && node scripts/media-finish.test.mjs",
+    "test:middleware": "node scripts/middleware.test.mjs",
     "test:payments": "node --experimental-sqlite scripts/checkout-webhook.test.mjs",
     "test:bailian": "node --experimental-sqlite scripts/bailian-worker.test.mjs",
     "test:agnes": "node --experimental-sqlite scripts/agnes-video.test.mjs",

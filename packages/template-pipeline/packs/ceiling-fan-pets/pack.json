@@ -1,0 +1,35 @@
+{
+  "id": "ceiling-fan-pets",
+  "slug": "ceiling-fan",
+  "aspectRatio": "9:16",
+  "durationSeconds": 15.278005,
+  "variant": "auto",
+  "cuts": [7.639],
+  "roles": [{ "id": "lead", "required": true, "label": "pet" }],
+  "segments": [
+    { "index": 0, "start": 0, "end": 7.639 },
+    { "index": 1, "start": 7.639, "end": 15.278005 }
+  ],
+  "beats": [
+    {
+      "start": 0,
+      "end": 7.639,
+      "role": "lead",
+      "times": ["0.000", "7.639"],
+      "cast": "0.000-7.639s: {{pet}} in an ordinary room, everyday snapshot, casual sweater. No fan in the photo. At 7.639s generated blades wipe across the frame. No people.",
+      "solo": "0.000-7.639s: {{pet}} in an ordinary room, everyday snapshot, casual sweater. No fan in the photo. At 7.639s generated blades wipe across the frame. No people and no second animal."
+    },
+    {
+      "start": 7.639,
+      "end": 15.278005,
+      "role": "lead",
+      "times": ["7.639", "15.278"],
+      "cast": "7.639-15.278s: {{pet}} after the wipe, now in a plain raincoat, same ordinary room. The blades exist only in the clip. End at 15.278s. No people.",
+      "solo": "7.639-15.278s: {{pet}} after the wipe, now in a plain raincoat, same ordinary room. The blades exist only in the clip. End at 15.278s. No people."
+    }
+  ],
+  "locked": [
+    "One continuous shot from 0.000s to 7.639s of {{group}} standing in an ordinary room in a casual sweater. Everyday snapshot. No real fan. No people.",
+    "The same shot from 7.639s to 15.278s. Generated blades wipe once at 7.639s and {{group}} is now in a plain raincoat in that same room. End at 15.278s. No people."
+  ]
+}

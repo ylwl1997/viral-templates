@@ -2,9 +2,9 @@
 import BrandHero from '../../design/components/BrandHero.astro';
 import { keywordPath, type Lang } from '../../lib/site';
 import type { Template } from '../../lib/templates';
+import BrandDesk from './BrandDesk.astro';
 import BrandFan from './BrandFan.astro';
 import BrandParty from './BrandParty.astro';
-import BrandStadium from './BrandStadium.astro';
 
 interface Props { template: Template; lang: Lang }
 const { template: t, lang } = Astro.props;
@@ -26,7 +26,7 @@ const photoLine = L(
       eyebrow={duration}
       eyebrowLogo={t.logo}
       title={L(t.heroEn, t.heroZh)}
-      lede={L(`${t.taglineEn}. Adult consent required.`, `${t.taglineZh}。需成人同意。`)}
+      lede={L(`${t.taglineEn}. Pet photos only.`, `${t.taglineZh}。仅限宠物照片。`)}
       logo={t.logo}
       mediaSrc={t.poster}
       demoVideo={t.demoVideo}
@@ -36,7 +36,7 @@ const photoLine = L(
       secondaryCta={{ href: '#look', label: L('See the look', '看效果') }}
     />
     {t.story?.layout === 'party' && <BrandParty template={t} lang={lang} />}
-    {t.story?.layout === 'stadium' && <BrandStadium template={t} lang={lang} />}
+    {t.story?.layout === 'desk' && <BrandDesk template={t} lang={lang} />}
     {t.story?.layout === 'fan' && <BrandFan template={t} lang={lang} />}
   </>
 ) : (

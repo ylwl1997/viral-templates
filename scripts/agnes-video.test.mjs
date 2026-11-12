@@ -28,6 +28,7 @@ import { probeImage } from '../functions/_lib/image-precheck.js';
 import { queueJobWithMedia } from '../functions/_lib/job-media.js';
 import { ensureSchema } from '../functions/_lib/account-db.js';
 import { processRemakeJobs } from '../functions/_lib/bailian-worker.js';
+import { adaptPack, getPack } from '../packages/template-pipeline/src/index.js';
 import { getTemplate, TEMPLATE_CATALOG } from '../functions/_lib/templates.js';
 import { plannedReferenceImages, resolveVideoProvider, selectRemakeProvider } from '../functions/_lib/video-provider.js';
 import { CLASSIC_DASHSCOPE_BASE } from '../functions/_lib/bailian.js';
@@ -46,10 +47,6 @@ const jpeg = probeImage('jpeg', 720, 1280);
 const mp4 = pad(Uint8Array.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]));
 const AGNES_KEY = 'agnes-test-key-not-real';
 const BAILIAN_KEY = 'sk-test-bailian-key';
-const bbyFile = new Uint8Array(fs.readFileSync(new URL('../public/brand/templates/bby-wow-demo.mp4', import.meta.url)));
-const kissFile = new Uint8Array(fs.readFileSync(new URL('../public/brand/templates/kiss-cam-demo.mp4', import.meta.url)));
-const fanFile = new Uint8Array(fs.readFileSync(new URL('../public/brand/templates/ceiling-fan-demo.mp4', import.meta.url)));
-
 assert(resolveVideoProvider({}) === 'agnes', 'default provider');
 assert(resolveVideoProvider({ VIDEO_PROVIDER: 'agnes' }) === 'agnes', 'explicit agnes');
 assert(resolveVideoProvider({ VIDEO_PROVIDER: 'bailian' }) === 'bailian', 'explicit bailian');
@@ -163,11 +160,11 @@ assert(pairShaped.body.images.length === 2, 'pair image count');
 assert(new URL(pairShaped.body.images[0]).pathname.endsWith('/photo'), 'pair image 1 path');
 assert(new URL(pairShaped.body.images[1]).pathname.endsWith('/photo-2'), 'pair image 2 path');
 assert(pairShaped.body.prompt.includes('<Image 1>') && pairShaped.body.prompt.includes('<Image 2>'), 'pair placeholders');
-assert(pairShaped.body.prompt.includes('both people'), 'pair replaces both');
+assert(pairShaped.body.prompt.includes('both pets'), 'pair replaces both');
 assert(pairShaped.body.prompt.includes('Photo A') && pairShaped.body.prompt.includes('Photo B'), 'pair slot labels');
-assert(pairShaped.body.prompt.includes('the person on the left') && pairShaped.body.prompt.includes('the person on the right'), 'pair roles');
-assert(pairShaped.body.prompt !== REFERENCE_PROMPT, 'pair kept the one-person prompt');
-assert(!pairShaped.body.prompt.includes('Use <Image 1> as the person'), 'pair singular person prompt');
+assert(pairShaped.body.prompt.includes('the pet on the left') && pairShaped.body.prompt.includes('the pet on the right'), 'pair roles');
+assert(pairShaped.body.prompt !== REFERENCE_PROMPT, 'pair kept the one-pet prompt');
+assert(!pairShaped.body.prompt.includes('Use <Image 1> as the pet and follow'), 'pair singular prompt');
 assert(pairShaped.body.videos.length === 1, 'pair still one video');
 
 const uiSource = fs.readFileSync(new URL('../src/lib/templates.ts', import.meta.url), 'utf8');
@@ -175,9 +172,12 @@ const uiCounts = new Map();
 for (const match of uiSource.matchAll(/slug:\s*'([^']+)'[\s\S]*?photoCount:\s*(\d+)/g)) {
   uiCounts.set(match[1], Number(match[2]));
 }
-assert(uiCounts.size === Object.keys(TEMPLATE_CATALOG).length, `ui catalog ${uiCounts.size}`);
+const publicCatalog = Object.entries(TEMPLATE_CATALOG).filter(([, row]) => !row.retired && !row.internal);
+assert(uiCounts.size === publicCatalog.length, `ui catalog ${uiCounts.size}`);
+assert(TEMPLATE_CATALOG['kiss-cam'].retired === true, 'kiss cam retired');
+assert(!uiSource.includes("slug: 'kiss-cam'"), 'kiss cam still has a public page');
 const signEnv = { AUTH_SECRET: 'media-test-secret-1', PUBLIC_SITE_APEX: 'swaystill.com' };
-for (const [slug, row] of Object.entries(TEMPLATE_CATALOG)) {
+for (const [slug, row] of publicCatalog) {
   const template = getTemplate(slug);
   assert(uiCounts.get(slug) === row.photoCount, `${slug} ui photoCount`);
   assert(template.photoCount === row.photoCount, `${slug} worker photoCount`);
@@ -192,8 +192,8 @@ for (const [slug, row] of Object.entries(TEMPLATE_CATALOG)) {
     assert(!prompt.includes('<Image 2>'), `${slug} names a second image`);
   } else {
     assert(prompt !== REFERENCE_PROMPT, `${slug} shipped the one-person prompt`);
-    assert(prompt.includes('both people') || prompt.includes('every person'), `${slug} prompt`);
-    assert(!prompt.includes('Use <Image 1> as the person'), `${slug} singular prompt`);
+    assert(prompt.includes('both pets') || prompt.includes('every pet'), `${slug} prompt`);
+    assert(!prompt.includes('Use <Image 1> as the pet and follow'), `${slug} singular prompt`);
     for (let index = 1; index <= row.photoCount; index += 1) {
       assert(prompt.includes(`<Image ${index}>`), `${slug} image ${index}`);
     }
@@ -215,28 +215,17 @@ for (const [slug, row] of Object.entries(TEMPLATE_CATALOG)) {
   });
 }
 
-const bbyProbe = probeReferenceMp4(bbyFile);
-const kissProbe = probeReferenceMp4(kissFile);
-const fanProbe = probeReferenceMp4(fanFile);
-assert(bbyProbe.fps === 24, `bby fps ${bbyProbe.fps}`);
-assert(kissProbe.fps === 24, `kiss fps ${kissProbe.fps}`);
-assert(fanProbe.fps === 30, `fan fps ${fanProbe.fps}`);
-assert(agnesOutputSeconds(bbyProbe.durationSeconds) === '6', `bby file seconds ${bbyProbe.durationSeconds}`);
-assert(agnesOutputSeconds(fanProbe.durationSeconds) === null, `fan file was clamped ${fanProbe.durationSeconds}`);
-assert(bbyFile.byteLength < AGNES_VIDEO_MAX_BYTES && fanFile.byteLength < AGNES_VIDEO_MAX_BYTES, 'demos are under 50MB');
-
 const image = { imageBytes: jpeg.byteLength, imageWidth: 720, imageHeight: 1280 };
-const bbyDecision = agnesMediaDecision({ durationSeconds: 6.041667, videoBytes: bbyFile, ...image });
+const bbyDecision = agnesMediaDecision({ durationSeconds: 6.041667, videoBytes: mp4, ...image });
 assert(bbyDecision.ok && bbyDecision.seconds === '6' && bbyDecision.segments.length === 1, JSON.stringify(bbyDecision));
-const fanDecision = agnesMediaDecision({ durationSeconds: 6.041667, videoBytes: fanFile, ...image });
+const fanDecision = agnesMediaDecision({ durationSeconds: 15.278005, videoBytes: mp4, ...image });
 assert(fanDecision.ok && fanDecision.reason === 'split' && fanDecision.segments.length === 2, JSON.stringify(fanDecision));
 for (const segment of fanDecision.segments) {
   const length = segment.end - segment.start;
   assert(length >= 4 && length <= 12, `fan piece ${length}`);
   assert(Number(segment.seconds) >= 4 && Number(segment.seconds) <= 12, segment.seconds);
 }
-assert(fanDecision.segments[0].seconds === '8', fanDecision.segments[0].seconds);
-assert(fanDecision.segments[1].seconds === '7', fanDecision.segments[1].seconds);
+assert(fanDecision.segments[0].seconds === '8' && fanDecision.segments[1].seconds === '8', JSON.stringify(fanDecision.segments));
 assert(fanDecision.segments[1].end - fanDecision.segments[1].start >= 4, 'fan was split as 12 plus a short tail');
 const evenFan = planAgnesSegments(15.278005, []);
 assert(evenFan.length === 2, 'even split');
@@ -255,7 +244,7 @@ const sizeDecision = agnesMediaDecision({
 assert(!sizeDecision.ok && sizeDecision.reason === 'size', sizeDecision.reason);
 const wideDecision = agnesMediaDecision({
   durationSeconds: 6,
-  videoBytes: bbyFile,
+  videoBytes: mp4,
   imageBytes: 1000,
   imageWidth: 6000,
   imageHeight: 3000,
@@ -550,7 +539,7 @@ const env = {
   ASSETS: {
     async fetch(request) {
       const href = String(request && request.url ? request.url : request);
-      const body = href.includes('ceiling-fan') ? fanFile : mp4;
+      const body = mp4;
       return new Response(body, { status: 200, headers: { 'content-type': 'video/mp4' } });
     },
   },
@@ -570,6 +559,7 @@ async function queue(slug, photos) {
     user,
     templateSlug: slug,
     photos,
+    petsOnly: true,
   });
 }
 
@@ -600,13 +590,14 @@ const bbyBody = createBody(calls);
 assert(bbyBody.seconds === '6', bbyBody.seconds);
 assert(bbyBody.mode === 'reference', bbyBody.mode);
 assert(bbyBody.images.length === 1, JSON.stringify(bbyBody.images.map((url) => new URL(url).pathname)));
-assert(bbyBody.prompt === REFERENCE_PROMPT, 'bby prompt');
+const bbyAdapted = adaptPack(getPack('bby-wow-pets'), [{ role: 'lead' }]);
+assert(bbyBody.prompt === bbyAdapted.segments[0].prompt, 'create did not call adaptPack');
+assert(!/\bperson\b/i.test(bbyBody.prompt), bbyBody.prompt);
 assert(new URL(bbyBody.images[0]).origin === 'https://swaystill.com', 'bby image origin');
 assert(new URL(bbyBody.images[0]).pathname.endsWith('/photo'), 'bby image kind');
 assert(new URL(bbyBody.images[0]).searchParams.has('sig'), 'bby image signed');
 assert(!bbyBody.images[0].includes('photo-2'), 'bby photo-2');
-assert(bbyBody.videos[0].url === 'https://swaystill.com/brand/templates/bby-wow-demo.mp4', bbyBody.videos[0].url);
-assert(bbyBody.videos[0].start_seconds === 0 && bbyBody.videos[0].require_audio === false, JSON.stringify(bbyBody.videos[0]));
+assert(!bbyBody.videos, 'bby sent a reference video');
 assert(!JSON.stringify(bbyBody).includes('pages.dev'), 'create body used the request host');
 assert(!JSON.stringify(bbyBody).includes('workers.dev') && !JSON.stringify(bbyBody).includes('r2.dev'), 'blocked host in body');
 const createsBeforePoll = script.creates;
@@ -631,45 +622,14 @@ const afterBby = await getCredits(db, user);
 assert(afterBby.balance === 494, `bby balance ${afterBby.balance}`);
 assert(afterBby.ledger.filter((row) => row.job_id === bby.job.id).map((row) => row.kind).join() === 'deduction', 'bby charged once');
 
-const kiss = await queue('kiss-cam', twoPhotos);
-const kissRun = await run(kiss.job.id);
-assert(kissRun.processed[0].provider === 'agnes', JSON.stringify(kissRun.processed[0]));
-const kissBody = createBody(calls.filter((call) => call.url.includes('/v1/videos')).slice(-1).length ? calls : calls);
-const kissCreates = calls.filter((call) => call.url.startsWith('https://api.agnes-ai.cn/v1/videos'));
-const kissPayload = JSON.parse(kissCreates[kissCreates.length - 1].init.body);
-assert(kissPayload.seconds === '6', kissPayload.seconds);
-assert(kissPayload.images.length === 2, 'kiss image count');
-const kissKinds = kissPayload.images.map((url) => new URL(url).pathname.split('/').pop());
-assert(kissKinds.join(',') === 'photo,photo-2', `kiss kinds ${kissKinds.join(',')}`);
-assert(kissPayload.images.every((url) => new URL(url).origin === 'https://swaystill.com'), 'kiss image origin');
-assert(kissPayload.images.every((url) => new URL(url).searchParams.has('sig')), 'kiss images signed');
-assert(kissPayload.videos[0].url === 'https://swaystill.com/brand/templates/kiss-cam-demo.mp4', 'kiss video');
-assert(kissPayload.prompt.includes('<Image 1>') && kissPayload.prompt.includes('<Image 2>'), 'kiss prompt images');
-assert(kissPayload.prompt.includes('both people'), 'kiss prompt both');
-assert(kissPayload.prompt.includes('Photo A') && kissPayload.prompt.includes('the person on the left'), 'kiss photo A');
-assert(kissPayload.prompt.includes('Photo B') && kissPayload.prompt.includes('the person on the right'), 'kiss photo B');
-assert(!kissPayload.prompt.includes('Use <Image 1> as the person'), 'kiss singular prompt');
-assert(!JSON.stringify(kissPayload).includes('pages.dev'), 'kiss body used the request host');
-
-const bailianBeforeKissDrop = script.bailianTasks;
-script.create = 'reject';
-const kissDrop = await queue('kiss-cam', twoPhotos);
-const kissDropRun = await run(kissDrop.job.id);
-assert(kissDropRun.processed[0].status === 'failed', JSON.stringify(kissDropRun.processed[0]));
-assert(kissDropRun.processed[0].error === 'reference_photos', kissDropRun.processed[0].error);
-assert(script.bailianTasks === bailianBeforeKissDrop, 'two-photo refusal fell back to mix');
-const kissDropRow = sqlite.prepare(`SELECT status, error_code, note_en, note_zh FROM jobs WHERE id = ?`).get(kissDrop.job.id);
-assert(kissDropRow.status === 'failed' && kissDropRow.error_code === 'reference_photos', JSON.stringify(kissDropRow));
-assert(/both photos/i.test(kissDropRow.note_en) && /charge was returned/i.test(kissDropRow.note_en), kissDropRow.note_en);
-assert(kissDropRow.note_zh.includes('两张'), kissDropRow.note_zh);
-assert(!/agnes|bailian|waffo|dashscope/i.test(`${kissDropRow.note_en} ${kissDropRow.note_zh}`), kissDropRow.note_en);
-const kissDropLedger = (await getCredits(db, user)).ledger.filter((row) => row.job_id === kissDrop.job.id).map((row) => row.kind).sort().join();
-assert(kissDropLedger === 'deduction,refund', `kiss drop ledger ${kissDropLedger}`);
-script.create = 'ok';
-
-const fanCuts = fanDecision.segments.map((segment) => cutReferenceMp4(fanFile, segment.start, segment.end));
-const sameSourceJoin = concatMp4(fanCuts);
-assert(sniffJoin(sameSourceJoin), 'same-source cuts did not join');
+let kissBlocked = false;
+try {
+  await queue('kiss-cam', twoPhotos);
+} catch (err) {
+  kissBlocked = err && err.code === 'template_retired';
+}
+assert(kissBlocked, 'kiss cam is still creatable');
+assert(!uiSource.includes('Coldplay Kiss Cam'), 'kiss cam title on a public page');
 
 // Stream-copied prefixes of two real 720x1280 outputs whose stsd boxes differ in btrt.
 const piece0 = fs.readFileSync(new URL('./fixtures/compatible-join/p0.mp4', import.meta.url));
@@ -697,7 +657,7 @@ assert(unpackedSlots.parallel && unpackedSlots.count === 2, JSON.stringify(unpac
 assert(unpackedSlots.slots[0] === 'task_piece_0001' && unpackedSlots.slots[1] === '', JSON.stringify(unpackedSlots.slots));
 assert(unpackAgnesTaskId('ag1_task_piece_0001').parallel === false, 'legacy piece id was treated as parallel');
 
-script.downloads = fanCuts.slice();
+script.downloads = [piece0, piece1];
 script.poll = 'completed';
 const bailianBeforeFan = script.bailianTasks;
 const createsBeforeFan = script.creates;
@@ -708,15 +668,12 @@ assert(fanStart.processed[0].status === 'running', JSON.stringify(fanStart.proce
 const fanCreates = calls.filter((call) => call.url.startsWith('https://api.agnes-ai.cn/v1/videos')).slice(createsBeforeFan);
 assert(fanCreates.length === 2, `parallel submit count ${fanCreates.length}`);
 const fanBodies = fanCreates.map((call) => JSON.parse(call.init.body));
-const eight = fanBodies.find((body) => body.seconds === '8');
-const seven = fanBodies.find((body) => body.seconds === '7');
-assert(fanBodies.every((body) => body.images.length === 1 && body.prompt === REFERENCE_PROMPT), 'fan still one image');
+assert(fanBodies.every((body) => body.seconds === '8'), JSON.stringify(fanBodies.map((body) => body.seconds)));
+assert(fanBodies.every((body) => body.images.length === 1 && body.prompt.includes('<Image 1>') && !/\bperson\b/i.test(body.prompt)), 'fan prompt');
+assert(fanBodies.every((body) => !body.videos), 'fan sent a reference video');
 assert(fanBodies.every((body) => !body.images[0].includes('photo-2')), 'fan photo-2');
-assert(eight && eight.videos[0].url.includes('/seg0?') && eight.videos[0].start_seconds === 0, 'fan first piece');
-assert(seven && seven.videos[0].url.includes('/seg1?'), JSON.stringify(seven));
-assert(fanBodies.every((body) => body.videos[0].url.startsWith('https://swaystill.com/')), 'segment input host');
-assert(fanBodies.every((body) => !body.videos[0].url.includes('ceiling-fan-demo.mp4')), 'full 15s file was sent');
-assert(!fanBodies.some((body) => /pages\.dev|workers\.dev|r2\.dev/.test(body.videos[0].url)), 'blocked host sent as segment input');
+assert(fanBodies.every((body) => body.images[0].startsWith('https://swaystill.com/')), 'fan image host');
+assert(!fanBodies.some((body) => /pages\.dev|workers\.dev|r2\.dev/.test(JSON.stringify(body))), 'blocked host sent');
 const fanPack = unpackAgnesTaskId(sqlite.prepare(`SELECT provider_task_id FROM jobs WHERE id = ?`).get(fan.job.id).provider_task_id);
 assert(fanPack.parallel && fanPack.slots.every(Boolean), JSON.stringify(fanPack));
 const pollsBeforeFan = calls.filter((call) => call.url.includes('/agnesapi')).length;
@@ -741,7 +698,7 @@ assert(String(fanRow.provider_task_id).startsWith('m2_'), fanRow.provider_task_i
 assert(!fanRow.error_code, fanRow.error_code);
 assert(!/agnes|bailian|waffo/i.test(fanRow.note_en), fanRow.note_en);
 const afterFan = await getCredits(db, user);
-assert(afterFan.balance === 494 - 6 - 15, `fan balance ${afterFan.balance}`);
+assert(afterFan.balance === 494 - 15, `fan balance ${afterFan.balance}`);
 assert(afterFan.ledger.filter((row) => row.job_id === fan.job.id).map((row) => row.kind).join() === 'deduction', 'fan charged once');
 
 script.create = 'rate';
@@ -761,21 +718,21 @@ assert(script.creates === rateSplitCreates + 2, 'split retry did not submit both
 assert(String(sqlite.prepare(`SELECT provider_task_id FROM jobs WHERE id = ?`).get(rateSplit.job.id).provider_task_id).startsWith('m2_'), 'split retry was not packed');
 
 script.create = 'rate-8';
-script.downloads = fanCuts.slice();
+script.downloads = [piece0, piece1];
 const partial = await queue('ceiling-fan', onePhoto);
 const partialStart = await run(partial.job.id);
-assert(partialStart.processed[0].status === 'running', JSON.stringify(partialStart.processed[0]));
+assert(partialStart.processed[0].status === 'queued', JSON.stringify(partialStart.processed[0]));
 assert(partialStart.processed[0].error === 'retry_later', partialStart.processed[0].error);
-assert(script.bailianTasks === bailianBeforeFan, 'partial 429 fell back to mix');
-const partialPack = unpackAgnesTaskId(sqlite.prepare(`SELECT provider_task_id FROM jobs WHERE id = ?`).get(partial.job.id).provider_task_id);
-assert(partialPack.parallel && partialPack.slots[1] && !partialPack.slots[0], JSON.stringify(partialPack.slots));
+assert(script.bailianTasks === bailianBeforeFan, 'even split 429 fell back to mix');
 const partialCreates = script.creates;
 const partialHeld = await run(partial.job.id, Date.now() + 1000);
-assert(script.creates === partialCreates, 'missing piece was retried inside the backoff');
-assert(partialHeld.processed[0].status === 'running', JSON.stringify(partialHeld.processed[0]));
+assert(script.creates === partialCreates, 'even split 429 retried inside the backoff');
+assert(partialHeld.processed[0].status === 'queued', JSON.stringify(partialHeld.processed[0]));
 script.create = 'ok';
-const partialReady = await run(partial.job.id, Date.now() + 8000);
-assert(script.creates === partialCreates + 1, `missing piece creates ${script.creates - partialCreates}`);
+const partialGo = await run(partial.job.id, Date.now() + 8000);
+assert(partialGo.processed[0].status === 'running', JSON.stringify(partialGo.processed[0]));
+assert(script.creates === partialCreates + 2, `even split retry creates ${script.creates - partialCreates}`);
+const partialReady = await run(partial.job.id, Date.now() + 16000);
 assert(partialReady.processed[0].status === 'ready', JSON.stringify(partialReady.processed[0]));
 assert(
   (await getCredits(db, user)).ledger.filter((row) => row.job_id === partial.job.id).map((row) => row.kind).join() === 'deduction',
@@ -841,9 +798,10 @@ const studio = fs.readFileSync(new URL('../src/components/CreateStudio.astro', i
 const accountScript = fs.readFileSync(new URL('../public/scripts/account-data.js', import.meta.url), 'utf8');
 assert(!studio.includes('/api/jobs/continue'), 'create page still posts continue');
 assert(studio.includes('30 * 60 * 1000'), 'create page watch is still about 10 minutes');
-assert(studio.includes('Both people in the clip are replaced'), 'create copy');
-assert(studio.includes('成片里的两个人都会被替换'), 'create copy zh');
+assert(studio.includes('No people.'), 'create copy');
+assert(studio.includes('没有人'), 'create copy zh');
 assert(studio.includes('photoSlots'), 'create uses slot meaning');
+assert(!studio.includes('kiss-cam'), 'create still offers kiss cam');
 assert(studio.includes('uploadCount === 1'), 'one-photo create still asks for one photo');
 assert(!accountScript.includes('/api/jobs/continue'), 'account page still posts continue');
 const drainConfig = fs.readFileSync(new URL('../workers/job-drain/wrangler.toml', import.meta.url), 'utf8');
@@ -854,31 +812,33 @@ script.poll = 'completed';
 script.create = 'ok';
 
 script.create = 'reject';
+const bailianBeforeReject = script.bailianTasks;
 const rejected = await queue('bby-wow', onePhoto);
 const rejectRun = await run(rejected.job.id);
-assert(rejectRun.processed[0].provider === 'bailian', JSON.stringify(rejectRun.processed[0]));
-assert(rejectRun.processed[0].status === 'running', JSON.stringify(rejectRun.processed[0]));
-const rejectRow = sqlite.prepare(`SELECT provider_task_id, status FROM jobs WHERE id = ?`).get(rejected.job.id);
-assert(rejectRow.status === 'running' && !String(rejectRow.provider_task_id).startsWith('agn_'), JSON.stringify(rejectRow));
+assert(rejectRun.processed[0].status === 'failed', JSON.stringify(rejectRun.processed[0]));
+assert(script.bailianTasks === bailianBeforeReject, 'pet refusal fell back to mix');
+const rejectRow = sqlite.prepare(`SELECT status, note_en FROM jobs WHERE id = ?`).get(rejected.job.id);
+assert(rejectRow.status === 'failed', JSON.stringify(rejectRow));
+assert(!/agnes|bailian|waffo/i.test(rejectRow.note_en), rejectRow.note_en);
 const afterReject = await getCredits(db, user);
-assert(afterReject.ledger.filter((row) => row.job_id === rejected.job.id).map((row) => row.kind).join() === 'deduction', 'fallback charged twice or refunded');
+assert(afterReject.ledger.filter((row) => row.job_id === rejected.job.id).map((row) => row.kind).sort().join() === 'deduction,refund', 'refusal did not refund');
 
 script.create = 'down';
+const bailianBeforeOutage = script.bailianTasks;
 const uncertain = await queue('bby-wow', onePhoto);
 const createsBeforeOutage = script.creates;
 const uncertainRun = await run(uncertain.job.id);
-assert(uncertainRun.processed[0].status === 'running', JSON.stringify(uncertainRun.processed[0]));
-assert(uncertainRun.processed[0].provider === 'bailian', JSON.stringify(uncertainRun.processed[0]));
-assert(script.creates === createsBeforeOutage + 1, 'outage retried Agnes');
-const uncertainRow = sqlite.prepare(`SELECT status, note_en, provider_task_id FROM jobs WHERE id = ?`).get(uncertain.job.id);
-assert(uncertainRow.status === 'running', uncertainRow.status);
-assert(!String(uncertainRow.provider_task_id).startsWith('ag'), uncertainRow.provider_task_id);
+assert(uncertainRun.processed[0].status === 'failed', JSON.stringify(uncertainRun.processed[0]));
+assert(script.bailianTasks === bailianBeforeOutage, 'pet outage fell back to mix');
+assert(script.creates === createsBeforeOutage + 1, 'outage did not try Agnes');
+const uncertainRow = sqlite.prepare(`SELECT status, note_en FROM jobs WHERE id = ?`).get(uncertain.job.id);
+assert(uncertainRow.status === 'failed', uncertainRow.status);
 assert(!/agnes|bailian|waffo/i.test(uncertainRow.note_en), uncertainRow.note_en);
 assert(!uncertainRow.note_en.includes(AGNES_KEY), 'note leaked the key');
 const afterUncertain = await getCredits(db, user);
 assert(
-  afterUncertain.ledger.filter((row) => row.job_id === uncertain.job.id).map((row) => row.kind).join() === 'deduction',
-  'outage fallback charged twice or refunded',
+  afterUncertain.ledger.filter((row) => row.job_id === uncertain.job.id).map((row) => row.kind).sort().join() === 'deduction,refund',
+  'outage did not refund',
 );
 
 script.create = 'rate';
@@ -941,8 +901,10 @@ const forced = await queueJobWithMedia({
   user,
   templateSlug: 'bby-wow',
   photos: onePhoto,
+  petsOnly: true,
 });
 const createsBeforeSwitch = script.creates;
+const bailianBeforeSwitch = script.bailianTasks;
 const switchRun = await processRemakeJobs({
   db,
   env: switched,
@@ -951,37 +913,8 @@ const switchRun = await processRemakeJobs({
   jobId: forced.job.id,
 });
 assert(script.creates === createsBeforeSwitch, 'bailian switch called Agnes');
-assert(switchRun.processed[0].provider === 'bailian', JSON.stringify(switchRun.processed[0]));
-
-const switchedKiss = await queueJobWithMedia({
-  db,
-  env: switched,
-  request: new Request(`${requestOrigin}/api/jobs`, { method: 'POST' }),
-  user,
-  templateSlug: 'kiss-cam',
-  photos: twoPhotos,
-});
-const createsBeforeKissSwitch = script.creates;
-const bailianBeforeKissSwitch = script.bailianTasks;
-const kissSwitchRun = await processRemakeJobs({
-  db,
-  env: switched,
-  request: new Request(`${requestOrigin}/api/jobs/process`, { method: 'POST' }),
-  fetchImpl,
-  jobId: switchedKiss.job.id,
-});
-assert(script.creates === createsBeforeKissSwitch, 'two-photo bailian switch called Agnes');
-assert(script.bailianTasks === bailianBeforeKissSwitch, 'two-photo bailian switch sent one photo');
-assert(kissSwitchRun.processed[0].status === 'failed', JSON.stringify(kissSwitchRun.processed[0]));
-assert(kissSwitchRun.processed[0].error === 'reference_photos', kissSwitchRun.processed[0].error);
-const kissSwitchLedger = (await getCredits(db, user)).ledger
-  .filter((row) => row.job_id === switchedKiss.job.id)
-  .map((row) => row.kind)
-  .sort()
-  .join();
-assert(kissSwitchLedger === 'deduction,refund', `kiss switch ledger ${kissSwitchLedger}`);
-const kissSwitchNote = sqlite.prepare(`SELECT note_en FROM jobs WHERE id = ?`).get(switchedKiss.job.id);
-assert(!/agnes|bailian|waffo|dashscope/i.test(kissSwitchNote.note_en), kissSwitchNote.note_en);
+assert(script.bailianTasks === bailianBeforeSwitch, 'pet look sent a template video to mix');
+assert(switchRun.processed[0].status === 'failed', JSON.stringify(switchRun.processed[0]));
 
 const pagesEnv = { ...env, PUBLIC_SITE_APEX: 'viral-templates.pages.dev' };
 const pagesJob = await queueJobWithMedia({
@@ -991,8 +924,10 @@ const pagesJob = await queueJobWithMedia({
   user,
   templateSlug: 'bby-wow',
   photos: onePhoto,
+  petsOnly: true,
 });
 const createsBeforePages = script.creates;
+const bailianBeforePages = script.bailianTasks;
 const pagesRun = await processRemakeJobs({
   db,
   env: pagesEnv,
@@ -1001,27 +936,8 @@ const pagesRun = await processRemakeJobs({
   jobId: pagesJob.job.id,
 });
 assert(script.creates === createsBeforePages, 'pages.dev apex called Agnes');
-assert(pagesRun.processed[0].provider === 'bailian', JSON.stringify(pagesRun.processed[0]));
-const pagesKiss = await queueJobWithMedia({
-  db,
-  env: pagesEnv,
-  request: new Request(`${requestOrigin}/api/jobs`, { method: 'POST' }),
-  user,
-  templateSlug: 'kiss-cam',
-  photos: twoPhotos,
-});
-const bailianBeforePagesKiss = script.bailianTasks;
-const createsBeforePagesKiss = script.creates;
-const pagesKissRun = await processRemakeJobs({
-  db,
-  env: pagesEnv,
-  request: new Request(`${requestOrigin}/api/jobs/process`, { method: 'POST' }),
-  fetchImpl,
-  jobId: pagesKiss.job.id,
-});
-assert(script.creates === createsBeforePagesKiss, 'two-photo pages host called Agnes');
-assert(script.bailianTasks === bailianBeforePagesKiss, 'two-photo pages host fell back to mix');
-assert(pagesKissRun.processed[0].status === 'failed' && pagesKissRun.processed[0].error === 'reference_photos', JSON.stringify(pagesKissRun.processed[0]));
+assert(script.bailianTasks === bailianBeforePages, 'pages.dev apex used mix');
+assert(pagesRun.processed[0].status === 'failed', JSON.stringify(pagesRun.processed[0]));
 assert(!calls.some((call) => /pages\.dev|workers\.dev|r2\.dev/.test(JSON.stringify(call.init && call.init.body || ''))), 'provider body contains a blocked host');
 
 console.log('agnes-video.test.mjs ok');

@@ -14,17 +14,17 @@ import { localizeFaq } from '../../lib/templates';
 const lang = 'zh' as const;
 ---
 <Layout
-  title={`${SITE.name} — 用已有照片做竖屏短片`}
-  description="选一个风格，上传已有的照片，画面保持竖屏。需成人同意。"
+  title={`${SITE.name} — 用已有的宠物照片做竖屏短片`}
+  description="选一个风格，上传已有的宠物快照，画面保持竖屏。"
   canonicalPath="/"
   lang={lang}
 >
   <section class="hero wrap hero-hub">
     <div class="hero-copy">
       <p class="eyebrow">静帧</p>
-      <h1>用已有的照片，做一条竖屏短片。</h1>
+      <h1>用已有的宠物照片，做一条竖屏短片。</h1>
       <p class="lede">
-        选一个风格，上传已有的照片，画面保持竖屏。需成人同意。
+        选一个风格，上传一张日常宠物快照，画面保持竖屏。
       </p>
       <div class="hero-cta">
         <a class="btn btn-primary" href={pathFor(lang, '/create/')}>开始制作</a>
@@ -50,7 +50,7 @@ const lang = 'zh' as const;
   <section class="section wrap" id="examples">
     <div class="section-head">
       <h2>示例</h2>
-      <p class="sub">进去的是照片，出来的是短片。照片里的人就是成片里的人。</p>
+      <p class="sub">进去的是宠物照片，出来的是短片。</p>
     </div>
     <ExampleCases lang={lang} templates={LIVE_TEMPLATES} />
   </section>
@@ -71,7 +71,7 @@ const lang = 'zh' as const;
     <StepsHow
       steps={[
         { title: '选择风格', body: '浏览模板并打开创作。' },
-        { title: '上传与授权', body: '仅限成人同意照片。禁止未成年人。' },
+        { title: '上传宠物', body: '只要日常宠物快照。不要上传人。' },
         { title: '生成', body: '登录后生成会排队，并扣这个效果所需的积分。完成后成片会出现在账户里。没完成则积分退回。' },
       ]}
     />

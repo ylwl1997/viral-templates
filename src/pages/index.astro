@@ -14,17 +14,17 @@ import { localizeFaq } from '../lib/templates';
 const lang = 'en' as const;
 ---
 <Layout
-  title={`${SITE.name} — a short clip from a photo you already have`}
-  description="Choose a look, upload a photo you already have, and keep the frame vertical. Adult consent required."
+  title={`${SITE.name} — a short clip from a pet photo you already have`}
+  description="Choose a look, upload a pet snapshot you already have, and keep the frame vertical."
   canonicalPath="/"
   lang={lang}
 >
   <section class="hero wrap hero-hub">
     <div class="hero-copy">
       <p class="eyebrow">Still frames</p>
-      <h1>A short clip, held from a photo you already have.</h1>
+      <h1>A short clip, held from a pet photo you already have.</h1>
       <p class="lede">
-        Choose a look, upload a photo you already have, and keep the frame vertical. Adult consent required.
+        Choose a look, upload an everyday pet snapshot, and keep the frame vertical.
       </p>
       <div class="hero-cta">
         <a class="btn btn-primary" href={pathFor(lang, '/create/')}>Start creating</a>
@@ -50,7 +50,7 @@ const lang = 'en' as const;
   <section class="section wrap" id="examples">
     <div class="section-head">
       <h2>Examples</h2>
-      <p class="sub">The photo that goes in, and the clip that comes out. The people match.</p>
+      <p class="sub">The pet photo that goes in, and the clip that comes out.</p>
     </div>
     <ExampleCases lang={lang} templates={LIVE_TEMPLATES} />
   </section>
@@ -71,7 +71,7 @@ const lang = 'en' as const;
     <StepsHow
       steps={[
         { title: 'Choose a look', body: 'Browse the templates and open Create.' },
-        { title: 'Upload and consent', body: 'Adult-consent photos only. No minors.' },
+        { title: 'Upload a pet', body: 'Everyday pet snapshots only. No people.' },
         { title: 'Generate', body: 'Signed-in Generate queues a job and uses the credits for that look. The clip appears on your account when it is ready. If it does not finish, the credits return.' },
       ]}
     />

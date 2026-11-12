@@ -1,0 +1,10 @@
+{
+  "name": "template-pipeline",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "description": "Vendored snapshot of ylwlceo/template-pipeline. Origin is the source of truth.",
+  "exports": {
+    ".": "./src/index.js"
+  }
+}

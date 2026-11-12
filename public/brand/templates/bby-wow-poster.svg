@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 320" role="img" aria-label="Placeholder pet snapshot">
+  <rect width="180" height="320" fill="#efe6da"/>
+  <rect x="0" y="210" width="180" height="110" fill="#d9cfc2"/>
+  <circle cx="90" cy="132" r="36" fill="#c4a574"/>
+  <ellipse cx="62" cy="108" rx="12" ry="18" fill="#c4a574"/>
+  <ellipse cx="118" cy="108" rx="12" ry="18" fill="#c4a574"/>
+  <rect x="70" y="168" width="40" height="46" rx="16" fill="#b8956a"/>
+  <text x="90" y="292" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#6d6256">Pet snapshot placeholder</text>
+</svg>

@@ -46,12 +46,14 @@ import {
   revertQueuedJob,
   saveProviderTask,
 } from './account-db.js';
+import { adaptPack, formatAgnesCreatePayload, getPack } from '../../packages/template-pipeline/src/index.js';
 import {
   AGNES_IMAGE_TOTAL_MAX_BYTES,
   AGNES_POLL_MIN_MS,
   AGNES_VIDEO_MAX_BYTES,
   agnesInputUrls,
   agnesMediaDecision,
+  agnesPhotoUrls,
   agnesPollDelayMs,
   agnesSegmentInputs,
   createReferenceVideo,
@@ -76,6 +78,7 @@ import {
 } from './bailian.js';
 import { readImageSize } from './image-precheck.js';
 import { mp4HasAudio, muxStyleAudio } from './mp4-finish.js';
+import { extraUploadKeys } from './job-media.js';
 import { getTemplate } from './templates.js';
 import { storeJobResult } from './job-media.js';
 import {
@@ -285,7 +288,7 @@ async function submitBailian(ctx, row, prepared) {
 async function readSubjects(bucket, row, photoCount) {
   const kinds = referencePhotoKinds(photoCount);
   if (!kinds) throw fail('reference_photos');
-  const keys = [row.upload_key, row.upload_key_2];
+  const keys = [row.upload_key, row.upload_key_2, ...extraUploadKeys(row)];
   const images = [];
   for (let index = 0; index < kinds.length; index += 1) {
     if (!keys[index]) throw fail('no_photo');
@@ -343,17 +346,59 @@ function agnesCode(err) {
   return err.code || 'failed';
 }
 
+function storedPhotoCount(row) {
+  const extra = extraUploadKeys(row);
+  return [row && row.upload_key, row && row.upload_key_2, ...extra].filter(Boolean).length;
+}
+
+function pipelineImages(template, row) {
+  const count = storedPhotoCount(row);
+  const slots = template.photoSlots || [];
+  const images = [];
+  for (let index = 0; index < count; index += 1) {
+    const slot = slots[index];
+    images.push({
+      role: index === 0 ? 'lead' : '',
+      shared: count === 1 && row.pipeline_frame === 'together',
+      label: slot && slot.replacesEn,
+    });
+  }
+  if (count === 1) images[0].role = 'lead';
+  return images;
+}
+
 function agnesCreateInput(template, inputs, seconds) {
-  if (!inputs || !Array.isArray(inputs.imageUrls) || inputs.imageUrls.length !== template.photoCount) return null;
+  if (!inputs || !Array.isArray(inputs.imageUrls)) return null;
+  if (inputs.imageOnly) {
+    if (!inputs.prompt) return null;
+    return {
+      imageOnly: true,
+      imageUrls: inputs.imageUrls,
+      seconds,
+      prompt: inputs.prompt,
+    };
+  }
+  if (inputs.imageUrls.length !== template.photoCount) return null;
   return {
     imageUrls: inputs.imageUrls,
     videoUrl: inputs.videoUrl,
     seconds,
-    prompt: referencePrompt(template),
+    prompt: inputs.prompt || referencePrompt(template),
   };
 }
 
 async function segmentInputs(ctx, row, prepared, segment) {
+  if (prepared.pipeline) {
+    const photoCount = prepared.photoCount;
+    const urls = await agnesPhotoUrls(ctx.env, row.id, photoCount);
+    if (!urls || !segment.prompt) return null;
+    return {
+      imageOnly: true,
+      imageUrls: urls.imageUrls,
+      prompt: segment.prompt,
+      seconds: segment.seconds,
+    };
+  }
   const segments = prepared.selection && prepared.selection.segments;
   const count = segments && segments.length ? segments.length : 1;
   const photoCount = prepared.template.photoCount;
@@ -595,6 +640,12 @@ async function submitRouted(ctx, row, prepared) {
   if (prepared.selection.provider === 'agnes') {
     const agnesResult = await submitAgnes(ctx, row, prepared);
     if (agnesResult && agnesResult.fallback) {
+      if (prepared.pipeline) {
+        return failJob(ctx.db, row, 'failed', {
+          note_en: 'This clip could not be started. The credits were returned.',
+          note_zh: '这条短片没有开始。积分已退回。',
+        });
+      }
       if (!plannedReferenceImages(prepared.template, 'bailian')) {
         return failReferencePhotos(ctx.db, row, prepared.template);
       }
@@ -606,13 +657,80 @@ async function submitRouted(ctx, row, prepared) {
   return submitBailian(ctx, row, prepared);
 }
 
+async function preparePipeline(ctx, row, template) {
+  const pack = getPack(template.packId);
+  if (!pack) return failJob(ctx.db, row, 'bad_template');
+  const photoCount = storedPhotoCount(row);
+  if (photoCount < (template.minPhotos || 1)) return failJob(ctx.db, row, 'no_photo');
+  const view = { ...template, photoCount };
+  if (!plannedReferenceImages(view, 'agnes')) return failReferencePhotos(ctx.db, row, view);
+  let images;
+  try {
+    images = await readSubjects(ctx.bucket, row, photoCount);
+  } catch (err) {
+    const code = err && err.code ? err.code : 'no_photo';
+    if (code === 'reference_photos') return failReferencePhotos(ctx.db, row, view);
+    if (code === 'photo_too_large' || code === 'no_photo' || code === 'storage_error') return failJob(ctx.db, row, code);
+    throw err;
+  }
+  const selection = chooseProvider(ctx, view, images, new Uint8Array());
+  if (!selection || selection.provider !== 'agnes') {
+    if (images.some((image) => image.bytes.byteLength > BAILIAN_IMAGE_MAX_BYTES)) {
+      return failJob(ctx.db, row, 'photo_too_large');
+    }
+    return failJob(ctx.db, row, 'failed', {
+      note_en: 'This clip could not be started. The credits were returned.',
+      note_zh: '这条短片没有开始。积分已退回。',
+    });
+  }
+  let adapted;
+  try {
+    adapted = adaptPack(pack, pipelineImages(template, row));
+    formatAgnesCreatePayload(
+      adapted,
+      adapted.images.map((_, index) => `https://example.invalid/${index}`),
+    );
+  } catch (err) {
+    return failJob(ctx.db, row, err && err.code === 'lead_required' ? 'no_photo' : 'failed');
+  }
+  const segments = adapted.segments.map((segment) => ({
+    index: segment.index,
+    start: segment.start,
+    end: segment.end,
+    seconds: segment.seconds,
+    prompt: segment.prompt,
+  }));
+  const claimed = await claimQueuedJob(ctx.db, row.id);
+  if (!claimed) return { id: row.id, status: 'running', action: 'busy' };
+  const previous = /^retry_later_(\d+)$/.exec(row.error_code || '');
+  return submitRouted(ctx, row, {
+    image: images[0],
+    images,
+    reference: null,
+    template: view,
+    photoCount,
+    pipeline: true,
+    selection: { ...selection, segments, seconds: segments[0].seconds },
+    seconds: segments[0].seconds,
+    backoffMs: previous ? Number(previous[1]) : 0,
+  });
+}
+
 async function prepareQueued(ctx, row) {
   const hold = retryHoldMs(row, ctx.nowMs);
   if (hold) {
     return { id: row.id, status: 'queued', action: 'retry', error: 'retry_later', retry_after_ms: hold };
   }
   const template = getTemplate(row.template_slug);
-  if (!template || !template.referenceVideo) return failJob(ctx.db, row, 'no_reference_video');
+  if (!template) return failJob(ctx.db, row, 'bad_template');
+  if (template.retired) {
+    return failJob(ctx.db, row, 'template_retired', {
+      note_en: 'This look is no longer offered. The credits were returned.',
+      note_zh: '这个效果已经不再提供。积分已退回。',
+    });
+  }
+  if (template.packId) return preparePipeline(ctx, row, template);
+  if (!template.referenceVideo) return failJob(ctx.db, row, 'no_reference_video');
   if (!referencePhotoKinds(template.photoCount)) return failReferencePhotos(ctx.db, row, template);
   if (!row.upload_key || (template.photoCount > 1 && !row.upload_key_2)) {
     if (template.photoCount === 2) {
@@ -727,7 +845,35 @@ async function discardSplitObjects(bucket, userId, jobId, count) {
 
 async function loadSplitPlan(ctx, row) {
   const template = getTemplate(row.template_slug);
-  if (!template || !template.referenceVideo) return null;
+  if (!template || template.retired) return null;
+  if (template.packId) {
+    const pack = getPack(template.packId);
+    if (!pack) return null;
+    const photoCount = storedPhotoCount(row);
+    const images = await readSubjects(ctx.bucket, row, photoCount);
+    const view = { ...template, photoCount };
+    const selection = chooseProvider(ctx, view, images, new Uint8Array());
+    if (!selection || selection.provider !== 'agnes') return null;
+    const adapted = adaptPack(pack, pipelineImages(template, row));
+    const segments = adapted.segments.map((segment) => ({
+      index: segment.index,
+      start: segment.start,
+      end: segment.end,
+      seconds: segment.seconds,
+      prompt: segment.prompt,
+    }));
+    if (segments.length < 2) return null;
+    return {
+      template: view,
+      reference: null,
+      pipeline: true,
+      photoCount,
+      selection: { ...selection, segments, seconds: segments[0].seconds },
+      image: images[0],
+      images,
+    };
+  }
+  if (!template.referenceVideo) return null;
   const reference = await loadReferenceVideo(ctx.env, ctx.origin, template.referenceVideo, ctx.fetchImpl);
   const images = await readSubjects(ctx.bucket, row, template.photoCount);
   const selection = chooseProvider(ctx, template, images, reference);

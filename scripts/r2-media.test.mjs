@@ -255,8 +255,8 @@ const broke = await queueJobWithMedia({
 );
 assert(broke && broke.code === 'insufficient_credits', `expected insufficient_credits, got ${broke && broke.code}`);
 const bbyCost = getTemplate('bby-wow').creditCost;
-const kissCost = getTemplate('kiss-cam').creditCost;
-assert(bbyCost === 6 && kissCost === 6, `source credits ${bbyCost}/${kissCost}`);
+const tinyCost = getTemplate('tiny-desk').creditCost;
+assert(bbyCost === 6 && tinyCost === 18 && getTemplate('kiss-cam').creatable === false, `source credits ${bbyCost}/${tinyCost}`);
 assert(broke.needed === bbyCost && broke.balance === 0, 'credit error details');
 await appendLedger(db, user, {
   delta: 100,
@@ -275,7 +275,7 @@ await expectCode(
       templateSlug: 'kiss-cam',
       photos: [{ bytes: jpeg, contentType: 'image/jpeg', ext: 'jpg' }],
     }),
-  'bad_photo',
+  'template_retired',
 );
 
 const unbound = await queueJobWithMedia({
@@ -320,14 +320,14 @@ const pair = await queueJobWithMedia({
   env,
   request,
   user,
-  templateSlug: 'kiss-cam',
-  photos: parsedForm.photos,
+      templateSlug: 'tiny-desk',
+      photos: parsedForm.photos,
 });
 const pairRow = sqlite.prepare(`SELECT upload_key, upload_key_2 FROM jobs WHERE id = ?`).get(pair.job.id);
 assert(pairRow.upload_key.endsWith('/0.jpg') && pairRow.upload_key_2.endsWith('/1.png'), 'two keys');
-assert(pair.job.status === 'queued', 'kiss cam queued');
+assert(pair.job.status === 'queued', 'tiny desk queued');
 const afterPair = await getCredits(db, user, { includeLedger: false });
-assert(afterPair.balance === 100 - bbyCost - kissCost, `kiss balance ${afterPair.balance}`);
+assert(afterPair.balance === 100 - bbyCost - tinyCost, `tiny balance ${afterPair.balance}`);
 
 let puts = 0;
 const flakyObjects = new Map();
@@ -352,7 +352,7 @@ await expectCode(
       env: { ...env, MEDIA: flaky },
       request,
       user,
-      templateSlug: 'kiss-cam',
+      templateSlug: 'tiny-desk',
       photos: parsedForm.photos,
     }),
   'storage_error',

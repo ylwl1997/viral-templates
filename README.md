@@ -30,7 +30,9 @@ Swaystill makes a short vertical clip from a photo you already have. The apex is
 | `/zh/t/{slug}/` | Chinese shell |
 | Unknown subdomain | Friendly `/unknown-site/` (404 via Function) |
 
-**Live slugs:** `bby-wow`, `kiss-cam`, `ceiling-fan`  
+**Live slugs:** `bby-wow`, `tiny-desk`, `ceiling-fan`  
+**Retired host:** `kiss-cam` redirects to the hub. Past orders still resolve in account history.  
+**Follow-up:** attach `tiny-desk.swaystill.com` in Cloudflare after deploy. Pages cannot bind that custom domain from this repo.  
 **Soon slugs:** `bulin-47`, `zombie-love`, `smalltown-boy-cats`, `clapping-cat`, `knight-cat`, `car-jump`
 
 Registry: `src/lib/templates.ts` (includes `logo` + `accent` per template)
@@ -42,7 +44,7 @@ Apex / env helpers: `src/lib/site.ts` (`PUBLIC_SITE_APEX`, default `viral-templa
 
 ```text
 https://viral-templates.pages.dev/t/bby-wow/
-https://viral-templates.pages.dev/t/kiss-cam/
+https://viral-templates.pages.dev/t/tiny-desk/
 https://viral-templates.pages.dev/t/ceiling-fan/
 https://viral-templates.pages.dev/t/clapping-cat/    # coming soon shell
 https://viral-templates.pages.dev/zh/t/bby-wow/
@@ -194,7 +196,7 @@ Details and env names: [`docs/credits-checkout.md`](docs/credits-checkout.md).
 
 ### Known limits
 
-- Google sign-in runs when the secrets in [`docs/google-oauth.md`](docs/google-oauth.md) are set. Remakes use Agnes Video 2.5 reference mode when `AGNES_API_KEY` is set. Bby Wow and Kiss Cam (about 6s) are one job. Ceiling Fan (about 15s) is cut into two 4–12s pieces and joined back in this worker. Mix runs only when a split cannot fix the media, the key is unset, or `VIDEO_PROVIDER=bailian`. Create starts generation with `waitUntil`. Pages has no cron trigger; `workers/job-drain` posts `POST /api/jobs/process` every two minutes once that Worker is deployed ([`docs/agnes-video.md`](docs/agnes-video.md)). Agnes inputs are public `https://{PUBLIC_SITE_APEX}/…` URLs. Mix uploads bytes to DashScope temporary storage (`oss://`). Do not pass `*.pages.dev`, `*.workers.dev`, or `*.r2.dev` media URLs to either provider.
+- Google sign-in runs when the secrets in [`docs/google-oauth.md`](docs/google-oauth.md) are set. Remakes use Agnes Video 2.5 reference mode when `AGNES_API_KEY` is set. Live looks send pet photos and adapted prompts only — no template video. Bby Wow (about 6s) is one job. Ceiling Fan (about 15s) and Tiny Desk (about 18s) are split into even 4–12s pieces and joined in this worker. Mix is not used for these looks. Create starts generation with `waitUntil`. Pages has no cron trigger; `workers/job-drain` posts `POST /api/jobs/process` every two minutes once that Worker is deployed ([`docs/agnes-video.md`](docs/agnes-video.md)). Agnes inputs are public `https://{PUBLIC_SITE_APEX}/…` URLs. Mix uploads bytes to DashScope temporary storage (`oss://`). Do not pass `*.pages.dev`, `*.workers.dev`, or `*.r2.dev` media URLs to either provider.
 - A pack refund or chargeback from the payment provider does not remove credits by itself. The credits page can store a short note for that case.
 - Session cookie is **host-only** (not shared across brand hosts). The database is shared. The same Google account maps to the same `user_id` on every host after signing in there, so credits and jobs follow the person. `/t/{slug}/` on the apex is the same host and the same cookie.
 - Brand Account link needs a prior brand-page visit (cookie) or open Sign in with `?next=/t/{slug}/…`

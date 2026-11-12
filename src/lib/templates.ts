@@ -1,6 +1,6 @@
 /** Template catalog. logo = public path to brand mark. Ops routing uses slug — never in customer copy. */
 
-import { BBY_LIVE, FAN_LIVE, KISS_LIVE } from './liveCases';
+import { BBY_LIVE, FAN_LIVE, TINY_LIVE } from './liveCases';
 import { getTemplate as sourceTemplate } from '../../functions/_lib/templates.js';
 
 function liveTiming(slug: string) {
@@ -27,7 +27,7 @@ function livePhotoSlots(slug: string) {
 }
 
 const bbyTiming = liveTiming('bby-wow');
-const kissTiming = liveTiming('kiss-cam');
+const tinyTiming = liveTiming('tiny-desk');
 const fanTiming = liveTiming('ceiling-fan');
 
 export type TemplateStatus = 'live' | 'soon';
@@ -56,7 +56,7 @@ export type TemplateCase = {
   id: string;
   labelEn: string;
   labelZh: string;
-  /** Upload stills of the same people as the result. Kiss Cam uses two. */
+  /** Upload stills of the same pets as the result. */
   sources: readonly string[];
   resultPoster?: string;
   resultVideo?: string;
@@ -97,7 +97,7 @@ export type StoryDiy = {
 
 /** Copy for a brand story. `layout` picks the page rhythm — party, stadium, or fan. */
 export type TemplateStory = {
-  layout: 'party' | 'stadium' | 'fan';
+  layout: 'party' | 'stadium' | 'fan' | 'desk';
   lead: StoryBlock;
   support: StoryBlock;
   beats: readonly StoryBeat[];
@@ -143,7 +143,9 @@ export type Template = {
   displayName: string;
   displayNameZh: string;
   status: TemplateStatus;
-  photoCount: 1 | 2;
+  photoCount: number;
+  /** Minimum uploads. Optional roles may be left empty. */
+  minPhotos?: number;
   /** Who each photo replaces. Required when photoCount is 2. */
   photoSlots?: readonly PhotoSlot[];
   /** Source clip length in seconds. Absent on unpublished looks. */
@@ -185,90 +187,87 @@ export type Template = {
 export const TEMPLATES: readonly Template[] = [
   {
     slug: 'bby-wow',
-    displayName: 'Bby Wow AI',
-    displayNameZh: 'Bby Wow AI',
+    displayName: 'Bby Wow',
+    displayNameZh: 'Bby Wow',
     status: 'live',
     photoCount: 1,
+    minPhotos: 1,
     ...bbyTiming,
-    taglineEn: '1 photo → vertical party-dance clip',
-    taglineZh: '1 张照片 → 竖屏派对舞短片',
-    seoTitleEn: 'Bby Wow AI — 1 photo party dance video',
-    seoTitleZh: 'Bby Wow AI — 1 张照片派对舞短片',
+    taglineEn: '1 pet photo → vertical bar-dance clip',
+    taglineZh: '1 张宠物照片 → 竖屏吧台舞短片',
+    seoTitleEn: 'Bby Wow — a pet bar-dance from one snapshot',
+    seoTitleZh: 'Bby Wow — 一张宠物快照的吧台舞',
     seoDescEn:
-      `Turn one adult-consent photo into a ~${bbyTiming.creditCost}s vertical party-dance AI video. Adult consent required.`,
+      `One everyday pet snapshot becomes a ~${bbyTiming.creditCost}s vertical dance. Ordinary room, casual collar or plain fur.`,
     seoDescZh:
-      `用 1 张成人同意照片生成约 ${bbyTiming.creditCost} 秒竖屏派对舞 AI 短片。需成人同意。`,
-    heroEn: 'One photo. A vertical party-dance clip.',
-    heroZh: '一张照片，一条竖屏派对舞短片。',
-    howEn: ['Upload 1 adult-consent photo', 'Confirm consent', 'Generate your clip'],
-    howZh: ['上传 1 张成人同意照片', '确认授权', '生成短片'],
+      `一张日常宠物快照，做成约 ${bbyTiming.creditCost} 秒的竖屏舞。普通房间，项圈或本来的毛色。`,
+    heroEn: 'One pet snapshot. A vertical bar-dance.',
+    heroZh: '一张宠物快照，一支竖屏吧台舞。',
+    howEn: ['Upload 1 pet photo', 'Confirm it is your pet', 'Generate the clip'],
+    howZh: ['上传 1 张宠物照片', '确认是你的宠物', '生成短片'],
     accent: 'magenta',
     logo: '/brand/templates/bby-wow.svg',
-    poster: '/brand/templates/bby-wow-poster.jpg',
-    demoVideo: '/brand/templates/bby-wow-demo.mp4',
+    poster: '/brand/templates/bby-wow-poster.svg',
     theme: { accent: 'magenta', heroPreset: 'split', typeVoice: 'playful', cardStyle: 'glow', coverStyle: 'orb', ambience: 'noise' },
-    disclaimerEn: 'Adult consent only · no minors. Not affiliated with Karol G, CapCut, or any label.',
-    disclaimerZh: '仅限成人同意照片 · 禁止未成年人。非 Karol G / CapCut 官方。',
+    disclaimerEn: 'Pet photos only. Not affiliated with the original recording or any label.',
+    disclaimerZh: '仅限宠物照片。与原曲或任何厂牌无关。',
     ...BBY_LIVE,
   },
   {
-    slug: 'kiss-cam',
-    displayName: 'Coldplay Kiss Cam AI',
-    displayNameZh: 'Coldplay Kiss Cam AI',
+    slug: 'tiny-desk',
+    displayName: 'Tiny Desk',
+    displayNameZh: 'Tiny Desk',
     status: 'live',
-    photoCount: 2,
-    photoSlots: livePhotoSlots('kiss-cam'),
-    ...kissTiming,
-    taglineEn: '2 photos → stadium kiss-cam remix (no concert footage)',
-    taglineZh: '2 张照片 → 球场大屏风（无演唱会素材）',
-    seoTitleEn: 'Coldplay Kiss Cam AI — 2 photos stadium remix',
-    seoTitleZh: 'Coldplay Kiss Cam AI — 2 张照片球场大屏',
+    photoCount: 5,
+    minPhotos: 1,
+    photoSlots: livePhotoSlots('tiny-desk'),
+    ...tinyTiming,
+    taglineEn: 'Pet photos → a vertical desk concert',
+    taglineZh: '宠物照片 → 竖屏桌边音乐会',
+    seoTitleEn: 'Tiny Desk — a pet concert at a plain desk',
+    seoTitleZh: 'Tiny Desk — 一张普通书桌上的宠物音乐会',
     seoDescEn:
-      'Two adult-consent photos → stadium kiss-cam style AI clip. No real concert footage. Adult consent required.',
+      `A pet office-desk concert, vertical, about ${tinyTiming.creditCost}s. Lead singer, keys, two backups, optional sax. Everyday snapshots only.`,
     seoDescZh:
-      '两张成人同意照片 → 球场大屏风 AI 短片。无真实演唱会素材。需成人同意。',
-    heroEn: 'Two photos. One jumbotron moment.',
-    heroZh: '两张照片，一个球场大屏瞬间。',
-    howEn: ['Upload 2 adult-consent photos', 'Confirm consent (no concert footage)', 'Generate your clip'],
-    howZh: ['上传 2 张成人同意照片', '确认授权（无演唱会素材）', '生成短片'],
+      `宠物桌边音乐会，竖屏，约 ${tinyTiming.creditCost} 秒。主唱、键盘、两侧和声，萨克斯可选。只要日常快照。`,
+    heroEn: 'A desk, a microphone, and your pets.',
+    heroZh: '一张书桌，一只麦克风，你家的宠物。',
+    howEn: ['Upload the lead pet, then any bandmates', 'Confirm they are pets', 'Generate the concert'],
+    howZh: ['先上传主唱，再上传乐队', '确认都是宠物', '生成音乐会'],
     accent: 'amber',
-    logo: '/brand/templates/kiss-cam.svg',
-    poster: '/brand/templates/kiss-cam-poster.jpg',
-    demoVideo: '/brand/templates/kiss-cam-demo.mp4',
-    theme: { accent: 'amber', heroPreset: 'editorial', typeVoice: 'bold', cardStyle: 'ribbon', coverStyle: 'stripes', ambience: 'grid' },
-    disclaimerEn:
-      'Adult consent only · no minors. Fan-made AI remix — not official Coldplay / CapCut. No real concert footage.',
-    disclaimerZh: '仅限成人同意 · 禁止未成年人。粉丝向 AI remix · 非 Coldplay / CapCut 官方。不含真实演唱会素材。',
-    ...KISS_LIVE,
+    logo: '/brand/templates/tiny-desk.svg',
+    poster: '/brand/templates/tiny-desk-poster.svg',
+    theme: { accent: 'amber', heroPreset: 'editorial', typeVoice: 'cool', cardStyle: 'mesh', coverStyle: 'grid', ambience: 'grid' },
+    disclaimerEn: 'Pet photos only. Not an official desk concert, and not affiliated with the show it echoes.',
+    disclaimerZh: '仅限宠物照片。不是官方桌边音乐会，也与它所借用的节目无关。',
+    ...TINY_LIVE,
   },
   {
     slug: 'ceiling-fan',
-    displayName: 'Ceiling Fan Transition AI',
-    displayNameZh: 'Ceiling Fan Transition AI',
+    displayName: 'Ceiling Fan',
+    displayNameZh: 'Ceiling Fan',
     status: 'live',
     photoCount: 1,
+    minPhotos: 1,
     ...fanTiming,
-    taglineEn: '1 photo → fan-wipe outfit change (AI only — no real fan)',
-    taglineZh: '1 张照片 → 吊扇换装转场（纯 AI · 勿绑真风扇）',
-    seoTitleEn: 'Ceiling Fan Transition AI — 1 photo outfit change',
-    seoTitleZh: 'Ceiling Fan Transition AI — 1 张照片换装转场',
+    taglineEn: '1 pet photo → a fan-wipe outfit change',
+    taglineZh: '1 张宠物照片 → 吊扇换装转场',
+    seoTitleEn: 'Ceiling Fan — a pet outfit wipe from one snapshot',
+    seoTitleZh: 'Ceiling Fan — 一张宠物快照的换装转场',
     seoDescEn:
-      `One adult-consent photo → ~${fanTiming.creditCost}s AI ceiling-fan outfit change. Never strap a phone to a fan. Adult consent required.`,
+      `One everyday pet snapshot becomes a ~${fanTiming.creditCost}s outfit wipe. The fan exists only in the clip. Never strap a phone to a real fan.`,
     seoDescZh:
-      `1 张成人同意照片 → 约 ${fanTiming.creditCost} 秒吊扇换装转场。切勿把手机绑在风扇上。需成人同意。`,
-    heroEn: 'One photo. A fan-wipe outfit change — never a real fan.',
-    heroZh: '一张照片，一次吊扇换装 —— 切勿使用真风扇。',
-    howEn: ['Upload 1 adult-consent photo', 'Confirm consent & safety note', 'Generate your clip'],
-    howZh: ['上传 1 张成人同意照片', '确认授权与安全提示', '生成短片'],
+      `一张日常宠物快照，做成约 ${fanTiming.creditCost} 秒的换装转场。风扇只存在于成片里。切勿把手机绑在真风扇上。`,
+    heroEn: 'One pet snapshot. A fan-wipe into another sweater.',
+    heroZh: '一张宠物快照，一次扇叶转场，换一件毛衣。',
+    howEn: ['Upload 1 pet photo', 'Confirm it is your pet', 'Generate the wipe'],
+    howZh: ['上传 1 张宠物照片', '确认是你的宠物', '生成转场'],
     accent: 'cyan',
     logo: '/brand/templates/ceiling-fan.svg',
-    poster: '/brand/templates/ceiling-fan-poster.jpg',
-    demoVideo: '/brand/templates/ceiling-fan-demo.mp4',
+    poster: '/brand/templates/ceiling-fan-poster.svg',
     theme: { accent: 'cyan', heroPreset: 'split', typeVoice: 'cool', cardStyle: 'mesh', coverStyle: 'radial', ambience: 'none' },
-    disclaimerEn:
-      'Adult consent only · no minors. Pure AI — never strap a phone to a spinning fan. Fan-made AI remix — not official CapCut, HoYoverse, miHoYo, or Genshin Impact.',
-    disclaimerZh:
-      '仅限成人同意 · 禁止未成年人。纯 AI · 切勿把手机绑在旋转风扇上。粉丝向 AI remix · 非 CapCut、HoYoverse、miHoYo 或 Genshin Impact 官方。',
+    disclaimerEn: 'Pet photos only. The fan is generated — never strap a phone to a spinning fan.',
+    disclaimerZh: '仅限宠物照片。风扇是生成的 — 切勿把手机绑在旋转的风扇上。',
     ...FAN_LIVE,
   },
   {
@@ -279,8 +278,8 @@ export const TEMPLATES: readonly Template[] = [
     photoCount: 1,
     durationEn: 'TBD',
     durationZh: '待定',
-    taglineEn: 'Trend edit template — coming soon',
-    taglineZh: '潮流剪辑模板 — 即将上线',
+    taglineEn: 'A pet dance edit — coming soon',
+    taglineZh: '宠物舞蹈剪辑 — 即将上线',
     seoTitleEn: 'Bulin 47 — Coming soon',
     seoTitleZh: 'Bulin 47 — 即将上线',
     seoDescEn: 'Bulin 47 AI template is coming soon. Not generatable yet.',
@@ -292,8 +291,8 @@ export const TEMPLATES: readonly Template[] = [
     accent: 'orange',
     logo: '/brand/templates/bulin-47.svg',
     theme: { accent: 'orange', heroPreset: 'centered', typeVoice: 'bold', cardStyle: 'soft', coverStyle: 'orb', ambience: 'none' },
-    disclaimerEn: 'Coming soon · adult consent will be required.',
-    disclaimerZh: '即将上线 · 上线后需成人同意照片。',
+    disclaimerEn: 'Coming soon · pet photos only.',
+    disclaimerZh: '即将上线 · 仅限宠物照片。',
   },
   {
     slug: 'zombie-love',
@@ -303,21 +302,21 @@ export const TEMPLATES: readonly Template[] = [
     photoCount: 1,
     durationEn: 'TBD',
     durationZh: '待定',
-    taglineEn: 'Zombie romance remix — coming soon',
-    taglineZh: '丧尸恋爱混剪 — 即将上线',
+    taglineEn: 'A pet in a costume — coming soon',
+    taglineZh: '宠物装扮短片 — 即将上线',
     seoTitleEn: 'Zombie Love — Coming soon',
     seoTitleZh: 'Zombie Love — 即将上线',
     seoDescEn: 'Zombie Love AI template is coming soon. Not generatable yet.',
     seoDescZh: 'Zombie Love AI 模板即将上线，暂不可生成。',
-    heroEn: 'Zombie Love is on the way.',
-    heroZh: 'Zombie Love 即将上线。',
+    heroEn: 'A costumed pet is on the way.',
+    heroZh: '一只装扮过的宠物即将上线。',
     howEn: ['Upload', 'Confirm', 'Generate'],
     howZh: ['上传', '确认', '生成'],
     accent: 'sky',
     logo: '/brand/templates/zombie-love.svg',
     theme: { accent: 'sky', heroPreset: 'split', typeVoice: 'cool', cardStyle: 'soft', coverStyle: 'grid', ambience: 'none' },
-    disclaimerEn: 'Coming soon · adult consent will be required.',
-    disclaimerZh: '即将上线 · 上线后需成人同意照片。',
+    disclaimerEn: 'Coming soon · pet photos only.',
+    disclaimerZh: '即将上线 · 仅限宠物照片。',
   },
   {
     slug: 'smalltown-boy-cats',
@@ -399,21 +398,21 @@ export const TEMPLATES: readonly Template[] = [
     photoCount: 1,
     durationEn: 'TBD',
     durationZh: '待定',
-    taglineEn: 'Car-jump action clip — coming soon',
-    taglineZh: '飙车跳跃动作短片 — 即将上线',
+    taglineEn: 'A pet mid-jump — coming soon',
+    taglineZh: '宠物跳跃短片 — 即将上线',
     seoTitleEn: 'Car Jump — Coming soon',
     seoTitleZh: 'Car Jump — 即将上线',
     seoDescEn: 'Car Jump AI template is coming soon. Not generatable yet.',
     seoDescZh: 'Car Jump AI 模板即将上线，暂不可生成。',
-    heroEn: 'Car Jump is on the way.',
-    heroZh: 'Car Jump 即将上线。',
+    heroEn: 'A pet mid-jump is on the way.',
+    heroZh: '一只跳跃中的宠物即将上线。',
     howEn: ['Upload', 'Confirm', 'Generate'],
     howZh: ['上传', '确认', '生成'],
     accent: 'slate',
     logo: '/brand/templates/car-jump.svg',
     theme: { accent: 'slate', heroPreset: 'editorial', typeVoice: 'cool', cardStyle: 'ribbon', coverStyle: 'stripes', ambience: 'none' },
-    disclaimerEn: 'Coming soon · adult consent will be required.',
-    disclaimerZh: '即将上线 · 上线后需成人同意照片。',
+    disclaimerEn: 'Coming soon · pet photos only.',
+    disclaimerZh: '即将上线 · 仅限宠物照片。',
   },
 ];
 

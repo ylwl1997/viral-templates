@@ -120,7 +120,7 @@ const job = await createStubJob(db, userA, 'BBY-WOW');
 assert(job.status === 'queued', job.status);
 assert(job.result_url == null, 'stub has a media url');
 assert(job.template_slug === 'bby-wow', job.template_slug);
-assert(job.template_name === 'Bby Wow AI', job.template_name);
+assert(job.template_name === 'Bby Wow', job.template_name);
 assert(!/mp4/i.test(job.note_en), job.note_en);
 assert(!/demo/i.test(job.note_en), job.note_en);
 

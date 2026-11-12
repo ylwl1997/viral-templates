@@ -97,7 +97,7 @@
   border-color: #fff6ea;
 }
 
-/* Kiss Cam — night stadium, cool graphite, scoreboard bezel */
+/* Retired kiss-cam host redirects to the hub. These rules are unused. */
 [data-theme="kiss-cam"] {
   color-scheme: dark;
   --accent: #d5dde6;

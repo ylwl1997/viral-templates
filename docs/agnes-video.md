@@ -2,7 +2,7 @@
 
 Customer pages do not mention Agnes, Bailian, DashScope, or Waffo. This is the server path that turns a queued remake into an MP4.
 
-Primary model: `agnes-video-2.5`, `mode=reference`. The stored photos plus the template demo. Each photo replaces one person in the template. A one-photo look sends `<Image 1>`. A two-photo look sends `<Image 1>` and `<Image 2>`, and the prompt names which slot replaces which person. The template keeps its scene, motion, camera, timing, and outfits. Output is `720P` and `9:16`.
+Primary model: `agnes-video-2.5`, `mode=reference`. Live looks are pet remakes. Create runs `adaptPack`, then sends the adapted prompts and the customer’s pet photo URLs. There is no input video. Output is `720P` and `9:16`. A longer look is still split into even 4–12s pieces and joined here. Credits stay one charge.
 
 `wan2.2-animate-mix` stays the automatic fallback for a one-photo look. It cannot take a second image. A look with `photoCount` greater than 1 does not fall through to mix. See [`bailian-animate.md`](bailian-animate.md).
 
@@ -21,8 +21,9 @@ Agnes reference limits are one video, duration 2–12 seconds, under 50 MB, and 
 
 | Template | Source | Path |
 |---|---|---|
-| Bby Wow, Kiss Cam | about 6.04s, 24 fps | One Agnes job, `seconds` `"6"`. Not split. |
-| Ceiling Fan | about 15.28s, keyframes at 0s and 8.3s | Two Agnes jobs, about 8.3s (`"8"`) and 6.9s (`"7"`), then joined in this worker. Not 12s + 3.3s, and not mix. |
+| Bby Wow | about 6.04s | One images-only job, `seconds` `"6"`. |
+| Ceiling Fan | about 15.28s | Two even pieces, each `seconds` `"8"`, then joined. |
+| Tiny Desk | 17.76s, editorial cuts at 5.375 / 11.625 / 15.0 | Two even pieces of 8.88s, each `seconds` `"9"`, then joined. |
 
 A clip of 2–12s is one job. The reference file is the public template URL. A source inside that range that rounds below 4 requests `"4"`. The file is still sent whole.
 

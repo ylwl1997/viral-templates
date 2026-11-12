@@ -1,0 +1,65 @@
+{
+  "id": "tiny-desk-pets",
+  "slug": "tiny-desk",
+  "aspectRatio": "9:16",
+  "durationSeconds": 17.76,
+  "variant": "auto",
+  "cuts": [5.375, 11.625, 15],
+  "roles": [
+    { "id": "lead", "required": true, "label": "lead singer" },
+    { "id": "keys", "required": false, "label": "keys" },
+    { "id": "left-backup", "required": false, "label": "left backup" },
+    { "id": "right-backup", "required": false, "label": "right backup" },
+    { "id": "sax", "required": false, "label": "sax", "optional": true }
+  ],
+  "segments": [
+    { "index": 0, "start": 0, "end": 8.88 },
+    { "index": 1, "start": 8.88, "end": 17.76 }
+  ],
+  "beats": [
+    {
+      "start": 0,
+      "end": 5.375,
+      "role": "lead",
+      "times": ["0.000", "5.375"],
+      "cast": "0.000-5.375s hard cut, close-up of {{pet}} singing into a small desk microphone. Plain wooden desk, ordinary room, phone-photo light, casual collar.",
+      "solo": "0.000-5.375s hard cut, close-up of {{pet}} singing into a small desk microphone. Plain wooden desk, ordinary room, phone-photo light, casual collar. No second animal."
+    },
+    {
+      "start": 5.375,
+      "end": 8.88,
+      "role": "keys",
+      "times": ["5.375", "8.880"],
+      "cast": "Hard cut at 5.375s: {{pet}} at the same desk, paws on a small keyboard, held to 8.880s.",
+      "solo": "Hard cut at 5.375s: {{pet}} leans toward a small keyboard at the same desk and holds to 8.880s. Do not add another animal."
+    },
+    {
+      "start": 8.88,
+      "end": 11.625,
+      "role": "left-backup",
+      "times": ["8.880", "11.625"],
+      "cast": "8.880-11.625s: {{pet}} seated on the left of the desk, quiet backup, same ordinary room.",
+      "solo": "8.880-11.625s: {{pet}} stays at the desk and nods through the phrase. Do not add another animal."
+    },
+    {
+      "start": 11.625,
+      "end": 15,
+      "role": "right-backup",
+      "times": ["11.625", "15.000"],
+      "cast": "Hard cut at 11.625s: {{pet}} on the right of the desk until 15.000s. Ordinary room, no stage.",
+      "solo": "Hard cut at 11.625s: {{pet}} turns slightly at the same desk until 15.000s. Do not add another animal."
+    },
+    {
+      "start": 15,
+      "end": 17.76,
+      "role": "sax",
+      "times": ["15.000", "17.760"],
+      "cast": "15.000-17.760s: {{pet}} with a small saxophone at the desk, then a last close-up of the lead pet.",
+      "solo": "15.000-17.760s: {{pet}} holds the last note at the desk. Do not add a saxophone player or any other animal."
+    }
+  ],
+  "locked": [
+    "Single continuous shot from 0.000s to 8.880s, no cut. {{group}} at a plain wooden desk in an ordinary room, phone-photo light. The phrase at 5.375s is a lean toward the microphone inside the same shot.",
+    "The same continuous shot from 8.880s to 17.760s. {{group}} stay together at the desk. Beats at 11.625s and 15.000s stay inside the shot. No people. Do not add animals."
+  ]
+}

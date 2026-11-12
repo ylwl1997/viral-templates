@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 320" role="img" aria-label="Placeholder hallway snapshot">
+  <rect width="180" height="320" fill="#f7f1e8"/>
+  <rect x="0" y="230" width="180" height="90" fill="#e4d9cc"/>
+  <circle cx="90" cy="150" r="32" fill="#d8b48a"/>
+  <ellipse cx="64" cy="128" rx="11" ry="16" fill="#d8b48a"/>
+  <ellipse cx="116" cy="128" rx="11" ry="16" fill="#d8b48a"/>
+  <path d="M62 196h56l8 28H54z" fill="#6f8f9a"/>
+  <text x="90" y="300" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#6d6256">Hallway snapshot placeholder</text>
+</svg>

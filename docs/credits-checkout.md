@@ -11,7 +11,7 @@ Current demo files, rounded:
 | Look | Source | Credits |
 |------|--------|---------|
 | Bby Wow | 6.041667s | 6 |
-| Kiss Cam | 6.041667s | 6 |
+| Tiny Desk | 17.76s | 18 |
 | Ceiling Fan | 15.278005s | 15 |
 
 `POST /api/jobs` deducts that amount when the photo is stored and the job row is queued. The ledger id is `deduct_{jobId}`. A second charge for the same job does not move the balance again.

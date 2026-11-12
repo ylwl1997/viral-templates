@@ -1,4 +1,4 @@
-import { JOB_MEDIA_COLUMNS, JOB_PROVIDER_COLUMNS, SCHEMA_SQL, schemaStatements } from './schema.js';
+import { JOB_MEDIA_COLUMNS, JOB_PROVIDER_COLUMNS, PIPELINE_JOB_COLUMNS, SCHEMA_SQL, schemaStatements } from './schema.js';
 import { creditsForDuration, getTemplate } from './templates.js';
 
 const JOB_STATUSES = new Set(['queued', 'running', 'ready', 'failed']);
@@ -61,7 +61,7 @@ export async function ensureMediaColumns(db) {
   const info = await db.prepare(`PRAGMA table_info(jobs)`).all();
   const have = new Set((info.results || []).map((row) => String(row.name)));
   if (!have.has('id')) return;
-  for (const name of [...JOB_MEDIA_COLUMNS, ...JOB_PROVIDER_COLUMNS]) {
+  for (const name of [...JOB_MEDIA_COLUMNS, ...JOB_PROVIDER_COLUMNS, ...PIPELINE_JOB_COLUMNS]) {
     if (have.has(name)) continue;
     if (!/^[a-z0-9_]+$/.test(name)) throw fail('storage_error');
     try {
@@ -416,7 +416,7 @@ export async function getJobMediaRecord(db, jobId) {
   await ensureSchema(db);
   return db
     .prepare(
-      `SELECT id, user_id, status, upload_key, upload_key_2, upload_url, upload_url_2, result_key, result_url
+      `SELECT id, user_id, status, upload_key, upload_key_2, extra_upload_keys, pipeline_frame, upload_url, upload_url_2, result_key, result_url
        FROM jobs WHERE id = ?`,
     )
     .bind(id)
@@ -438,7 +438,7 @@ function cleanTaskId(value) {
   return text;
 }
 
-const REMAKE_COLUMNS = `id, user_id, template_slug, status, upload_key, upload_key_2, provider_task_id, error_code, updated_at`;
+const REMAKE_COLUMNS = `id, user_id, template_slug, status, upload_key, upload_key_2, extra_upload_keys, pipeline_frame, provider_task_id, error_code, updated_at`;
 
 /**
  * Oldest running jobs first, then oldest queued jobs.

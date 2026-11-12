@@ -39,8 +39,8 @@ assert(xmpDeclaresAi(labeled), 'xmp marker');
 assert(labeled[4] === 0x66 && labeled[5] === 0x74, 'ftyp stayed first');
 assert(!xmpDeclaresAi(poster), 'photo is not a labeled video');
 
-for (const name of ['bby-wow-demo.mp4', 'kiss-cam-demo.mp4', 'ceiling-fan-demo.mp4']) {
-  const src = fs.readFileSync(new URL(`../public/brand/templates/${name}`, import.meta.url));
+for (const name of ['audio-bed.mp4']) {
+  const src = fs.readFileSync(new URL(`./fixtures/${name}`, import.meta.url));
   assert(mp4HasAudio(src), `${name} has no music bed`);
   const silent = withoutAudioTrack(src);
   assert(!mp4HasAudio(silent), `${name} strip left audio`);

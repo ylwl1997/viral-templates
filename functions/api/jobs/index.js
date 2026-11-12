@@ -15,6 +15,8 @@ export async function onRequestPost(context) {
       user: opened.user,
       templateSlug: parsed.template_slug,
       photos: parsed.photos,
+      petsOnly: parsed.petsOnly === true,
+      frame: parsed.frame,
     });
     if (result.job && result.job.id) scheduleRemakeKick(context, result.job.id);
     return jsonNoStore({ ok: true, job: result.job, media: result.media }, 201);

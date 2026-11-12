@@ -22,8 +22,8 @@ export const SITE = {
   /** Canonical origin for sitemap / shared legal pages (https). */
   url: `https://${SITE_APEX}`,
   apex: SITE_APEX,
-  taglineEn: 'Short vertical clips from a photo you already have.',
-  taglineZh: '用已有的照片，做一条竖屏短片。',
+  taglineEn: 'Short vertical clips from a pet photo you already have.',
+  taglineZh: '用已有的宠物照片，做一条竖屏短片。',
   ga4Id: (import.meta.env.PUBLIC_GA4_MEASUREMENT_ID as string) || '',
   adsterraSocialBarZone:
     (import.meta.env.PUBLIC_ADSTERRA_SOCIAL_BAR_ZONE as string) ||
@@ -45,9 +45,9 @@ export const SITE = {
     ],
   },
   disclaimerEn:
-    `Adult consent only · no minors. Independent AI remix tools — not official Coldplay / Karol G / CapCut / any label. Kiss Cam uses no real concert footage. Ceiling Fan: never strap a phone to a fan. Photos deleted ~${photoRetentionDays} days; finished clips ~${videoRetentionDays} days (see Privacy).`,
+    `Pet photos only. Not an official recording or show. Ceiling Fan: never strap a phone to a fan. Photos deleted ~${photoRetentionDays} days; finished clips ~${videoRetentionDays} days (see Privacy).`,
   disclaimerZh:
-    `仅限成人同意照片 · 禁止未成年人。独立 AI remix · 非 Coldplay / Karol G / CapCut 官方。Kiss Cam 不含真实演唱会素材。吊扇模板：切勿把手机绑在风扇上。照片约 ${photoRetentionDays} 天删除，成片约 ${videoRetentionDays} 天（见隐私政策）。`,
+    `仅限宠物照片。不是官方录音或节目。吊扇效果：切勿把手机绑在风扇上。照片约 ${photoRetentionDays} 天删除，成片约 ${videoRetentionDays} 天（见隐私政策）。`,
 } as const;
 
 export type Lang = 'en' | 'zh';

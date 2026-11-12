@@ -11,8 +11,9 @@
 
 const KNOWN_SLUGS = new Set([
   'bby-wow',
-  'kiss-cam',
+  'tiny-desk',
   'ceiling-fan',
+  'kiss-cam',
   'bulin-47',
   'zombie-love',
   'smalltown-boy-cats',
@@ -167,6 +168,11 @@ export async function onRequest(context) {
   }
 
   // Already on a brand path (/t/{slug}/…): keep vt_brand for later /account/* visits.
+  if (/^\/(?:zh\/)?t\/kiss-cam(?:\/|$)/.test(url.pathname)) {
+    const home = url.pathname.startsWith('/zh/') ? '/zh/' : '/';
+    return Response.redirect(new URL(home, url), 302);
+  }
+
   const pathBrand = brandFromPath(url.pathname);
   if (pathBrand) {
     const res = await next();
@@ -182,6 +188,9 @@ export async function onRequest(context) {
   if (!isApex && host.endsWith(suffix)) {
     const sub = host.slice(0, -suffix.length);
     if (sub && sub !== 'www' && !sub.includes('.')) {
+      if (sub === 'kiss-cam') {
+        return Response.redirect(new URL('/', url), 302);
+      }
       if (!KNOWN_SLUGS.has(sub)) {
         const notFound = new URL('/unknown-site/', url);
         const res = await serve(context, notFound);

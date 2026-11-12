@@ -1,0 +1,335 @@
+{
+  "$ref": "#/definitions/AdaptedPromptSet",
+  "definitions": {
+    "AdaptedPromptSet": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "1.0.0"
+        },
+        "packId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "packVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mappingPolicy": {
+          "type": "string",
+          "const": "drop-unfilled"
+        },
+        "adaptation": {
+          "type": "object",
+          "properties": {
+            "adapter": {
+              "type": "string",
+              "minLength": 1
+            },
+            "requestedAdapter": {
+              "type": "string",
+              "minLength": 1
+            },
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "failClosed": {
+              "type": "boolean"
+            },
+            "usedModelText": {
+              "type": "boolean"
+            },
+            "fallback": {
+              "type": "string",
+              "enum": [
+                "none",
+                "deterministic",
+                "pack-prompt"
+              ]
+            },
+            "warnings": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "petCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "countClass": {
+              "type": "string",
+              "enum": [
+                "single",
+                "multi"
+              ]
+            },
+            "photoLayout": {
+              "type": "string",
+              "enum": [
+                "single",
+                "solo-stills",
+                "grouped",
+                "mixed"
+              ]
+            },
+            "interaction": {
+              "type": "string",
+              "enum": [
+                "single-performer",
+                "ensemble-in-frame",
+                "grouped-together"
+              ]
+            },
+            "reasons": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "adapter",
+            "requestedAdapter",
+            "failClosed",
+            "usedModelText",
+            "fallback",
+            "warnings",
+            "petCount",
+            "countClass",
+            "photoLayout",
+            "interaction",
+            "reasons"
+          ],
+          "additionalProperties": false
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "roleId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "filled",
+                  "dropped"
+                ]
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "packToken": {
+                "type": "string"
+              },
+              "deliveryToken": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "phrase": {
+                "type": "string"
+              },
+              "appearance": {
+                "type": "object",
+                "properties": {
+                  "species": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "breed": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "colors": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "markings": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "eyes": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "clothing": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "count": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "image": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "groupId": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "roleId",
+              "status",
+              "required",
+              "packToken",
+              "deliveryToken"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "startSec": {
+                "type": "number"
+              },
+              "endSec": {
+                "type": "number"
+              },
+              "durationSec": {
+                "type": "number"
+              },
+              "promptSeconds": {
+                "type": "integer"
+              },
+              "variant": {
+                "type": "string",
+                "enum": [
+                  "timed-beats",
+                  "locked-segment",
+                  "single-performer"
+                ]
+              },
+              "derivedFrom": {
+                "type": "string",
+                "enum": [
+                  "timed-beats",
+                  "locked-segment"
+                ]
+              },
+              "prompt": {
+                "type": "string",
+                "minLength": 1
+              },
+              "droppedRoleIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "keptRoleIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "collapsed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "startSec",
+              "endSec",
+              "durationSec",
+              "promptSeconds",
+              "variant",
+              "prompt",
+              "droppedRoleIds",
+              "keptRoleIds",
+              "collapsed"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "generationHints": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "const": "agnes-video-2.5"
+            },
+            "resolution": {
+              "type": "string",
+              "const": "720P"
+            },
+            "aspectRatio": {
+              "type": "string",
+              "pattern": "^\\d+:\\d+$"
+            },
+            "imagesOnly": {
+              "type": "boolean",
+              "const": true
+            },
+            "mode": {
+              "type": "string",
+              "const": "reference"
+            },
+            "seconds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(?:[4-9]|1[0-2])$"
+              }
+            }
+          },
+          "required": [
+            "model",
+            "resolution",
+            "aspectRatio",
+            "imagesOnly",
+            "mode",
+            "seconds"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "packId",
+        "packVersion",
+        "mappingPolicy",
+        "adaptation",
+        "roles",
+        "segments",
+        "generationHints"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

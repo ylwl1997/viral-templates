@@ -1,0 +1,62 @@
+---
+import type { Lang } from '../../lib/site';
+import type { Template } from '../../lib/templates';
+import BrandClose from './BrandClose.astro';
+import BrandLook from './BrandLook.astro';
+
+interface Props { template: Template; lang: Lang }
+const { template: t, lang } = Astro.props;
+const story = t.story;
+if (!story) throw new Error('Tiny Desk is missing its story');
+const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+const { lead, support, beats, diy } = story;
+---
+<section class="section wrap">
+  <div class="party-lead">
+    <p class="eyebrow">{L(lead.eyebrowEn, lead.eyebrowZh)}</p>
+    <h2>{L(lead.titleEn, lead.titleZh)}</h2>
+    <p class="story-body">{L(lead.bodyEn, lead.bodyZh)}</p>
+    <ol class="party-beats">
+      {beats.map((beat) => (
+        <li>
+          <h3>{L(beat.titleEn, beat.titleZh)}</h3>
+          <p>{L(beat.bodyEn, beat.bodyZh)}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<section class="section wrap">
+  <p class="eyebrow">{L(support.eyebrowEn, support.eyebrowZh)}</p>
+  <h2>{L(support.titleEn, support.titleZh)}</h2>
+  <p class="story-body">{L(support.bodyEn, support.bodyZh)}</p>
+</section>
+
+<BrandLook
+  template={t}
+  lang={lang}
+  variant="desk"
+  title={L('The snapshot, then the desk.', '快照进去，书桌出来。')}
+  lede={L(
+    'Ordinary room, plain desk, phone light. The pets in the photos are the band.',
+    '普通房间，一张书桌，手机光线。照片里的宠物就是乐队。',
+  )}
+/>
+
+<section class="section wrap">
+  <p class="eyebrow">{L(diy.eyebrowEn, diy.eyebrowZh)}</p>
+  <h2>{L(diy.titleEn, diy.titleZh)}</h2>
+  <div class="diy-split">
+    <div>
+      <h3>{L(diy.hardTitleEn, diy.hardTitleZh)}</h3>
+      <p>{L(diy.hardEn, diy.hardZh)}</p>
+    </div>
+    <div>
+      <h3>{L(diy.easyTitleEn, diy.easyTitleZh)}</h3>
+      <p>{L(diy.easyEn, diy.easyZh)}</p>
+    </div>
+  </div>
+</section>
+
+<BrandClose template={t} lang={lang} />

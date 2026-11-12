@@ -105,7 +105,7 @@ Body:
 You need a real `BAILIAN_API_KEY` on the Pages project. This VM does not have it. `scripts/smoke-bailian.mjs` never sends that key. It only sends `JOB_PROCESS_SECRET`.
 
 1. Set the secrets above and deploy.
-2. Sign in on https://viral-templates.pages.dev and open Create for a live look (`bby-wow`, `kiss-cam`, or `ceiling-fan`).
+2. Sign in on https://viral-templates.pages.dev and open Create for a live pet look (`bby-wow`, `tiny-desk`, or `ceiling-fan`). Live looks do not send a template video.
 3. Upload a JPG, PNG, or WebP of one adult. Bailian rejects images over 5 MB (Create still accepts up to 8 MB; those jobs fail with `photo_too_large`).
 4. Generate. Copy `job.id` from the JSON or the account page.
 5. From a checkout of this repo:

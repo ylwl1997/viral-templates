@@ -34,7 +34,7 @@ function expired(row, nowMs = Date.now()) {
 export async function createPhoneLink({ db, env, request, user, templateSlug, slot }) {
   if (!mediaConfigured(env)) throw fail('upload_unavailable');
   const template = getTemplate(templateSlug);
-  if (!template || !template.referenceVideo) throw fail('bad_template');
+  if (!template || template.retired || !template.packId) throw fail('bad_template');
   const index = Number(slot);
   if (!Number.isInteger(index) || index < 0 || index >= template.photoCount) throw fail('bad_photo');
   const row = await ensureUser(db, user);

@@ -12,9 +12,10 @@ const { template: t, lang = 'en' } = Astro.props;
 const label = (en: string, zh: string) => (lang === 'zh' ? zh : en);
 const home = keywordPath(lang, t.slug, '');
 const credits = t.creditCost ?? 0;
-const pairSlots = t.photoCount === 2 && t.photoSlots && t.photoSlots.length === 2 ? t.photoSlots : null;
-const uploadCount = pairSlots ? 2 : t.photoCount === 1 ? 1 : 0;
-const slots = uploadCount === 2 ? [0, 1] : uploadCount === 1 ? [0] : [];
+const bandSlots = t.photoSlots && t.photoSlots.length > 1 ? t.photoSlots : null;
+const uploadCount = bandSlots ? bandSlots.length : t.photoCount === 1 ? 1 : 0;
+const minPhotos = t.minPhotos && t.minPhotos > 0 ? t.minPhotos : uploadCount;
+const slots = uploadCount > 1 ? bandSlots.map((_, i) => i) : uploadCount === 1 ? [0] : [];
 const uid = `cs-${t.slug}`;
 const signInBase = signInHref(lang);
 const creditsHref = accountHref(lang, 'credits');
@@ -23,12 +24,12 @@ const duration = lang === 'zh' ? t.durationZh : t.durationEn;
 const name = lang === 'zh' ? t.displayNameZh : t.displayName;
 const primaryCase = t.cases?.[0];
 const sources = primaryCase?.sources ?? [];
-const photoLabel = label('Your photo', '上传的照片');
-const pairReplaceEn = pairSlots
-  ? `${pairSlots[0].labelEn} replaces ${pairSlots[0].replacesEn}. ${pairSlots[1].labelEn} replaces ${pairSlots[1].replacesEn}. Both people in the clip are replaced.`
+const photoLabel = label('Pet photo', '宠物照片');
+const pairReplaceEn = bandSlots
+  ? 'The first photo is the lead pet. Later seats are optional and stay empty if you skip them.'
   : '';
-const pairReplaceZh = pairSlots
-  ? `${pairSlots[0].labelZh} 会替换${pairSlots[0].replacesZh}。${pairSlots[1].labelZh} 会替换${pairSlots[1].replacesZh}。成片里的两个人都会被替换。`
+const pairReplaceZh = bandSlots
+  ? '第一张是主唱宠物。后面的座位可选，不传就空着。'
   : '';
 ---
 <section class="wrap create-studio" id={uid} data-r2-ready={SITE.r2Configured ? '1' : '0'}>
@@ -49,14 +50,15 @@ const pairReplaceZh = pairSlots
       <div class="studio-step">
         <span class="step-index">1</span>
         <div>
-          <h3>{pairSlots ? label('Your photos', '你的照片') : label('Your photo', '你的照片')}</h3>
-          {pairSlots ? (
-            <div class="upload-slots" data-slots="2">
+          <h3>{bandSlots ? label('Pet photos', '宠物照片') : label('Pet photo', '宠物照片')}</h3>
+          {bandSlots ? (
+            <div class="upload-slots" data-slots={String(bandSlots.length)}>
               {slots.map((i) => (
                 <label class="slot" data-slot={i}>
                   <input type="file" accept="image/jpeg,image/png,image/webp" class="slot-file" data-slot={i} />
                   <span class="slot-label">
-                    {label(pairSlots[i].labelEn, pairSlots[i].labelZh)}
+                    {label(bandSlots[i].labelEn, bandSlots[i].labelZh)}
+                    {i > 0 ? label(' · optional', ' · 可选') : ''}
                     <br /><small>JPG, PNG, WebP</small>
                   </span>
                   <img class="slot-preview" data-slot={i} alt="" hidden />
@@ -67,15 +69,21 @@ const pairReplaceZh = pairSlots
             <label class="upload-zone" for={`${uid}-photo`}>
               <input id={`${uid}-photo`} class="slot-file" data-slot="0" type="file" accept="image/jpeg,image/png,image/webp" />
               <div id={`${uid}-ph`}>
-                <strong>{label('Drop a photo or click to upload', '拖放照片，或点击上传')}</strong>
-                <div class="hint">JPG, PNG, WebP · {label('you need the rights to use it', '需拥有使用权')}</div>
+                <strong>{label('Drop a pet photo or click to upload', '拖放宠物照片，或点击上传')}</strong>
+                <div class="hint">JPG, PNG, WebP · {label('an everyday snapshot you can use', '你可以使用的日常快照')}</div>
               </div>
               <img id={`${uid}-preview`} class="preview-img slot-preview" data-slot="0" alt="" hidden />
             </label>
           ) : (
             <p class="hint">{label('This look is not available yet.', '这个效果还不能生成。')}</p>
           )}
-          {pairSlots ? <p class="hint">{label(pairReplaceEn, pairReplaceZh)}</p> : null}
+          {bandSlots ? <p class="hint">{label(pairReplaceEn, pairReplaceZh)}</p> : null}
+          {bandSlots ? (
+            <label class="consent-check">
+              <input type="checkbox" data-together />
+              <span>{label('These pets are together in the one photo I upload.', '我只上传一张照片，里面的宠物在一起。')}</span>
+            </label>
+          ) : null}
           <div class="phone-handoff" data-phone-handoff hidden>
             <button type="button" class="btn btn-ghost" data-phone-start>
               {label('Upload from your phone', '用手机上传')}
@@ -115,8 +123,8 @@ const pairReplaceZh = pairSlots
             <input id={`${uid}-consent`} type="checkbox" />
             <span>
               {label(
-                `This photo is of me, or I have permission. ${pairSlots ? 'Both people are' : 'They are'} 18 or older, or it is a pet with the owner’s permission.`,
-                `这是我本人，或我已获得授权。${pairSlots ? '两人均' : '对方'}年满 18 岁，或为已获主人同意的宠物。`
+                'These photos are pets I can use. No people.',
+                '这些照片是我可以使用的宠物。没有人。',
               )}
             </span>
           </label>
@@ -138,15 +146,10 @@ const pairReplaceZh = pairSlots
         </a>
       </div>
       <div class="status-box" id={`${uid}-status`}>
-        {pairSlots
-          ? label(
-              'Add both photos and confirm consent. Both people in the clip are replaced.',
-              '上传两张照片并确认授权。成片里的两个人都会被替换。',
-            )
-          : label(
-              'Add a photo and confirm consent to continue.',
-              '上传照片并确认授权后才能继续。',
-            )}
+        {label(
+          'Add a pet photo and confirm it to continue.',
+          '上传宠物照片并确认后才能继续。',
+        )}
       </div>
       <p data-job-follow hidden>
         <a data-job-download hidden rel="noopener noreferrer"></a>
@@ -174,14 +177,14 @@ const pairReplaceZh = pairSlots
         alt={label(`${name} sample`, `${name} 示例`)}
         originalLabel={photoLabel}
         resultLabel={label('Result', '生成的视频')}
-        note={pairSlots
+        note={bandSlots
           ? label(
               `${pairReplaceEn} Generate queues the job. The clip shows on your account when it is ready.`,
               `${pairReplaceZh}生成会把任务排进账户。完成后成片会出现在账户里。`,
             )
           : label(
-              'The photo matches the person in the clip. Your upload replaces it. Generate queues the job. The clip shows on your account when it is ready.',
-              '照片与成片是同一个人。上传后会换成你的照片。生成会把任务排进账户。完成后成片会出现在账户里。',
+              'The pet in the photo is the pet in the clip. Generate queues the job. The clip shows on your account when it is ready.',
+              '照片里的宠物就是成片里的宠物。生成会把任务排进账户。完成后成片会出现在账户里。',
             )}
         liveOriginal
       />
@@ -189,7 +192,7 @@ const pairReplaceZh = pairSlots
   </div>
 </section>
 
-<script is:inline define:vars={{ photoCount: uploadCount, uid, signInBase, lang, slug: t.slug }}>
+<script is:inline define:vars={{ photoCount: minPhotos, maxPhotos: uploadCount, uid, signInBase, lang, slug: t.slug }}>
   (function () {
     const root = document.getElementById(uid);
     if (!root) return;
@@ -207,12 +210,14 @@ const pairReplaceZh = pairSlots
       status.textContent = text;
       status.className = 'status-box' + (kind ? ' ' + kind : '');
     }
-    function readyCount() {
-      return Object.keys(files).length;
+    function filledPrefix() {
+      var n = 0;
+      while (files[String(n)]) n += 1;
+      return n;
     }
     function syncGenerate() {
       if (!btn) return;
-      var ok = photoCount > 0 && consent && consent.checked && readyCount() >= photoCount;
+      var ok = photoCount > 0 && consent && consent.checked && filledPrefix() >= photoCount;
       btn.disabled = !ok;
       if (ok) btn.removeAttribute('aria-disabled');
       else btn.setAttribute('aria-disabled', 'true');
@@ -544,12 +549,12 @@ const pairReplaceZh = pairSlots
           setStatus(lang === 'zh' ? '这个效果还不能生成。' : 'This look is not available yet.', 'err');
           return;
         }
-        if (readyCount() < photoCount) {
-          setStatus(lang === 'zh' ? '请先上传照片。' : 'Upload photo(s) first.', 'err');
+        if (filledPrefix() < photoCount) {
+          setStatus(lang === 'zh' ? '请先上传宠物照片。' : 'Upload a pet photo first.', 'err');
           return;
         }
         if (!consent.checked) {
-          setStatus(lang === 'zh' ? '请先确认成人授权。' : 'Confirm adult consent first.', 'err');
+          setStatus(lang === 'zh' ? '请先确认这是宠物照片。' : 'Confirm these are pet photos first.', 'err');
           return;
         }
         var follow = root.querySelector('[data-job-follow]');
@@ -561,10 +566,14 @@ const pairReplaceZh = pairSlots
         setStatus(lang === 'zh' ? '正在加入队列…' : 'Queuing…', 'cfg');
         var body = new FormData();
         body.append('template_slug', slug);
-        Object.keys(files).sort().forEach(function (slot) {
-          var file = files[slot];
-          body.append('photo_' + slot, file, file.name || ('photo-' + slot));
-        });
+        body.append('pets_only', '1');
+        var together = root.querySelector('[data-together]');
+        if (together && together.checked && filledPrefix() === 1) body.append('frame', 'together');
+        var prefix = filledPrefix();
+        for (var slotIndex = 0; slotIndex < prefix && slotIndex < maxPhotos; slotIndex += 1) {
+          var file = files[String(slotIndex)];
+          body.append('photo_' + slotIndex, file, file.name || ('photo-' + slotIndex));
+        }
         fetch('/api/jobs', {
           method: 'POST',
           credentials: 'same-origin',

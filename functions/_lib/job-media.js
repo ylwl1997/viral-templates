@@ -85,9 +85,14 @@ export async function readCreateJobBody(request) {
     const list = [];
     if (Array.isArray(body.photos)) list.push(...body.photos);
     else if (typeof body.photo === 'string') list.push(body.photo);
-    if (list.length > 2) throw fail('bad_photo');
+    if (list.length > 5) throw fail('bad_photo');
     for (const item of list) photos.push(imageFromDataUrl(item));
-    return { template_slug: body.template_slug, photos };
+    return {
+      template_slug: body.template_slug,
+      photos,
+      petsOnly: body.pets_only === true || body.pets_only === '1' || body.pets_only === 1,
+      frame: body.frame === 'together' ? 'together' : 'solo',
+    };
   }
   if (type.includes('multipart/form-data')) {
     let form;
@@ -99,7 +104,7 @@ export async function readCreateJobBody(request) {
     const slug = form.get('template_slug');
     if (typeof slug !== 'string') throw fail('bad_template');
     const photos = [];
-    for (const slot of [0, 1]) {
+    for (const slot of [0, 1, 2, 3, 4]) {
       const raw = form.get(`photo_${slot}`) || (slot === 0 ? form.get('photo') : null);
       if (raw == null) continue;
       if (photos.length !== slot) throw fail('bad_photo');
@@ -113,7 +118,14 @@ export async function readCreateJobBody(request) {
       }
       photos.push({ bytes, contentType: sniffed.contentType, ext: sniffed.ext });
     }
-    return { template_slug: slug, photos };
+    const petsFlag = form.get('pets_only');
+    const frameFlag = form.get('frame');
+    return {
+      template_slug: slug,
+      photos,
+      petsOnly: petsFlag === '1' || petsFlag === 'true',
+      frame: frameFlag === 'together' ? 'together' : 'solo',
+    };
   }
   throw fail('bad_json');
 }
@@ -122,12 +134,30 @@ export async function readCreateJobBody(request) {
  * Queue a job. Photos are stored only when the MEDIA binding is present.
  * Missing binding: job still queues, media.error is r2_unbound when photos were sent.
  */
-export async function queueJobWithMedia({ db, env, request, user, templateSlug, photos }) {
+export function extraUploadKeys(record) {
+  if (!record || typeof record.extra_upload_keys !== 'string' || !record.extra_upload_keys) return [];
+  try {
+    const parsed = JSON.parse(record.extra_upload_keys);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((key) => typeof key === 'string' && key.startsWith('uploads/'));
+  } catch {
+    return [];
+  }
+}
+
+export function storedPhotoKeys(record) {
+  return [record && record.upload_key, record && record.upload_key_2, ...extraUploadKeys(record)].filter(Boolean);
+}
+
+export async function queueJobWithMedia({ db, env, request, user, templateSlug, photos, petsOnly, frame }) {
   const template = getTemplate(templateSlug);
   if (!template) throw fail('bad_template');
+  if (template.retired) throw fail('template_retired');
+  if (petsOnly === false) throw fail('pets_only');
   const incoming = Array.isArray(photos) ? photos : [];
-  if (incoming.length > 2) throw fail('bad_photo');
-  if (incoming.length && incoming.length !== template.photoCount) throw fail('bad_photo');
+  const minPhotos = template.minPhotos || 1;
+  if (incoming.length > template.photoCount || incoming.length > 5) throw fail('bad_photo');
+  if (incoming.length && (incoming.length < minPhotos || incoming.length > template.photoCount)) throw fail('bad_photo');
   const prepared = incoming.map((photo) => {
     const sniffed = assertReferenceImage(photo.bytes);
     return { bytes: photo.bytes, contentType: sniffed.contentType, ext: sniffed.ext };
@@ -157,8 +187,8 @@ export async function queueJobWithMedia({ db, env, request, user, templateSlug, 
         customMetadata: photoMeta(owner.user_id, id, days),
       });
       keys.push(key);
-      const kind = slot === 0 ? 'photo' : 'photo-2';
-      stored.push({ key, url: await signedDownloadUrl(env, request, id, kind, ttl) });
+      const kind = slot === 0 ? 'photo' : `photo-${slot + 1}`;
+      stored.push({ key, url: slot < 2 ? await signedDownloadUrl(env, request, id, kind, ttl) : null });
     }
     if (templateCreditCost(template) > 0) {
       await chargeJobCredits(db, owner, id, template);
@@ -171,6 +201,14 @@ export async function queueJobWithMedia({ db, env, request, user, templateSlug, 
       upload_key_2: stored[1] ? stored[1].key : null,
       upload_url_2: stored[1] ? stored[1].url : null,
     });
+    const extra = stored.slice(2).map((item) => item.key);
+    const pipelineFrame = frame === 'together' && stored.length === 1 ? 'together' : 'solo';
+    if (extra.length || pipelineFrame) {
+      await db
+        .prepare(`UPDATE jobs SET extra_upload_keys = ?, pipeline_frame = ? WHERE id = ?`)
+        .bind(extra.length ? JSON.stringify(extra) : null, pipelineFrame, id)
+        .run();
+    }
     return {
       job,
       media: {
@@ -321,6 +359,10 @@ export function keyForKind(record, kind) {
   if (/^seg[0-7]$/.test(kind)) return segmentObjectKey(record.user_id, record.id, Number(kind.slice(3)));
   if (kind === 'photo') return record.upload_key || null;
   if (kind === 'photo-2') return record.upload_key_2 || null;
+  if (kind === 'photo-3' || kind === 'photo-4' || kind === 'photo-5') {
+    const extra = extraUploadKeys(record);
+    return extra[Number(kind.slice(6)) - 3] || null;
+  }
   if (kind === 'result') {
     if (record.status !== 'ready') return null;
     return record.result_key || null;

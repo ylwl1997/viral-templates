@@ -46,12 +46,25 @@ import {
   revertQueuedJob,
   saveProviderTask,
 } from './account-db.js';
+import bbyWowPack from '../../packages/template-pipeline/packs/bby-wow-pets/pack.json' with { type: 'json' };
+import ceilingFanPack from '../../packages/template-pipeline/packs/ceiling-fan-pets/pack.json' with { type: 'json' };
+import tinyDeskPack from '../../packages/template-pipeline/packs/tiny-desk-pets/pack.json' with { type: 'json' };
+import {
+  ImageAssignmentError,
+  MissingRequiredRoleError,
+  PackValidationError,
+  StaleIdentityError,
+  adaptPack,
+  formatAgnesCreatePayload,
+  parseTemplatePack,
+} from '../../packages/template-pipeline/dist/site/index.js';
 import {
   AGNES_IMAGE_TOTAL_MAX_BYTES,
   AGNES_POLL_MIN_MS,
   AGNES_VIDEO_MAX_BYTES,
   agnesInputUrls,
   agnesMediaDecision,
+  agnesPhotoUrls,
   agnesPollDelayMs,
   agnesSegmentInputs,
   createReferenceVideo,
@@ -76,6 +89,7 @@ import {
 } from './bailian.js';
 import { readImageSize } from './image-precheck.js';
 import { mp4HasAudio, muxStyleAudio } from './mp4-finish.js';
+import { extraUploadKeys } from './job-media.js';
 import { getTemplate } from './templates.js';
 import { storeJobResult } from './job-media.js';
 import {
@@ -111,6 +125,22 @@ const NOTES = {
   no_reference_video: {
     en: 'This look has no reference clip yet, so a video cannot be generated.',
     zh: '这个风格还没有参考视频，无法生成。',
+  },
+  missing_required_role: {
+    en: 'This look needs the lead pet photo. The clip was not generated, and the credits were returned.',
+    zh: '这个效果需要主宠物的照片。短片没有生成，积分已退回。',
+  },
+  stale_identity: {
+    en: 'This clip could not be started. The credits were returned.',
+    zh: '这条短片没有开始。积分已退回。',
+  },
+  invalid_pack: {
+    en: 'This clip could not be started. The credits were returned.',
+    zh: '这条短片没有开始。积分已退回。',
+  },
+  image_assignment: {
+    en: 'This clip could not be started. The credits were returned.',
+    zh: '这条短片没有开始。积分已退回。',
   },
   provider_task_taken: {
     en: 'This clip could not be started. Please try again from Create.',
@@ -285,7 +315,7 @@ async function submitBailian(ctx, row, prepared) {
 async function readSubjects(bucket, row, photoCount) {
   const kinds = referencePhotoKinds(photoCount);
   if (!kinds) throw fail('reference_photos');
-  const keys = [row.upload_key, row.upload_key_2];
+  const keys = [row.upload_key, row.upload_key_2, ...extraUploadKeys(row)];
   const images = [];
   for (let index = 0; index < kinds.length; index += 1) {
     if (!keys[index]) throw fail('no_photo');
@@ -343,17 +373,86 @@ function agnesCode(err) {
   return err.code || 'failed';
 }
 
+function storedPhotoCount(row) {
+  const extra = extraUploadKeys(row);
+  return [row && row.upload_key, row && row.upload_key_2, ...extra].filter(Boolean).length;
+}
+
+const PARSED_PACKS = {
+  'bby-wow-pets': parseTemplatePack(bbyWowPack),
+  'ceiling-fan-pets': parseTemplatePack(ceilingFanPack),
+  'tiny-desk-pets': parseTemplatePack(tinyDeskPack),
+};
+
+function loadPack(id) {
+  return PARSED_PACKS[id] || null;
+}
+
+function pipelineCustomerImages(pack, row, urls) {
+  const count = urls ? urls.length : storedPhotoCount(row);
+  const together = count === 1 && row.pipeline_frame === 'together';
+  const images = [];
+  for (let index = 0; index < count; index += 1) {
+    const role = pack.roles[index];
+    if (!role) continue;
+    const image = {
+      roleId: role.id,
+      url: urls ? urls[index] : `https://example.invalid/${index + 1}`,
+    };
+    if (together) {
+      image.groupId = 'together';
+      image.appearance = { count: 2 };
+    }
+    images.push(image);
+  }
+  return images;
+}
+
+function pipelineErrorCode(err) {
+  if (err instanceof MissingRequiredRoleError || err instanceof StaleIdentityError || err instanceof PackValidationError || err instanceof ImageAssignmentError) {
+    return err.code;
+  }
+  if (err && (err.code === 'missing_required_role' || err.code === 'stale_identity' || err.code === 'invalid_pack' || err.code === 'image_assignment')) {
+    return err.code;
+  }
+  return 'failed';
+}
+
 function agnesCreateInput(template, inputs, seconds) {
-  if (!inputs || !Array.isArray(inputs.imageUrls) || inputs.imageUrls.length !== template.photoCount) return null;
+  if (!inputs || !Array.isArray(inputs.imageUrls)) return null;
+  if (inputs.imageOnly) {
+    if (!inputs.prompt) return null;
+    return {
+      imageOnly: true,
+      imageUrls: inputs.imageUrls,
+      seconds,
+      prompt: inputs.prompt,
+    };
+  }
+  if (inputs.imageUrls.length !== template.photoCount) return null;
   return {
     imageUrls: inputs.imageUrls,
     videoUrl: inputs.videoUrl,
     seconds,
-    prompt: referencePrompt(template),
+    prompt: inputs.prompt || referencePrompt(template),
   };
 }
 
 async function segmentInputs(ctx, row, prepared, segment) {
+  if (prepared.pipeline) {
+    const photoCount = prepared.photoCount;
+    const urls = await agnesPhotoUrls(ctx.env, row.id, photoCount);
+    if (!urls || !prepared.pack || !segment.id) return null;
+    const adapted = await adaptPack(prepared.pack, pipelineCustomerImages(prepared.pack, row, urls.imageUrls));
+    const formatted = formatAgnesCreatePayload(adapted, segment.id);
+    if (!formatted.create.body.images.length) return null;
+    return {
+      imageOnly: true,
+      imageUrls: formatted.create.body.images,
+      prompt: formatted.create.body.prompt,
+      seconds: formatted.create.body.seconds,
+    };
+  }
   const segments = prepared.selection && prepared.selection.segments;
   const count = segments && segments.length ? segments.length : 1;
   const photoCount = prepared.template.photoCount;
@@ -389,6 +488,7 @@ async function submitAgnesSegment(ctx, row, prepared, index) {
     inputs = await segmentInputs(ctx, row, prepared, segment);
   } catch (err) {
     console.error('agnes_input', row.id, err && err.code ? err.code : 'error');
+    if (prepared.pipeline) return failJob(db, row, pipelineErrorCode(err));
     if (index === 0) return { fallback: true };
     return failJob(db, row, 'failed');
   }
@@ -524,11 +624,20 @@ async function submitAgnesParallel(ctx, row, prepared) {
   try {
     for (const segment of segments) {
       const one = await segmentInputs(ctx, row, prepared, segment);
-      if (!one) return { fallback: true };
+      if (!one) {
+        if (prepared.pipeline) {
+          return failJob(db, row, 'failed', {
+            note_en: 'This clip could not be started. The credits were returned.',
+            note_zh: '这条短片没有开始。积分已退回。',
+          });
+        }
+        return { fallback: true };
+      }
       inputs.push(one);
     }
   } catch (err) {
     console.error('agnes_input', row.id, err && err.code ? err.code : 'error');
+    if (prepared.pipeline) return failJob(db, row, pipelineErrorCode(err));
     return { fallback: true };
   }
   const created = await Promise.all(segments.map((segment, index) => createPiece(ctx, prepared.template, inputs[index], segment)));
@@ -595,6 +704,12 @@ async function submitRouted(ctx, row, prepared) {
   if (prepared.selection.provider === 'agnes') {
     const agnesResult = await submitAgnes(ctx, row, prepared);
     if (agnesResult && agnesResult.fallback) {
+      if (prepared.pipeline) {
+        return failJob(ctx.db, row, 'failed', {
+          note_en: 'This clip could not be started. The credits were returned.',
+          note_zh: '这条短片没有开始。积分已退回。',
+        });
+      }
       if (!plannedReferenceImages(prepared.template, 'bailian')) {
         return failReferencePhotos(ctx.db, row, prepared.template);
       }
@@ -606,13 +721,79 @@ async function submitRouted(ctx, row, prepared) {
   return submitBailian(ctx, row, prepared);
 }
 
+async function preparePipeline(ctx, row, template) {
+  const pack = loadPack(template.packId);
+  if (!pack) return failJob(ctx.db, row, 'bad_template');
+  const photoCount = storedPhotoCount(row);
+  if (photoCount < (template.minPhotos || 1)) return failJob(ctx.db, row, 'no_photo');
+  const view = { ...template, photoCount };
+  if (!plannedReferenceImages(view, 'agnes')) return failReferencePhotos(ctx.db, row, view);
+  let images;
+  try {
+    images = await readSubjects(ctx.bucket, row, photoCount);
+  } catch (err) {
+    const code = err && err.code ? err.code : 'no_photo';
+    if (code === 'reference_photos') return failReferencePhotos(ctx.db, row, view);
+    if (code === 'photo_too_large' || code === 'no_photo' || code === 'storage_error') return failJob(ctx.db, row, code);
+    throw err;
+  }
+  const selection = chooseProvider(ctx, view, images, new Uint8Array());
+  if (!selection || selection.provider !== 'agnes') {
+    if (images.some((image) => image.bytes.byteLength > BAILIAN_IMAGE_MAX_BYTES)) {
+      return failJob(ctx.db, row, 'photo_too_large');
+    }
+    return failJob(ctx.db, row, 'failed', {
+      note_en: 'This clip could not be started. The credits were returned.',
+      note_zh: '这条短片没有开始。积分已退回。',
+    });
+  }
+  let adapted;
+  try {
+    adapted = await adaptPack(pack, pipelineCustomerImages(pack, row));
+    for (const segment of adapted.segments) formatAgnesCreatePayload(adapted, segment.id);
+  } catch (err) {
+    return failJob(ctx.db, row, pipelineErrorCode(err));
+  }
+  const segments = adapted.segments.map((segment, index) => ({
+    id: segment.id,
+    index,
+    start: segment.startSec,
+    end: segment.endSec,
+    seconds: String(segment.promptSeconds),
+    prompt: segment.prompt,
+  }));
+  const claimed = await claimQueuedJob(ctx.db, row.id);
+  if (!claimed) return { id: row.id, status: 'running', action: 'busy' };
+  const previous = /^retry_later_(\d+)$/.exec(row.error_code || '');
+  return submitRouted(ctx, row, {
+    image: images[0],
+    images,
+    reference: null,
+    template: view,
+    photoCount,
+    pipeline: true,
+    pack,
+    selection: { ...selection, segments, seconds: segments[0].seconds },
+    seconds: segments[0].seconds,
+    backoffMs: previous ? Number(previous[1]) : 0,
+  });
+}
+
 async function prepareQueued(ctx, row) {
   const hold = retryHoldMs(row, ctx.nowMs);
   if (hold) {
     return { id: row.id, status: 'queued', action: 'retry', error: 'retry_later', retry_after_ms: hold };
   }
   const template = getTemplate(row.template_slug);
-  if (!template || !template.referenceVideo) return failJob(ctx.db, row, 'no_reference_video');
+  if (!template) return failJob(ctx.db, row, 'bad_template');
+  if (template.retired) {
+    return failJob(ctx.db, row, 'template_retired', {
+      note_en: 'This look is no longer offered. The credits were returned.',
+      note_zh: '这个效果已经不再提供。积分已退回。',
+    });
+  }
+  if (template.packId) return preparePipeline(ctx, row, template);
+  if (!template.referenceVideo) return failJob(ctx.db, row, 'no_reference_video');
   if (!referencePhotoKinds(template.photoCount)) return failReferencePhotos(ctx.db, row, template);
   if (!row.upload_key || (template.photoCount > 1 && !row.upload_key_2)) {
     if (template.photoCount === 2) {
@@ -727,7 +908,44 @@ async function discardSplitObjects(bucket, userId, jobId, count) {
 
 async function loadSplitPlan(ctx, row) {
   const template = getTemplate(row.template_slug);
-  if (!template || !template.referenceVideo) return null;
+  if (!template || template.retired) return null;
+  if (template.packId) {
+    const pack = loadPack(template.packId);
+    if (!pack) return null;
+    const photoCount = storedPhotoCount(row);
+    const images = await readSubjects(ctx.bucket, row, photoCount);
+    const view = { ...template, photoCount };
+    const selection = chooseProvider(ctx, view, images, new Uint8Array());
+    if (!selection || selection.provider !== 'agnes') return null;
+    let adapted;
+    try {
+      adapted = await adaptPack(pack, pipelineCustomerImages(pack, row));
+    } catch (err) {
+      const code = pipelineErrorCode(err);
+      if (code !== 'failed') throw err;
+      return null;
+    }
+    const segments = adapted.segments.map((segment, index) => ({
+      id: segment.id,
+      index,
+      start: segment.startSec,
+      end: segment.endSec,
+      seconds: String(segment.promptSeconds),
+      prompt: segment.prompt,
+    }));
+    if (segments.length < 2) return null;
+    return {
+      template: view,
+      reference: null,
+      pipeline: true,
+      pack,
+      photoCount,
+      selection: { ...selection, segments, seconds: segments[0].seconds },
+      image: images[0],
+      images,
+    };
+  }
+  if (!template.referenceVideo) return null;
   const reference = await loadReferenceVideo(ctx.env, ctx.origin, template.referenceVideo, ctx.fetchImpl);
   const images = await readSubjects(ctx.bucket, row, template.photoCount);
   const selection = chooseProvider(ctx, template, images, reference);
@@ -755,6 +973,8 @@ async function storeSplitPiece(ctx, row, info, videoUrl) {
     plan = await loadSplitPlan(ctx, row);
   } catch (err) {
     console.error('segment_plan', row.id, err && err.code ? err.code : 'error');
+    const pipelineCode = pipelineErrorCode(err);
+    if (pipelineCode !== 'failed') return failJob(ctx.db, row, pipelineCode);
     return failJob(ctx.db, row, err && err.code === 'reference_fetch' ? 'no_reference_video' : 'failed');
   }
   if (!plan) return failJob(ctx.db, row, 'failed');
@@ -818,7 +1038,8 @@ async function resumeSplit(ctx, row) {
     if (err && err.code === 'reference_fetch') {
       return { id: row.id, status: 'running', action: 'retry', error: 'reference_fetch', provider: 'agnes' };
     }
-    return failJob(ctx.db, row, 'failed');
+    const pipelineCode = pipelineErrorCode(err);
+    return failJob(ctx.db, row, pipelineCode === 'failed' ? 'failed' : pipelineCode);
   }
   if (!plan) return failJob(ctx.db, row, 'failed');
   const parts = await readPartBytes(ctx.bucket, row.user_id, row.id, plan.selection.segments.length);
@@ -889,7 +1110,8 @@ async function pollAgnesParallel(ctx, row, info) {
     if (err && err.code === 'reference_fetch') {
       return { id: row.id, status: 'running', action: 'retry', error: 'reference_fetch', provider: 'agnes' };
     }
-    return failJob(db, row, 'failed');
+    const pipelineCode = pipelineErrorCode(err);
+    return failJob(db, row, pipelineCode === 'failed' ? 'failed' : pipelineCode);
   }
   if (!plan || !plan.selection.segments || plan.selection.segments.length !== info.count) {
     return failJob(db, row, 'failed');
@@ -911,7 +1133,7 @@ async function pollAgnesParallel(ctx, row, info) {
       }
     } catch (err) {
       console.error('agnes_input', row.id, err && err.code ? err.code : 'error');
-      return failJob(db, row, 'failed');
+      return failJob(db, row, plan.pipeline ? pipelineErrorCode(err) : 'failed');
     }
     const created = await Promise.all(
       missing.map((index, pos) => createPiece(ctx, plan.template, inputs[pos], plan.selection.segments[index])),

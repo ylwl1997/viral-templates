@@ -9,6 +9,8 @@
  * Checked by scripts/account-d1.test.mjs and scripts/r2-media.test.mjs.
  */
 export const JOB_MEDIA_COLUMNS = ['upload_key', 'upload_key_2', 'upload_url', 'upload_url_2', 'result_key'];
+/** Added for pet looks with more than two photos. Fresh schema includes them; 0006 alters old databases. */
+export const PIPELINE_JOB_COLUMNS = ['extra_upload_keys', 'pipeline_frame'];
 export const JOB_PROVIDER_COLUMNS = ['provider_task_id'];
 export const SCHEMA_SQL = `
 -- Shared account storage for the apex and every brand host.
@@ -56,6 +58,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   upload_key_2 TEXT,
   upload_url TEXT,
   upload_url_2 TEXT,
+  extra_upload_keys TEXT,
+  pipeline_frame TEXT,
   result_key TEXT,
   provider_task_id TEXT,
   error_code TEXT,

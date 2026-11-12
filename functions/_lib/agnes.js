@@ -40,7 +40,7 @@ export const AGNES_IMAGE_MAX_SIDE = 5760;
  * Keep the template motion and replace only the person.
  */
 export const REFERENCE_PROMPT =
-  'Use <Image 1> as the person and follow <Video 1> motion/camera/timing/scene; keep the template setting and outfits; replace only the identity; photorealistic.';
+  'Use <Image 1> as the pet and follow <Video 1> motion/camera/timing/scene; keep the ordinary room; no people; photorealistic.';
 
 /**
  * Official reference mode accepts an `images` array of up to 8 URLs.
@@ -50,7 +50,7 @@ export const REFERENCE_PROMPT =
 export const AGNES_MAX_REFERENCE_IMAGES = 8;
 
 /** Stored photo kinds this worker can sign, in slot order. */
-export const STORED_PHOTO_KINDS = ['photo', 'photo-2'];
+export const STORED_PHOTO_KINDS = ['photo', 'photo-2', 'photo-3', 'photo-4', 'photo-5'];
 
 /** Reference images in one request must stay under 50 MB together. */
 export const AGNES_IMAGE_TOTAL_MAX_BYTES = 50 * 1024 * 1024;
@@ -87,8 +87,8 @@ export function referencePrompt(template) {
     const replaces = promptSlotText(slot.replacesEn, `person ${index + 1}`);
     lines.push(`<Image ${index + 1}> is ${label} and replaces ${replaces}`);
   }
-  const who = count === 2 ? 'both people' : 'every person';
-  return `Replace ${who} in <Video 1>. ${lines.join('. ')}. Do not keep either face from the template video. Follow <Video 1> motion, camera, timing, and scene. Keep the template setting and outfits. Photorealistic.`;
+  const who = count === 2 ? 'both pets' : 'every pet';
+  return `Replace ${who} in <Video 1>. ${lines.join('. ')}. Do not keep a person in the frame. Follow <Video 1> motion, camera, timing, and scene. Keep the ordinary room. Photorealistic.`;
 }
 
 const CONTAINERS = new Set(['moov', 'trak', 'mdia', 'minf', 'stbl']);
@@ -372,6 +372,45 @@ export function agnesMediaDecision({
   };
 }
 
+/**
+ * Images-only reference body. No videos array. Used by the pipeline path.
+ */
+export function buildImageReferenceRequest(runtime, input) {
+  const origin = runtime && runtime.publicOrigin;
+  const source = input || {};
+  const listed = Array.isArray(source.imageUrls) ? source.imageUrls : [];
+  if (listed.length < 1 || listed.length > AGNES_MAX_REFERENCE_IMAGES) throw fail('agnes_unreachable_input');
+  const images = listed.map((url) => assertAgnesInputUrl(url, origin));
+  const seconds = source.seconds;
+  const output = typeof seconds === 'string' && /^([4-9]|1[0-2])$/.test(seconds) ? seconds : agnesOutputSeconds(seconds);
+  if (!output) throw fail('agnes_bad_seconds');
+  const prompt = String(source.prompt || '').trim();
+  if (!prompt || prompt.includes('<Video')) throw fail('agnes_bad_prompt');
+  const mentioned = prompt.match(/<Image \d+>/g) || [];
+  if (!mentioned.length) throw fail('agnes_bad_prompt');
+  for (const token of mentioned) {
+    const index = Number(token.replace(/\D/g, ''));
+    if (index < 1 || index > images.length) throw fail('agnes_bad_prompt');
+  }
+  return {
+    url: `${runtime.base}/videos`,
+    headers: {
+      Authorization: `Bearer ${runtime.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: {
+      model: runtime.model || AGNES_MODEL,
+      prompt,
+      seconds: output,
+      mode: 'reference',
+      size: AGNES_SIZE,
+      aspect_ratio: AGNES_ASPECT_RATIO,
+      images,
+      n: 1,
+    },
+  };
+}
+
 export function buildReferenceRequest(runtime, input) {
   const origin = runtime && runtime.publicOrigin;
   const source = input || {};
@@ -524,6 +563,17 @@ export async function agnesSegmentInputs(env, jobId, index, photoCount = 1) {
   return { imageUrl: imageUrls[0], imageUrls, videoUrl };
 }
 
+export async function agnesPhotoUrls(env, jobId, photoCount = 1) {
+  const origin = customMediaOrigin(env);
+  if (!origin) return null;
+  const host = new URL(origin).hostname;
+  const secret = resolveAuthSecret(env, host).secret;
+  if (!secret || String(secret).length < 16) return null;
+  const imageUrls = await signedPhotoUrls(origin, secret, jobId, photoCount);
+  if (!imageUrls || imageUrls.length !== Number(photoCount)) return null;
+  return { imageUrl: imageUrls[0], imageUrls };
+}
+
 export async function agnesInputUrls(env, jobId, referenceVideo, photoCount = 1) {
   const origin = customMediaOrigin(env);
   if (!origin) return null;
@@ -604,7 +654,7 @@ function videoIdOf(json) {
 }
 
 export async function createReferenceVideo(runtime, fetchImpl, input) {
-  const req = buildReferenceRequest(runtime, input);
+  const req = input && input.imageOnly ? buildImageReferenceRequest(runtime, input) : buildReferenceRequest(runtime, input);
   const json = await requestJson(
     fetchImpl,
     req.url,

@@ -1,0 +1,391 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "tiny-desk-pets",
+  "title": "Tiny Desk pets",
+  "version": "1.0.0",
+  "aspectRatio": "9:16",
+  "sourceDurationSec": 17.76,
+  "notes": "Full pack for the 17.76s vertical 720x1280 Tiny Desk remake. Editorial generation segments are 0–12s and 12–17.76s so the hook close-up stays intact and the sub-4s sax and return beats share a segment. The automatic whole-beat planner would instead cut at 6s (6s + 11.76s), which is also inside 4–12s. An even time split would be 8.88s + 8.88s and would slice the hook. The source video is not in this repo. See examples/tiny-desk-pets-5s-test.json for the cheap test.",
+  "styleLine": "Photorealistic vertical 9:16 Tiny Desk-style office concert, packed bookshelves, warm tungsten practicals, vintage mics, shallow depth on close-ups, documentary realism, no caption graphics.",
+  "templateAnimalTerms": [
+    "beagle",
+    "shiba",
+    "golden retriever"
+  ],
+  "roles": [
+    {
+      "id": "lead",
+      "label": "Lead singer",
+      "required": true,
+      "position": "Hook close-up",
+      "appearanceHints": "orange tabby cat, white chest, white paws, green-yellow eyes, orange tabby stripes",
+      "wardrobe": "a red cap and a red-and-black hoodie",
+      "promptToken": "<Image 1>",
+      "staleTerms": [
+        "orange tabby",
+        "green-yellow"
+      ]
+    },
+    {
+      "id": "keys",
+      "label": "Keys",
+      "required": false,
+      "position": "Center at the red keyboard",
+      "appearanceHints": "black-and-white Siberian husky with blue eyes",
+      "wardrobe": "a black jacket and headset",
+      "promptToken": "<Image 2>",
+      "staleTerms": [
+        "blue eyes",
+        "Siberian husky"
+      ]
+    },
+    {
+      "id": "left-backup",
+      "label": "Left backup",
+      "required": false,
+      "position": "Backup left",
+      "appearanceHints": "red-gold Pembroke Welsh corgi with a white chest and white blaze",
+      "wardrobe": "a white hoodie",
+      "promptToken": "<Image 3>",
+      "staleTerms": [
+        "Pembroke",
+        "red-gold"
+      ]
+    },
+    {
+      "id": "right-backup",
+      "label": "Right backup",
+      "required": false,
+      "position": "Backup right",
+      "appearanceHints": "black-and-white tuxedo cat with a white muzzle and white paws",
+      "wardrobe": "a red track jacket",
+      "promptToken": "<Image 4>",
+      "staleTerms": [
+        "tuxedo"
+      ]
+    },
+    {
+      "id": "sax",
+      "label": "Saxophone",
+      "required": false,
+      "position": "Saxophone profile",
+      "appearanceHints": "cream French bulldog",
+      "wardrobe": "a navy-and-white hoodie and headphones",
+      "promptToken": "<Image 5>",
+      "staleTerms": [
+        "French bulldog"
+      ]
+    }
+  ],
+  "storyBeats": [
+    {
+      "id": "wide-band",
+      "startSec": 0,
+      "endSec": 6,
+      "summary": "Cramped shelf-packed office. The keys pet pounds a red keyboard at center in a black jacket and headset. Left backup in a white hoodie and right backup in a red track jacket sway beside vintage mics. Locked medium-wide, warm practicals."
+    },
+    {
+      "id": "hook-cu",
+      "startSec": 6,
+      "endSec": 12,
+      "summary": "Hard cut to a tight close-up of the lead in a red cap and red-and-black hoodie, mouthing the hook, then raising a paw and pointing. A saxophone edge may enter, never replacing the lead."
+    },
+    {
+      "id": "sax-profile",
+      "startSec": 12,
+      "endSec": 15,
+      "summary": "Medium profile of the sax pet in a navy-and-white hoodie and headphones on a gold sax. The keys pet's snout sits lower-right beside a silver mic stand."
+    },
+    {
+      "id": "wide-return",
+      "startSec": 15,
+      "endSec": 17.76,
+      "summary": "Hard cut back to the locked medium-wide band. Keys pet on the red keyboard, left backup swaying, right backup pointing upward, mouths on the beat."
+    }
+  ],
+  "generationSegments": [
+    {
+      "id": "segment-1",
+      "startSec": 0,
+      "endSec": 12,
+      "durationSec": 12,
+      "promptSeconds": 12,
+      "beatIds": [
+        "wide-band",
+        "hook-cu"
+      ],
+      "variantPrompts": {
+        "timed-beats": "Photorealistic vertical 9:16 video. Follow this time-coded direction. Every performer is the exact pet in the photos, not a human and not a different animal. No human faces and no human hands.\n\n0-3s: In a cramped, shelf-packed office, a black-and-white Siberian husky with blue eyes from <Image 2> pounds a red keyboard at center in a black jacket and headset, while a red-gold Pembroke Welsh corgi with a white chest and white blaze from <Image 3> sways in a white hoodie on the left and a black-and-white tuxedo cat with a white muzzle and white paws from <Image 4> sways in a red track jacket on the right, locked medium-wide, warm practical lights catching the vintage mics as the groove hits.\n3-6s: The same locked medium-wide holds a black-and-white Siberian husky with blue eyes from <Image 2> keeps both paws on the red keys in a black jacket and headset, while a red-gold Pembroke Welsh corgi with a white chest and white blaze from <Image 3> sways in a white hoodie on the left and a black-and-white tuxedo cat with a white muzzle and white paws from <Image 4> sways in a red track jacket on the right, mouths moving, no push-in.\n6-9s: A hard cut slams into a tight close-up of the orange tabby cat from <Image 1> — white chest, white paws, green-yellow eyes, orange tabby stripes — as the lead singer in a red cap and a red-and-black hoodie, mouthing the hook on the beat.\n9-12s: The same close-up holds on the orange tabby cat from <Image 1> who raises a white paw and points with a grin. The cream French bulldog from <Image 5> may appear only if a saxophone edge enters the frame, never replacing the lead.\n\nKeep each animal's exact face and markings. Do not leave the original template dogs in the shot. Photorealistic, documentary Tiny Desk office lighting, packed bookshelves, vintage mics, shallow depth on the close-up.",
+        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. This is the opening medium-wide of a Tiny Desk-style office concert, held for the full segment, packed bookshelves behind the desk and no close-up insert.\n\nLocked medium-wide camera, no push-in, no close-up insert. Cramped room, packed bookshelves, posters, warm tungsten practical lights, vintage microphones, a red keyboard on a cluttered desk in the foreground.\n\nEvery performer is an animal, not a human. No human faces and no human hands. Faces, fur, and paws must match the identity photos.\n\nCenter at the red keyboard: <Image 2>, a black-and-white Siberian husky with blue eyes, in a black jacket and headset, paws on the keys, mouth moving on the beat.\nBackup left: <Image 3>, a Pembroke Welsh corgi with a red-gold coat, white chest, and a white facial blaze, in a white hoodie and headset, swaying and singing.\nBackup right: <Image 4>, a black-and-white tuxedo cat with a white chest, white muzzle, and white paws, in a red track jacket and headset, swaying, one paw lifting on the beat.\n\nDo not introduce a lead-singer close-up, a saxophone, or any other animal in this segment. Keep every named pet clearly recognizable for the whole shot. Photorealistic, documentary lighting, mouths on the beat."
+      },
+      "script": {
+        "timedHeader": "Photorealistic vertical 9:16 video. Follow this time-coded direction. Every performer is the exact pet in the photos, not a human and not a different animal. No human faces and no human hands.",
+        "timedCues": [
+          {
+            "label": "0-3s",
+            "startSec": 0,
+            "endSec": 3,
+            "opener": "In a cramped, shelf-packed office,",
+            "subjects": [
+              {
+                "roleId": "keys",
+                "authored": "a black-and-white Siberian husky with blue eyes from <Image 2>",
+                "action": "pounds a red keyboard at center in a black jacket and headset",
+                "wardrobePhrase": "a black jacket and headset"
+              },
+              {
+                "roleId": "left-backup",
+                "authored": "a red-gold Pembroke Welsh corgi with a white chest and white blaze from <Image 3>",
+                "action": "sways in a white hoodie on the left",
+                "wardrobePhrase": "a white hoodie"
+              },
+              {
+                "roleId": "right-backup",
+                "authored": "a black-and-white tuxedo cat with a white muzzle and white paws from <Image 4>",
+                "action": "sways in a red track jacket on the right",
+                "wardrobePhrase": "a red track jacket"
+              }
+            ],
+            "closer": "locked medium-wide, warm practical lights catching the vintage mics as the groove hits",
+            "camera": "In a cramped, shelf-packed office, locked medium-wide, warm practical lights catching the vintage mics,",
+            "anchor": "locked medium-wide",
+            "singleAction": "pounds a red keyboard at center, mouth moving as the groove hits"
+          },
+          {
+            "label": "3-6s",
+            "startSec": 3,
+            "endSec": 6,
+            "opener": "The same locked medium-wide holds",
+            "subjects": [
+              {
+                "roleId": "keys",
+                "authored": "a black-and-white Siberian husky with blue eyes from <Image 2>",
+                "action": "keeps both paws on the red keys in a black jacket and headset",
+                "wardrobePhrase": "a black jacket and headset"
+              },
+              {
+                "roleId": "left-backup",
+                "authored": "a red-gold Pembroke Welsh corgi with a white chest and white blaze from <Image 3>",
+                "action": "sways in a white hoodie on the left",
+                "wardrobePhrase": "a white hoodie"
+              },
+              {
+                "roleId": "right-backup",
+                "authored": "a black-and-white tuxedo cat with a white muzzle and white paws from <Image 4>",
+                "action": "sways in a red track jacket on the right",
+                "wardrobePhrase": "a red track jacket"
+              }
+            ],
+            "closer": "mouths moving, no push-in",
+            "camera": "The same locked medium-wide holds,",
+            "anchor": "locked medium-wide",
+            "singleAction": "keeps the red keyboard at center, mouth moving, no push-in"
+          },
+          {
+            "label": "6-9s",
+            "startSec": 6,
+            "endSec": 9,
+            "opener": "A hard cut slams into a tight close-up of",
+            "subjects": [
+              {
+                "roleId": "lead",
+                "authored": "the orange tabby cat from <Image 1> — white chest, white paws, green-yellow eyes, orange tabby stripes —",
+                "action": "as the lead singer in a red cap and a red-and-black hoodie, mouthing the hook on the beat",
+                "wardrobePhrase": "a red cap and a red-and-black hoodie",
+                "boundPhrases": [
+                  {
+                    "from": "white paw",
+                    "to": "paw"
+                  }
+                ]
+              }
+            ],
+            "closer": "",
+            "camera": "A hard cut slams into a tight close-up of",
+            "anchor": "hard cut",
+            "singleAction": "mouthing the hook on the beat"
+          },
+          {
+            "label": "9-12s",
+            "startSec": 9,
+            "endSec": 12,
+            "opener": "The same close-up holds on",
+            "subjects": [
+              {
+                "roleId": "lead",
+                "authored": "the orange tabby cat from <Image 1>",
+                "action": "who raises a white paw and points with a grin",
+                "wardrobePhrase": "a red cap and a red-and-black hoodie",
+                "boundPhrases": [
+                  {
+                    "from": "white paw",
+                    "to": "paw"
+                  }
+                ]
+              }
+            ],
+            "closer": "",
+            "optionalSentences": [
+              {
+                "roleId": "sax",
+                "identity": "cream French bulldog",
+                "template": "The {identity} from {token} may appear only if a saxophone edge enters the frame, never replacing the lead."
+              }
+            ],
+            "camera": "The same close-up holds on",
+            "anchor": "close-up",
+            "singleAction": "raises a paw and points with a grin"
+          }
+        ],
+        "timedFooter": "Keep each animal's exact face and markings. Do not leave the original template dogs in the shot. Photorealistic, documentary Tiny Desk office lighting, packed bookshelves, vintage mics, shallow depth on the close-up.",
+        "lockedIntro": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. This is the opening medium-wide of a Tiny Desk-style office concert, held for the full segment, packed bookshelves behind the desk and no close-up insert.\n\nLocked medium-wide camera, no push-in, no close-up insert. Cramped room, packed bookshelves, posters, warm tungsten practical lights, vintage microphones, a red keyboard on a cluttered desk in the foreground.\n\nEvery performer is an animal, not a human. No human faces and no human hands. Faces, fur, and paws must match the identity photos.",
+        "lockedLines": [
+          {
+            "roleId": "keys",
+            "position": "Center at the red keyboard",
+            "identity": "a black-and-white Siberian husky with blue eyes",
+            "wardrobe": "a black jacket and headset",
+            "action": "paws on the keys, mouth moving on the beat"
+          },
+          {
+            "roleId": "left-backup",
+            "position": "Backup left",
+            "identity": "a Pembroke Welsh corgi with a red-gold coat, white chest, and a white facial blaze",
+            "wardrobe": "a white hoodie and headset",
+            "action": "swaying and singing"
+          },
+          {
+            "roleId": "right-backup",
+            "position": "Backup right",
+            "identity": "a black-and-white tuxedo cat with a white chest, white muzzle, and white paws",
+            "wardrobe": "a red track jacket and headset",
+            "action": "swaying, one paw lifting on the beat"
+          }
+        ],
+        "lockedExclusion": "Do not introduce a lead-singer close-up, a saxophone, or any other animal in this segment. Keep every named pet clearly recognizable for the whole shot. Photorealistic, documentary lighting, mouths on the beat.",
+        "lockedCamera": "Locked medium-wide camera, no push-in, no close-up insert.",
+        "setting": "Cramped room, packed bookshelves, posters, warm tungsten practical lights, vintage microphones, a red keyboard on a cluttered desk in the foreground.",
+        "styleAnchors": [
+          "9:16",
+          "Photorealistic",
+          "packed bookshelves"
+        ]
+      }
+    },
+    {
+      "id": "segment-2",
+      "startSec": 12,
+      "endSec": 17.76,
+      "durationSec": 5.76,
+      "promptSeconds": 6,
+      "beatIds": [
+        "sax-profile",
+        "wide-return"
+      ],
+      "variantPrompts": {
+        "timed-beats": "Photorealistic vertical 9:16 video. Follow this time-coded direction. Every performer is the exact pet in the photos, not a human and not a different animal. No human faces and no human hands.\n\n0-3s: Medium profile in the same cramped office, a cream French bulldog with a fawn mask from <Image 5> plays a gold saxophone in a navy-and-white hoodie and headphones, while a black-and-white Siberian husky with blue eyes from <Image 2> rests a snout in the lower-right beside a silver mic stand, warm practical light and no lyric graphics.\n3-6s: A hard cut returns to the locked medium-wide, a black-and-white Siberian husky with blue eyes from <Image 2> pounds the red keyboard at center in a black jacket and headset, while a red-gold Pembroke Welsh corgi with a white chest and white blaze from <Image 3> sways in a white hoodie on the left and a black-and-white tuxedo cat with a white muzzle and white paws from <Image 4> points upward in a red track jacket on the right, mouths on the beat.\n\nKeep each animal's exact face and markings. Do not leave the original template dogs in the shot. Photorealistic, documentary Tiny Desk office lighting, packed bookshelves, vintage mics, shallow depth on the close-up.",
+        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Medium profile of the saxophone corner, packed bookshelves behind, held for the full segment.\n\nMedium profile camera, no push-in and no cut back to the wide.\n\nEvery performer is an animal, not a human. No human faces and no human hands. Faces and fur must match the identity photos.\n\nSaxophone profile: <Image 5>, a cream French bulldog with a fawn mask, in a navy-and-white hoodie and headphones, playing a gold saxophone.\nLower right: <Image 2>, a black-and-white Siberian husky with blue eyes, in a black jacket and headset, snout beside a silver mic stand.\n\nDo not cut back to the wide band and do not add an animal who was not named above. Photorealistic, documentary lighting, mouths on the beat."
+      },
+      "script": {
+        "timedHeader": "Photorealistic vertical 9:16 video. Follow this time-coded direction. Every performer is the exact pet in the photos, not a human and not a different animal. No human faces and no human hands.",
+        "timedCues": [
+          {
+            "label": "0-3s",
+            "startSec": 0,
+            "endSec": 3,
+            "opener": "Medium profile in the same cramped office,",
+            "subjects": [
+              {
+                "roleId": "sax",
+                "authored": "a cream French bulldog with a fawn mask from <Image 5>",
+                "action": "plays a gold saxophone in a navy-and-white hoodie and headphones",
+                "wardrobePhrase": "a navy-and-white hoodie and headphones"
+              },
+              {
+                "roleId": "keys",
+                "authored": "a black-and-white Siberian husky with blue eyes from <Image 2>",
+                "action": "rests a snout in the lower-right beside a silver mic stand"
+              }
+            ],
+            "closer": "warm practical light and no lyric graphics",
+            "camera": "Medium profile in the same cramped office,",
+            "anchor": "Medium profile",
+            "singleAction": "plays through the phrase in medium profile"
+          },
+          {
+            "label": "3-6s",
+            "startSec": 3,
+            "endSec": 6,
+            "opener": "A hard cut returns to the locked medium-wide,",
+            "subjects": [
+              {
+                "roleId": "keys",
+                "authored": "a black-and-white Siberian husky with blue eyes from <Image 2>",
+                "action": "pounds the red keyboard at center in a black jacket and headset",
+                "wardrobePhrase": "a black jacket and headset"
+              },
+              {
+                "roleId": "left-backup",
+                "authored": "a red-gold Pembroke Welsh corgi with a white chest and white blaze from <Image 3>",
+                "action": "sways in a white hoodie on the left",
+                "wardrobePhrase": "a white hoodie"
+              },
+              {
+                "roleId": "right-backup",
+                "authored": "a black-and-white tuxedo cat with a white muzzle and white paws from <Image 4>",
+                "action": "points upward in a red track jacket on the right",
+                "wardrobePhrase": "a red track jacket"
+              }
+            ],
+            "closer": "mouths on the beat",
+            "camera": "A hard cut returns to the locked medium-wide,",
+            "anchor": "hard cut",
+            "singleAction": "holds the wide shot and hits the beat"
+          }
+        ],
+        "timedFooter": "Keep each animal's exact face and markings. Do not leave the original template dogs in the shot. Photorealistic, documentary Tiny Desk office lighting, packed bookshelves, vintage mics, shallow depth on the close-up.",
+        "lockedIntro": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Medium profile of the saxophone corner, packed bookshelves behind, held for the full segment.\n\nMedium profile camera, no push-in and no cut back to the wide.\n\nEvery performer is an animal, not a human. No human faces and no human hands. Faces and fur must match the identity photos.",
+        "lockedLines": [
+          {
+            "roleId": "sax",
+            "position": "Saxophone profile",
+            "identity": "a cream French bulldog with a fawn mask",
+            "wardrobe": "a navy-and-white hoodie and headphones",
+            "action": "playing a gold saxophone"
+          },
+          {
+            "roleId": "keys",
+            "position": "Lower right",
+            "identity": "a black-and-white Siberian husky with blue eyes",
+            "wardrobe": "a black jacket and headset",
+            "action": "snout beside a silver mic stand"
+          }
+        ],
+        "lockedExclusion": "Do not cut back to the wide band and do not add an animal who was not named above. Photorealistic, documentary lighting, mouths on the beat.",
+        "lockedCamera": "Medium profile camera, no push-in and no cut back to the wide.",
+        "setting": "The same cramped office, packed bookshelves, a gold saxophone, and a silver mic stand in warm practical light.",
+        "styleAnchors": [
+          "9:16",
+          "Photorealistic",
+          "packed bookshelves"
+        ]
+      }
+    }
+  ],
+  "providerHints": {
+    "defaultModel": "agnes-video-2.5",
+    "resolution": "720P",
+    "imagesOnly": true,
+    "mode": "reference"
+  },
+  "provenance": {
+    "boundaries": "hypit",
+    "shotBoundariesSec": [
+      5.375,
+      11.625,
+      15
+    ],
+    "detail": "Shot boundaries transcribed from the Hypit pass on 2026-11-12: 5.375s wide to lead close-up, 11.625s lead close-up to sax, 15.0s back to wide. The source file is not stored in this repository.",
+    "segmentStrategy": "editorial-beat-groups"
+  }
+}

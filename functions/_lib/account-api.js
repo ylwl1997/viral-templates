@@ -9,6 +9,8 @@ export function accountError(err) {
     code === 'bad_json' ||
     code === 'bad_limit' ||
     code === 'bad_photo' ||
+    code === 'pets_only' ||
+    code === 'template_retired' ||
     code === 'photo_too_large' ||
     code === 'photo_too_small' ||
     code === 'photo_aspect' ||

@@ -1,0 +1,44 @@
+{
+  "name": "template-pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Compile short vertical templates into versioned prompt packs and adapt them to customer identity photos.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "template-pipeline": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "schemas",
+    "packs",
+    "examples",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "schema": "tsx scripts/emit-schema.ts",
+    "packs": "tsx examples/writePacks.ts"
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "ajv": "^8.17.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.8",
+    "zod-to-json-schema": "^3.24.5"
+  }
+}

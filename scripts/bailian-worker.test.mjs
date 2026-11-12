@@ -107,13 +107,12 @@ const viaMainland = buildSynthesisRequest(mainland, {
 assert(viaMainland.body.input.image_url.startsWith('https://media.example.com/'), viaMainland.body.input.image_url);
 assert(!viaMainland.body.input.video_url.includes('pages.dev'), 'mainland url picked up pages.dev');
 
-for (const slug of ['bby-wow', 'kiss-cam', 'ceiling-fan']) {
+for (const slug of ['bby-wow', 'tiny-desk', 'ceiling-fan']) {
   const template = getTemplate(slug);
-  assert(template.referenceVideo && template.referenceVideo.endsWith('.mp4'), slug);
-  assert(fs.existsSync(new URL(`../public${template.referenceVideo}`, import.meta.url)), template.referenceVideo);
+  assert(template.packId && template.creatable && !template.referenceVideo, slug);
 }
 assert(getTemplate('bulin-47').referenceVideo == null, 'soon template has no reference');
-assert(getTemplate('kiss-cam').photoCount === 2, 'kiss cam still two photos');
+assert(getTemplate('kiss-cam').retired === true && getTemplate('kiss-cam').creatable === false, 'kiss cam retired');
 
 const workerSource = fs.readFileSync(new URL('../functions/_lib/bailian-worker.js', import.meta.url), 'utf8');
 const dbSource = fs.readFileSync(new URL('../functions/_lib/account-db.js', import.meta.url), 'utf8');
@@ -323,7 +322,7 @@ const queued = await queueJobWithMedia({
   env,
   request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
   user,
-  templateSlug: 'bby-wow',
+  templateSlug: 'bailian-fixture',
   photos: [{ bytes: jpeg, contentType: 'image/jpeg', ext: 'jpg' }],
 });
 assert(queued.job.status === 'queued', 'queued');
@@ -501,26 +500,20 @@ const afterHuge = await getCredits(db, user);
 assert(afterHuge.balance === 500 - bbyCost, `huge refund balance ${afterHuge.balance}`);
 assert(afterHuge.ledger.some((row) => row.kind === 'refund' && row.job_id === hugeJob.job.id && row.delta === 15), 'fan refund');
 
-const kissMissing = await queueJobWithMedia({
-  db,
-  env,
-  request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
-  user,
-  templateSlug: 'kiss-cam',
-  photos: [],
-});
-const kissFail = await kickRemakeJob({
-  db,
-  env,
-  request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
-  jobId: kissMissing.job.id,
-});
-assert(kissFail.processed[0].error === 'no_photo', JSON.stringify(kissFail));
-assert(kissFail.processed[0].status === 'failed', kissFail.processed[0].status);
-const kissNote = sqlite.prepare(`SELECT status, error_code, note_en, note_zh FROM jobs WHERE id = ?`).get(kissMissing.job.id);
-assert(kissNote.status === 'failed' && kissNote.error_code === 'no_photo', JSON.stringify(kissNote));
-assert(kissNote.note_en.includes('two saved photos'), kissNote.note_en);
-assert(kissNote.note_zh.includes('两张'), kissNote.note_zh);
+let kissRetired = false;
+try {
+  await queueJobWithMedia({
+    db,
+    env,
+    request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
+    user,
+    templateSlug: 'kiss-cam',
+    photos: [],
+  });
+} catch (err) {
+  kissRetired = err && err.code === 'template_retired';
+}
+assert(kissRetired, 'kiss cam can still be queued');
 
 const { fetchImpl: providerFetch, calls: kickCalls } = installFetch({ unique: true });
 let releaseFetch;
@@ -535,39 +528,22 @@ const cookieLine = await issueSessionCookie(new Request(`${origin}/api/jobs`, { 
 const cookie = cookieLine.split(';')[0];
 const form = new FormData();
 form.set('template_slug', 'kiss-cam');
+form.set('pets_only', '1');
 form.set('photo_0', new File([jpeg], 'a.jpg', { type: 'image/jpeg' }));
 form.set('photo_1', new File([jpeg], 'b.jpg', { type: 'image/jpeg' }));
-const pending = [];
-const created = await Promise.race([
-  onCreate({
-    env: { ...env, JOB_PROCESS_SECRET: '' },
-    request: new Request(`${origin}/api/jobs`, { method: 'POST', headers: { cookie }, body: form }),
-    waitUntil(promise) {
-      pending.push(promise);
-    },
-  }),
-  new Promise((_, reject) => setTimeout(() => reject(new Error('create blocked on provider')), 500)),
-]);
-assert(created.status === 201, `create ${created.status}`);
+const created = await onCreate({
+  env: { ...env, JOB_PROCESS_SECRET: '' },
+  request: new Request(`${origin}/api/jobs`, { method: 'POST', headers: { cookie }, body: form }),
+  waitUntil() {},
+});
+assert(created.status === 400, `create ${created.status}`);
 const createdBody = await created.json();
-assert(createdBody.ok === true && createdBody.job.status === 'queued', JSON.stringify(createdBody.job));
-assert(createdBody.media.photos === 2, `kiss-cam photos ${createdBody.media.photos}`);
-assert(pending.length === 1, 'create registered waitUntil');
-const stillQueued = sqlite.prepare(`SELECT status FROM jobs WHERE id = ?`).get(createdBody.job.id);
-assert(stillQueued.status === 'queued' || stillQueued.status === 'running', stillQueued.status);
+assert(createdBody.error === 'template_retired', JSON.stringify(createdBody));
 releaseFetch();
-await pending[0];
-const kissKickCalls = kickCalls.filter((call) => call.url.includes('/video-synthesis') || call.url.includes('/tasks/'));
-assert(kissKickCalls.length === 0, 'two-photo create was sent to mix');
-const kicked = sqlite.prepare(`SELECT status, error_code, note_en, note_zh FROM jobs WHERE id = ?`).get(createdBody.job.id);
-assert(kicked.status === 'failed' && kicked.error_code === 'reference_photos', JSON.stringify(kicked));
-assert(/both photos/i.test(kicked.note_en), kicked.note_en);
-assert(!/agnes|bailian|waffo|dashscope/i.test(`${kicked.note_en} ${kicked.note_zh}`), kicked.note_en);
-const kissLedger = (await getCredits(db, user)).ledger.filter((row) => row.job_id === createdBody.job.id).map((row) => row.kind).sort().join();
-assert(kissLedger === 'deduction,refund', `kiss ledger ${kissLedger}`);
 
 const bbyForm = new FormData();
-bbyForm.set('template_slug', 'bby-wow');
+bbyForm.set('template_slug', 'bailian-fixture');
+bbyForm.set('pets_only', '1');
 bbyForm.set('photo_0', new File([jpeg], 'a.jpg', { type: 'image/jpeg' }));
 const bbyPending = [];
 const bbyCallsBefore = kickCalls.length;
@@ -735,7 +711,7 @@ const takenJob = await queueJobWithMedia({
   env,
   request: new Request(`${origin}/api/jobs`, { method: 'POST' }),
   user,
-  templateSlug: 'bby-wow',
+  templateSlug: 'bailian-fixture',
   photos: [{ bytes: jpeg, contentType: 'image/jpeg', ext: 'jpg' }],
 });
 let takenDirect = '';

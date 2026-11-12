@@ -13,7 +13,7 @@ function sourceCredits(slug: string): number {
 }
 
 const bbyCredits = sourceCredits('bby-wow');
-const kissCredits = sourceCredits('kiss-cam');
+const tinyCredits = sourceCredits('tiny-desk');
 const fanCredits = sourceCredits('ceiling-fan');
 
 /** Hub-level questions. Brand pages keep their own keyword sets. */
@@ -23,57 +23,57 @@ export const HUB_FAQ: readonly FaqEntry[] = [
     qEn: 'What is Swaystill?',
     qZh: 'Swaystill 是什么？',
     aEn:
-      'Swaystill makes a short vertical clip from a photo you already have. Pick a look, upload an adult-consent photo (two for the kiss-cam look), and generate. Each look has its own page.',
-    aZh: 'Swaystill 用你已经有的照片做一条竖屏短片。选一个效果，上传成人同意的照片（kiss cam 要两张），然后生成。每个效果有自己的页面。',
+      'Swaystill makes a short vertical clip from a pet photo you already have. Pick a look, upload the pet, and generate. Each look has its own page.',
+    aZh: 'Swaystill 用你已经有的宠物照片做一条竖屏短片。选一个效果，上传宠物，然后生成。每个效果有自己的页面。',
   },
   {
     id: 'looks',
     qEn: 'Which looks can I open today?',
     qZh: '现在能做哪些效果？',
     aEn:
-      'Three: Bby Wow AI (one photo, party dance), Coldplay Kiss Cam AI (two photos, stadium board), and Ceiling Fan Transition AI (one photo, outfit-change wipe). Create on the home page lists those looks.',
+      'Three: Bby Wow (one pet, bar dance), Tiny Desk (a pet band at a desk), and Ceiling Fan (one pet, outfit wipe). Create on the home page lists those looks.',
     aZh:
-      '三个：Bby Wow AI（一张照片，派对舞）、Coldplay Kiss Cam AI（两张照片，球场大屏）、Ceiling Fan Transition AI（一张照片，换装转场）。首页的创作里列出的就是这些。',
+      '三个：Bby Wow（一只宠物，吧台舞）、Tiny Desk（书桌边的宠物乐队）、Ceiling Fan（一只宠物，换装转场）。首页的创作里列出的就是这些。',
   },
   {
     id: 'bby',
-    qEn: 'What is Bby Wow AI?',
-    qZh: 'Bby Wow AI 是什么？',
+    qEn: 'What is Bby Wow?',
+    qZh: 'Bby Wow 是什么？',
     aEn:
-      `One adult photo becomes a party-dance clip of about ${bbyCredits} seconds. The sample photo, the clip, and questions for that look are on the Bby Wow page.`,
-    aZh: `一张成人照片做成大约 ${bbyCredits} 秒的派对舞。示例照片、短片和这个效果自己的问题，在 Bby Wow 页面上。`,
+      `One pet snapshot becomes a bar-dance clip of about ${bbyCredits} seconds. Questions for that look are on the Bby Wow page.`,
+    aZh: `一张宠物快照做成大约 ${bbyCredits} 秒的吧台舞。这个效果自己的问题在 Bby Wow 页面上。`,
   },
   {
-    id: 'kiss',
-    qEn: 'What is Coldplay Kiss Cam AI?',
-    qZh: 'Coldplay Kiss Cam AI 是什么？',
+    id: 'tiny',
+    qEn: 'What is Tiny Desk?',
+    qZh: 'Tiny Desk 是什么？',
     aEn:
-      `Two adult photos become a jumbotron-style clip of about ${kissCredits} seconds. It uses no concert footage and is not official Coldplay.`,
-    aZh: `两张成人照片做成大约 ${kissCredits} 秒的大屏风格短片。不含演唱会素材，也不是 Coldplay 官方。`,
+      `Pet snapshots become a desk concert of about ${tinyCredits} seconds. The lead is required. Keys, backups, and sax are optional.`,
+    aZh: `宠物快照做成大约 ${tinyCredits} 秒的桌边音乐会。主唱必填。键盘、和声和萨克斯可选。`,
   },
   {
     id: 'fan',
-    qEn: 'What is Ceiling Fan Transition AI?',
-    qZh: 'Ceiling Fan Transition AI 是什么？',
+    qEn: 'What is Ceiling Fan?',
+    qZh: 'Ceiling Fan 是什么？',
     aEn:
-      `One adult photo becomes an outfit-change wipe of about ${fanCredits} seconds. The fan is generated. Never strap a phone to a real fan.`,
-    aZh: `一张成人照片做成大约 ${fanCredits} 秒的换装转场。风扇是生成的。切勿把手机绑在真风扇上。`,
+      `One pet snapshot becomes an outfit wipe of about ${fanCredits} seconds. The fan is generated. Never strap a phone to a real fan.`,
+    aZh: `一张宠物快照做成大约 ${fanCredits} 秒的换装转场。风扇是生成的。切勿把手机绑在真风扇上。`,
   },
   {
     id: 'photos',
     qEn: 'What photos can I upload?',
     qZh: '可以上传什么照片？',
     aEn:
-      'Clear photos of consenting adults, in ordinary light. One or two, depending on the look. You need the rights to the photo. Do not upload photos of minors.',
-    aZh: '光线普通、同意出镜的成人，脸要清楚。按效果需要一张或两张。你需要有使用这张照片的权利。请勿上传未成年人照片。',
+      'Everyday pet snapshots, in an ordinary room. One pet, or a small band, depending on the look. You need the right to use the photo. Do not upload people.',
+    aZh: '普通房间里的宠物日常快照。按效果需要一只，或一支小乐队。你需要有使用这张照片的权利。请勿上传人。',
   },
   {
     id: 'consent',
-    qEn: 'Do I need consent?',
-    qZh: '需要授权吗？',
+    qEn: 'What do I confirm?',
+    qZh: '需要确认什么？',
     aEn:
-      'Yes. Only adults who agree to appear. Kiss Cam uses no real concert footage. Ceiling Fan is generated — never strap a phone to a fan.',
-    aZh: '需要。仅限同意出镜的成人。Kiss Cam 不含真实演唱会素材。吊扇效果是生成的 — 切勿把手机绑在风扇上。',
+      'That the upload is a pet you can use, not a person. Ceiling Fan is generated — never strap a phone to a fan.',
+    aZh: '上传的是你可以使用的宠物，不是人。吊扇效果是生成的 — 切勿把手机绑在风扇上。',
   },
   {
     id: 'generate',
@@ -88,8 +88,8 @@ export const HUB_FAQ: readonly FaqEntry[] = [
     qEn: 'How long does a clip run?',
     qZh: '短片有多长？',
     aEn:
-      `About ${bbyCredits} seconds for Bby Wow, ${kissCredits} seconds for Kiss Cam, and about ${fanCredits} seconds for Ceiling Fan. Those are the lengths of the source clips. The file shows on your account when the job is ready.`,
-    aZh: `Bby Wow 大约 ${bbyCredits} 秒，Kiss Cam 大约 ${kissCredits} 秒，Ceiling Fan 大约 ${fanCredits} 秒。这是素材的时长。任务完成后，成片会出现在你的账户里。`,
+      `About ${bbyCredits} seconds for Bby Wow, ${tinyCredits} seconds for Tiny Desk, and about ${fanCredits} seconds for Ceiling Fan. The file shows on your account when the job is ready.`,
+    aZh: `Bby Wow 大约 ${bbyCredits} 秒，Tiny Desk 大约 ${tinyCredits} 秒，Ceiling Fan 大约 ${fanCredits} 秒。任务完成后，成片会出现在你的账户里。`,
   },
   {
     id: 'credits',
@@ -107,17 +107,17 @@ export const HUB_FAQ: readonly FaqEntry[] = [
   },
   {
     id: 'kids',
-    qEn: 'Can I make a clip of a child?',
-    qZh: '可以做孩子的短片吗？',
-    aEn: 'No. Adult consent only. Do not upload photos of minors.',
-    aZh: '不可以。仅限成人同意。请勿上传未成年人照片。',
+    qEn: 'Can I upload a person?',
+    qZh: '可以上传人吗？',
+    aEn: 'No. Swaystill is a pet remake. Do not upload people.',
+    aZh: '不可以。Swaystill 是宠物翻拍。请勿上传人。',
   },
   {
     id: 'affiliation',
-    qEn: 'Are you CapCut, Coldplay, or Karol G?',
-    qZh: '你们是 CapCut、Coldplay 或 Karol G 吗？',
-    aEn: 'No. Independent remix looks — not official CapCut, Coldplay, Karol G, or any label.',
-    aZh: '不是。独立的 remix 效果 — 非 CapCut、Coldplay、Karol G 或任何厂牌官方。',
+    qEn: 'Are these official shows or songs?',
+    qZh: '这些是官方节目或歌曲吗？',
+    aEn: 'No. Independent pet remakes. Not an official recording, label, or desk concert.',
+    aZh: '不是。独立的宠物翻拍。不是官方录音、厂牌或桌边音乐会。',
   },
   {
     id: 'refund',

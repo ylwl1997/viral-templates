@@ -33,6 +33,9 @@ export const MAX_RETENTION_DAYS = 365;
 export const MEDIA_KINDS = new Set([
   'photo',
   'photo-2',
+  'photo-3',
+  'photo-4',
+  'photo-5',
   'result',
   'seg0',
   'seg1',
@@ -95,7 +98,7 @@ function isSafeId(value) {
 
 export function photoObjectKey(userId, jobId, slot, ext) {
   if (!isSafeId(userId) || !isSafeId(jobId)) throw fail('storage_error');
-  if (slot !== 0 && slot !== 1) throw fail('bad_photo');
+  if (!Number.isInteger(slot) || slot < 0 || slot > 4) throw fail('bad_photo');
   if (ext !== 'jpg' && ext !== 'png' && ext !== 'webp') throw fail('bad_photo');
   return `uploads/${userId}/${jobId}/${slot}.${ext}`;
 }

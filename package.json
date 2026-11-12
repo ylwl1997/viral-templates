@@ -17,6 +17,7 @@
     "test:payments": "node --experimental-sqlite scripts/checkout-webhook.test.mjs",
     "test:bailian": "node --experimental-sqlite scripts/bailian-worker.test.mjs",
     "test:agnes": "node --experimental-sqlite scripts/agnes-video.test.mjs",
+    "test:pipeline": "node scripts/pipeline.test.mjs",
     "smoke:bailian": "node scripts/smoke-bailian.mjs",
     "job-drain:deploy": "wrangler deploy --config workers/job-drain/wrangler.toml",
     "d1:migrate:local": "wrangler d1 migrations apply viral-templates --local",
@@ -26,7 +27,8 @@
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
     "@waffo/pancake-ts": "0.28.0",
-    "astro": "^5.14.0"
+    "astro": "^5.14.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "wrangler": "^4.40.0"

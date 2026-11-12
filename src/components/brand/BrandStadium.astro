@@ -7,7 +7,7 @@ import BrandLook from './BrandLook.astro';
 interface Props { template: Template; lang: Lang }
 const { template: t, lang } = Astro.props;
 const story = t.story;
-if (!story) throw new Error('Kiss Cam is missing its story');
+if (!story) throw new Error('This look is missing its story');
 const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
 const { lead, support, beats, diy } = story;
 ---

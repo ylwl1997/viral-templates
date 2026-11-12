@@ -23,7 +23,7 @@ Agnes reference limits are one video, duration 2–12 seconds, under 50 MB, and 
 |---|---|---|
 | Bby Wow | about 6.04s | One images-only job, `seconds` `"6"`. |
 | Ceiling Fan | about 15.28s | Two even pieces, each `seconds` `"8"`, then joined. |
-| Tiny Desk | 17.76s, editorial cuts at 5.375 / 11.625 / 15.0 | Two even pieces of 8.88s, each `seconds` `"9"`, then joined. |
+| Tiny Desk | 17.76s, editorial cuts at 5.375 / 11.625 / 15.0 | Two authored pieces, 0–12s (`"12"`) and 12–17.76s (`"6"`), then joined. Not an even 8.88s split. |
 
 A clip of 2–12s is one job. The reference file is the public template URL. A source inside that range that rounds below 4 requests `"4"`. The file is still sent whole.
 

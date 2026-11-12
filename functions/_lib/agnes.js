@@ -386,8 +386,11 @@ export function buildImageReferenceRequest(runtime, input) {
   if (!output) throw fail('agnes_bad_seconds');
   const prompt = String(source.prompt || '').trim();
   if (!prompt || prompt.includes('<Video') || /\bperson\b/i.test(prompt)) throw fail('agnes_bad_prompt');
-  for (let index = 1; index <= images.length; index += 1) {
-    if (!prompt.includes(`<Image ${index}>`)) throw fail('agnes_bad_prompt');
+  const mentioned = prompt.match(/<Image \d+>/g) || [];
+  if (!mentioned.length) throw fail('agnes_bad_prompt');
+  for (const token of mentioned) {
+    const index = Number(token.replace(/\D/g, ''));
+    if (index < 1 || index > images.length) throw fail('agnes_bad_prompt');
   }
   return {
     url: `${runtime.base}/videos`,

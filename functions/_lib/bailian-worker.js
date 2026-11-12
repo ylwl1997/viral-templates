@@ -46,7 +46,10 @@ import {
   revertQueuedJob,
   saveProviderTask,
 } from './account-db.js';
-import { adaptPack, formatAgnesCreatePayload, getPack } from '../../packages/template-pipeline/src/index.js';
+import bbyWowPack from '../../packages/template-pipeline/packs/bby-wow-pets/pack.json' with { type: 'json' };
+import ceilingFanPack from '../../packages/template-pipeline/packs/ceiling-fan-pets/pack.json' with { type: 'json' };
+import tinyDeskPack from '../../packages/template-pipeline/packs/tiny-desk-pets/pack.json' with { type: 'json' };
+import { adaptPack, formatAgnesCreatePayload, parseTemplatePack } from '../../packages/template-pipeline/dist/index.js';
 import {
   AGNES_IMAGE_TOTAL_MAX_BYTES,
   AGNES_POLL_MIN_MS,
@@ -351,19 +354,28 @@ function storedPhotoCount(row) {
   return [row && row.upload_key, row && row.upload_key_2, ...extra].filter(Boolean).length;
 }
 
-function pipelineImages(template, row) {
-  const count = storedPhotoCount(row);
-  const slots = template.photoSlots || [];
+const PARSED_PACKS = {
+  'bby-wow-pets': parseTemplatePack(bbyWowPack),
+  'ceiling-fan-pets': parseTemplatePack(ceilingFanPack),
+  'tiny-desk-pets': parseTemplatePack(tinyDeskPack),
+};
+
+function loadPack(id) {
+  return PARSED_PACKS[id] || null;
+}
+
+function pipelineCustomerImages(pack, row, urls) {
+  const count = urls ? urls.length : storedPhotoCount(row);
+  const shared = count === 1 && row.pipeline_frame === 'together';
   const images = [];
   for (let index = 0; index < count; index += 1) {
-    const slot = slots[index];
+    const role = pack.roles[index];
     images.push({
-      role: index === 0 ? 'lead' : '',
-      shared: count === 1 && row.pipeline_frame === 'together',
-      label: slot && slot.replacesEn,
+      roleId: role ? role.id : undefined,
+      url: urls ? urls[index] : `https://example.invalid/${index + 1}`,
+      shared: shared && index === 0,
     });
   }
-  if (count === 1) images[0].role = 'lead';
   return images;
 }
 
@@ -391,12 +403,14 @@ async function segmentInputs(ctx, row, prepared, segment) {
   if (prepared.pipeline) {
     const photoCount = prepared.photoCount;
     const urls = await agnesPhotoUrls(ctx.env, row.id, photoCount);
-    if (!urls || !segment.prompt) return null;
+    if (!urls || !prepared.pack || !segment.id) return null;
+    const adapted = await adaptPack(prepared.pack, pipelineCustomerImages(prepared.pack, row, urls.imageUrls));
+    const formatted = formatAgnesCreatePayload(adapted, segment.id);
     return {
       imageOnly: true,
-      imageUrls: urls.imageUrls,
-      prompt: segment.prompt,
-      seconds: segment.seconds,
+      imageUrls: formatted.body.images,
+      prompt: formatted.body.prompt,
+      seconds: formatted.body.seconds,
     };
   }
   const segments = prepared.selection && prepared.selection.segments;
@@ -658,7 +672,7 @@ async function submitRouted(ctx, row, prepared) {
 }
 
 async function preparePipeline(ctx, row, template) {
-  const pack = getPack(template.packId);
+  const pack = loadPack(template.packId);
   if (!pack) return failJob(ctx.db, row, 'bad_template');
   const photoCount = storedPhotoCount(row);
   if (photoCount < (template.minPhotos || 1)) return failJob(ctx.db, row, 'no_photo');
@@ -685,19 +699,17 @@ async function preparePipeline(ctx, row, template) {
   }
   let adapted;
   try {
-    adapted = adaptPack(pack, pipelineImages(template, row));
-    formatAgnesCreatePayload(
-      adapted,
-      adapted.images.map((_, index) => `https://example.invalid/${index}`),
-    );
+    adapted = await adaptPack(pack, pipelineCustomerImages(pack, row));
+    for (const segment of adapted.segments) formatAgnesCreatePayload(adapted, segment.id);
   } catch (err) {
     return failJob(ctx.db, row, err && err.code === 'lead_required' ? 'no_photo' : 'failed');
   }
   const segments = adapted.segments.map((segment) => ({
+    id: segment.id,
     index: segment.index,
-    start: segment.start,
-    end: segment.end,
-    seconds: segment.seconds,
+    start: segment.startSec,
+    end: segment.endSec,
+    seconds: String(segment.promptSeconds),
     prompt: segment.prompt,
   }));
   const claimed = await claimQueuedJob(ctx.db, row.id);
@@ -710,6 +722,7 @@ async function preparePipeline(ctx, row, template) {
     template: view,
     photoCount,
     pipeline: true,
+    pack,
     selection: { ...selection, segments, seconds: segments[0].seconds },
     seconds: segments[0].seconds,
     backoffMs: previous ? Number(previous[1]) : 0,
@@ -847,19 +860,20 @@ async function loadSplitPlan(ctx, row) {
   const template = getTemplate(row.template_slug);
   if (!template || template.retired) return null;
   if (template.packId) {
-    const pack = getPack(template.packId);
+    const pack = loadPack(template.packId);
     if (!pack) return null;
     const photoCount = storedPhotoCount(row);
     const images = await readSubjects(ctx.bucket, row, photoCount);
     const view = { ...template, photoCount };
     const selection = chooseProvider(ctx, view, images, new Uint8Array());
     if (!selection || selection.provider !== 'agnes') return null;
-    const adapted = adaptPack(pack, pipelineImages(template, row));
+    const adapted = await adaptPack(pack, pipelineCustomerImages(pack, row));
     const segments = adapted.segments.map((segment) => ({
+      id: segment.id,
       index: segment.index,
-      start: segment.start,
-      end: segment.end,
-      seconds: segment.seconds,
+      start: segment.startSec,
+      end: segment.endSec,
+      seconds: String(segment.promptSeconds),
       prompt: segment.prompt,
     }));
     if (segments.length < 2) return null;
@@ -867,6 +881,7 @@ async function loadSplitPlan(ctx, row) {
       template: view,
       reference: null,
       pipeline: true,
+      pack,
       photoCount,
       selection: { ...selection, segments, seconds: segments[0].seconds },
       image: images[0],

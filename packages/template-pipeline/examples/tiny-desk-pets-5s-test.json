@@ -1,8 +1,0 @@
-{
-  "id": "tiny-desk-pets-5s-test",
-  "note": "Short prompts for the two variants. The live pack is 17.76s. These 5s lines keep the same desk, the hard-cut hook, and the single-shot stay-together read.",
-  "durationSeconds": 5,
-  "aspectRatio": "9:16",
-  "timed-beats": "0.000-1.250s hard cut, close-up of the pet in <Image 1> singing at a plain desk, ordinary room, phone-photo light. Hard cut at 1.250s: the same pet keeps the song at the desk through 5.000s. No people. Do not add animals.",
-  "locked-segment": "Single continuous shot from 0.000s to 5.000s. The pets in <Image 1> stay together at a plain desk in an ordinary room. A lean toward the microphone at 1.250s stays inside the shot. No cut. No people. Do not add animals."
-}

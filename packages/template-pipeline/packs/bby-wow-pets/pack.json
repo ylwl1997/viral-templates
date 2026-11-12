@@ -1,31 +1,80 @@
 {
+  "schemaVersion": "1.0.0",
   "id": "bby-wow-pets",
-  "slug": "bby-wow",
+  "title": "Bby Wow pets",
+  "version": "1.0.0",
   "aspectRatio": "9:16",
-  "durationSeconds": 6.041667,
-  "variant": "auto",
-  "cuts": [1.25],
-  "roles": [{ "id": "lead", "required": true, "label": "dancer" }],
-  "segments": [{ "index": 0, "start": 0, "end": 6.041667 }],
-  "beats": [
+  "sourceDurationSec": 6.041667,
+  "styleLine": "Photorealistic vertical 9:16 bar-dance, ordinary room, phone-photo light, one pet, no people.",
+  "roles": [
     {
-      "start": 0,
-      "end": 1.25,
-      "role": "lead",
-      "times": ["0.000", "1.250"],
-      "cast": "0.000-1.250s hard cut, close-up of {{pet}} in an ordinary room, phone-photo light, casual collar or plain fur. No party set.",
-      "solo": "0.000-1.250s hard cut, close-up of {{pet}} in an ordinary room, phone-photo light, casual collar or plain fur. No party set. No people."
-    },
-    {
-      "start": 1.25,
-      "end": 6.041667,
-      "role": "lead",
-      "times": ["1.250", "6.042"],
-      "cast": "Hard cut at 1.250s: {{pet}} dances through 6.042s in that same everyday room. Keep the dance, the cuts, and the timing. No people.",
-      "solo": "Hard cut at 1.250s: {{pet}} dances through 6.042s in that same everyday room. Keep the dance, the cuts, and the timing. No people and no second animal."
+      "id": "lead",
+      "label": "Dancer",
+      "required": true,
+      "position": "Center",
+      "wardrobe": "a casual collar or plain fur",
+      "promptToken": "<Image 1>"
     }
   ],
-  "locked": [
-    "One continuous shot from 0.000s to 6.042s of {{group}} dancing in an ordinary room. The accent at 1.250s stays inside the shot. Phone-photo light. No people."
-  ]
+  "generationSegments": [
+    {
+      "id": "segment-1",
+      "startSec": 0,
+      "endSec": 6.041667,
+      "durationSec": 6.041667,
+      "promptSeconds": 6,
+      "variantPrompts": {
+        "timed-beats": "Photorealistic vertical 9:16 video. Every performer is the pet in the photo, not a human. No human faces and no human hands.\n\n0.0-1.2s: Hard cut, close-up of the pet in <Image 1> in an ordinary room, phone-photo light, casual collar or plain fur.\n1.2-6.0s: Hard cut at 1.2s. The pet in <Image 1> dances through 6.0s in that same everyday room. Keep the dance and the timing. Do not add another animal.",
+        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts, from 0.0s to 6.0s. The pet in <Image 1> dances in an ordinary room, phone-photo light. The accent at 1.2s stays inside the shot. No human faces and no human hands. Do not add another animal."
+      },
+      "script": {
+        "timedHeader": "Photorealistic vertical 9:16 video. Every performer is the pet in the photo, not a human. No human faces and no human hands.",
+        "timedCues": [
+          {
+            "label": "0.0-1.2s",
+            "camera": "Hard cut, close-up of",
+            "singleAction": "in an ordinary room, phone-photo light, casual collar or plain fur",
+            "subjects": [
+              {
+                "roleId": "lead",
+                "action": "in an ordinary room, phone-photo light, casual collar or plain fur"
+              }
+            ]
+          },
+          {
+            "label": "1.2-6.0s",
+            "camera": "Hard cut at 1.2s.",
+            "singleAction": "dances through 6.0s in that same everyday room",
+            "subjects": [
+              {
+                "roleId": "lead",
+                "action": "dances through 6.0s in that same everyday room"
+              }
+            ]
+          }
+        ],
+        "timedFooter": "Do not add another animal.",
+        "lockedCamera": "One continuous shot, no hard cuts.",
+        "setting": "An ordinary room, phone-photo light.",
+        "lockedLines": [
+          {
+            "roleId": "lead",
+            "position": "Center",
+            "wardrobe": "a casual collar or plain fur",
+            "action": "dancing"
+          }
+        ]
+      }
+    }
+  ],
+  "providerHints": {
+    "defaultModel": "agnes-video-2.5",
+    "resolution": "720P",
+    "imagesOnly": true,
+    "mode": "reference"
+  },
+  "provenance": {
+    "shotBoundariesSec": [1.25],
+    "segmentStrategy": "single-segment"
+  }
 }

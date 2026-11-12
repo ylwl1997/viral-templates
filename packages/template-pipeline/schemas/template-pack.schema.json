@@ -1,37 +1,496 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "template-pack.schema.json",
-  "title": "Template pack 1.0.0",
-  "type": "object",
-  "required": ["schemaVersion", "id", "aspectRatio", "sourceDurationSec", "roles", "generationSegments", "providerHints"],
-  "properties": {
-    "schemaVersion": { "const": "1.0.0" },
-    "aspectRatio": { "const": "9:16" },
-    "sourceDurationSec": { "type": "number", "exclusiveMinimum": 0 },
-    "generationSegments": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "required": ["id", "startSec", "endSec", "durationSec", "promptSeconds", "variantPrompts"],
-        "properties": {
-          "promptSeconds": { "type": "integer", "minimum": 4, "maximum": 12 },
-          "variantPrompts": {
-            "type": "object",
-            "required": ["timed-beats", "locked-segment"]
-          }
-        }
-      }
-    },
-    "providerHints": {
+  "$ref": "#/definitions/TemplatePack",
+  "definitions": {
+    "TemplatePack": {
       "type": "object",
-      "required": ["defaultModel", "resolution", "imagesOnly", "mode"],
       "properties": {
-        "defaultModel": { "const": "agnes-video-2.5" },
-        "resolution": { "const": "720P" },
-        "imagesOnly": { "const": true },
-        "mode": { "const": "reference" }
-      }
+        "schemaVersion": {
+          "type": "string",
+          "const": "1.0.0"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "aspectRatio": {
+          "type": "string",
+          "pattern": "^\\d+:\\d+$"
+        },
+        "sourceDurationSec": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "notes": {
+          "type": "string"
+        },
+        "styleLine": {
+          "type": "string",
+          "minLength": 1
+        },
+        "templateAnimalTerms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default": []
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "position": {
+                "type": "string",
+                "minLength": 1
+              },
+              "appearanceHints": {
+                "type": "string",
+                "minLength": 1
+              },
+              "wardrobe": {
+                "type": "string"
+              },
+              "promptToken": {
+                "type": "string",
+                "pattern": "^<Image \\d+>$"
+              },
+              "staleTerms": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "required",
+              "position",
+              "appearanceHints",
+              "wardrobe",
+              "promptToken"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "storyBeats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+$"
+              },
+              "startSec": {
+                "type": "number",
+                "minimum": 0
+              },
+              "endSec": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "id",
+              "startSec",
+              "endSec",
+              "summary"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "generationSegments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+$"
+              },
+              "startSec": {
+                "type": "number",
+                "minimum": 0
+              },
+              "endSec": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "durationSec": {
+                "type": "number",
+                "minimum": 4,
+                "maximum": 12
+              },
+              "promptSeconds": {
+                "type": "integer",
+                "minimum": 4,
+                "maximum": 12
+              },
+              "beatIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              },
+              "variantPrompts": {
+                "type": "object",
+                "properties": {
+                  "timed-beats": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "locked-segment": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "timed-beats",
+                  "locked-segment"
+                ],
+                "additionalProperties": false
+              },
+              "script": {
+                "type": "object",
+                "properties": {
+                  "timedHeader": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "timedCues": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string",
+                          "pattern": "^\\d+-\\d+s$"
+                        },
+                        "startSec": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "endSec": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "opener": {
+                          "type": "string"
+                        },
+                        "subjects": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "roleId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "authored": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "action": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "wardrobePhrase": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "boundPhrases": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "from": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "to": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "from",
+                                    "to"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "roleId",
+                              "authored",
+                              "action"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "minItems": 1
+                        },
+                        "closer": {
+                          "type": "string"
+                        },
+                        "optionalSentences": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "roleId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "identity": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "template": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "roleId",
+                              "identity",
+                              "template"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "camera": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "anchor": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "singleAction": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "startSec",
+                        "endSec",
+                        "opener",
+                        "subjects",
+                        "closer",
+                        "camera",
+                        "anchor",
+                        "singleAction"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 6
+                  },
+                  "timedFooter": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "lockedIntro": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "lockedLines": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "roleId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "position": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "identity": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "wardrobe": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "action": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "roleId",
+                        "position",
+                        "identity",
+                        "wardrobe",
+                        "action"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1
+                  },
+                  "lockedExclusion": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "lockedCamera": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "setting": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "styleAnchors": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "timedHeader",
+                  "timedCues",
+                  "timedFooter",
+                  "lockedIntro",
+                  "lockedLines",
+                  "lockedExclusion",
+                  "lockedCamera",
+                  "setting",
+                  "styleAnchors"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "id",
+              "startSec",
+              "endSec",
+              "durationSec",
+              "promptSeconds",
+              "beatIds",
+              "variantPrompts",
+              "script"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "providerHints": {
+          "type": "object",
+          "properties": {
+            "defaultModel": {
+              "type": "string",
+              "const": "agnes-video-2.5"
+            },
+            "resolution": {
+              "type": "string",
+              "const": "720P"
+            },
+            "imagesOnly": {
+              "type": "boolean",
+              "const": true
+            },
+            "mode": {
+              "type": "string",
+              "const": "reference"
+            }
+          },
+          "required": [
+            "defaultModel",
+            "resolution",
+            "imagesOnly",
+            "mode"
+          ],
+          "additionalProperties": false
+        },
+        "provenance": {
+          "type": "object",
+          "properties": {
+            "boundaries": {
+              "type": "string",
+              "enum": [
+                "hypit",
+                "ffmpeg",
+                "manual"
+              ]
+            },
+            "shotBoundariesSec": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "detail": {
+              "type": "string"
+            },
+            "segmentStrategy": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "boundaries",
+            "shotBoundariesSec",
+            "detail",
+            "segmentStrategy"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "title",
+        "version",
+        "aspectRatio",
+        "sourceDurationSec",
+        "notes",
+        "styleLine",
+        "roles",
+        "storyBeats",
+        "generationSegments",
+        "providerHints",
+        "provenance"
+      ],
+      "additionalProperties": false
     }
-  }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
 }

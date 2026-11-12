@@ -385,7 +385,7 @@ export function buildImageReferenceRequest(runtime, input) {
   const output = typeof seconds === 'string' && /^([4-9]|1[0-2])$/.test(seconds) ? seconds : agnesOutputSeconds(seconds);
   if (!output) throw fail('agnes_bad_seconds');
   const prompt = String(source.prompt || '').trim();
-  if (!prompt || prompt.includes('<Video') || /\bperson\b/i.test(prompt)) throw fail('agnes_bad_prompt');
+  if (!prompt || prompt.includes('<Video')) throw fail('agnes_bad_prompt');
   const mentioned = prompt.match(/<Image \d+>/g) || [];
   if (!mentioned.length) throw fail('agnes_bad_prompt');
   for (const token of mentioned) {
@@ -406,6 +406,7 @@ export function buildImageReferenceRequest(runtime, input) {
       size: AGNES_SIZE,
       aspect_ratio: AGNES_ASPECT_RATIO,
       images,
+      n: 1,
     },
   };
 }

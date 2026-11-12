@@ -5,92 +5,181 @@
   "version": "1.0.0",
   "aspectRatio": "9:16",
   "sourceDurationSec": 15.278005,
-  "notes": "Even split of 15.278005s into two pieces of 7.6390025s. Both stay inside 4–12s. promptSeconds is 8 and 8.",
-  "styleLine": "Photorealistic vertical 9:16 outfit wipe on one pet. Ordinary room. The fan exists only in the clip.",
+  "notes": "Even split of 15.278005s. Both pieces stay inside 4–12s. promptSeconds is 8 and 8.",
+  "styleLine": "Photorealistic vertical 9:16 outfit wipe on one pet in an ordinary room. No fan in the photo.",
+  "templateAnimalTerms": [],
   "roles": [
     {
       "id": "lead",
       "label": "Pet",
       "required": true,
       "position": "Center",
+      "appearanceHints": "the customer pet",
       "wardrobe": "a casual sweater, then a plain raincoat",
-      "promptToken": "<Image 1>"
+      "promptToken": "<Image 1>",
+      "staleTerms": []
+    }
+  ],
+  "storyBeats": [
+    {
+      "id": "sweater",
+      "startSec": 0,
+      "endSec": 7.639,
+      "summary": "The pet wears a casual sweater. No fan in the photo."
+    },
+    {
+      "id": "raincoat",
+      "startSec": 7.639,
+      "endSec": 15.278005,
+      "summary": "After the wipe the pet wears a plain raincoat."
     }
   ],
   "generationSegments": [
     {
       "id": "segment-1",
       "startSec": 0,
-      "endSec": 7.6390025,
-      "durationSec": 7.6390025,
+      "endSec": 7.639,
+      "durationSec": 7.639,
       "promptSeconds": 8,
+      "beatIds": [
+        "sweater"
+      ],
       "variantPrompts": {
-        "timed-beats": "Photorealistic vertical 9:16 video. The subject is the pet in the photo, not a human. No human faces and no human hands.\n\n0.0-7.6s: The pet in <Image 1> stands in an ordinary room in a casual sweater. Everyday snapshot, phone-photo light. No fan in the photo. At 7.6s generated blades wipe across the frame. Do not add another animal.",
-        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot. The pet in <Image 1> stands in an ordinary room in a casual sweater. Everyday snapshot. No fan in the photo. No human faces and no human hands. Do not add another animal."
+        "timed-beats": "Photorealistic vertical 9:16 video. The subject is the pet in the photo, not a human. No human faces and no human hands.\n\n0-4s: In an ordinary room, the pet from <Image 1> stands in a casual sweater with no fan in the photo, phone-photo light.\n4-8s: The same ordinary room holds the pet from <Image 1> reaches the generated blade wipe, no second animal.\n\nThe blades exist only in the clip. Do not add another animal. Photorealistic, ordinary room.",
+        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Ordinary room, phone-photo light.\n\nLocked camera, no cut.\n\nCenter: <Image 1>, the pet, in a casual sweater, standing with no fan in the photo.\n\nDo not add another animal. The blades exist only in the clip. Photorealistic, ordinary room."
       },
       "script": {
         "timedHeader": "Photorealistic vertical 9:16 video. The subject is the pet in the photo, not a human. No human faces and no human hands.",
         "timedCues": [
           {
-            "label": "0.0-7.6s",
-            "camera": "Ordinary room.",
-            "singleAction": "stands in a casual sweater until generated blades wipe across the frame",
+            "label": "0-4s",
+            "startSec": 0,
+            "endSec": 4,
+            "opener": "In an ordinary room,",
             "subjects": [
               {
                 "roleId": "lead",
-                "action": "stands in a casual sweater. No fan in the photo"
+                "authored": "the pet from <Image 1>",
+                "action": "stands in a casual sweater with no fan in the photo",
+                "wardrobePhrase": "a casual sweater"
               }
-            ]
+            ],
+            "closer": "phone-photo light",
+            "camera": "Ordinary room, medium shot,",
+            "anchor": "Ordinary room",
+            "singleAction": "stands in a casual sweater with no fan in the photo"
+          },
+          {
+            "label": "4-8s",
+            "startSec": 4,
+            "endSec": 8,
+            "opener": "The same ordinary room holds",
+            "subjects": [
+              {
+                "roleId": "lead",
+                "authored": "the pet from <Image 1>",
+                "action": "reaches the generated blade wipe",
+                "wardrobePhrase": "a casual sweater"
+              }
+            ],
+            "closer": "no second animal",
+            "camera": "Same ordinary room,",
+            "anchor": "ordinary room",
+            "singleAction": "meets the generated blade wipe"
           }
         ],
-        "timedFooter": "Do not add another animal.",
-        "lockedCamera": "One continuous shot.",
-        "setting": "An ordinary room, phone-photo light, no fan in the photo.",
+        "timedFooter": "The blades exist only in the clip. Do not add another animal. Photorealistic, ordinary room.",
+        "lockedIntro": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Ordinary room, phone-photo light.\n\nLocked camera, no cut.",
         "lockedLines": [
           {
             "roleId": "lead",
             "position": "Center",
+            "identity": "the pet",
             "wardrobe": "a casual sweater",
-            "action": "standing"
+            "action": "standing with no fan in the photo"
           }
+        ],
+        "lockedExclusion": "Do not add another animal. The blades exist only in the clip. Photorealistic, ordinary room.",
+        "lockedCamera": "Locked camera, no cut.",
+        "setting": "An ordinary room. No fan in the photo. The blades exist only in the clip.",
+        "styleAnchors": [
+          "9:16",
+          "Photorealistic",
+          "ordinary room"
         ]
       }
     },
     {
       "id": "segment-2",
-      "startSec": 7.6390025,
+      "startSec": 7.639,
       "endSec": 15.278005,
-      "durationSec": 7.6390025,
+      "durationSec": 7.639005,
       "promptSeconds": 8,
+      "beatIds": [
+        "raincoat"
+      ],
       "variantPrompts": {
-        "timed-beats": "Photorealistic vertical 9:16 video. The subject is the pet in the photo, not a human. No human faces and no human hands.\n\n0.0-7.6s: After the wipe, the pet in <Image 1> is in a plain raincoat in the same ordinary room. The blades exist only in the clip. End on that pet. Do not add another animal.",
-        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot. The pet in <Image 1> wears a plain raincoat in the same ordinary room. The blades exist only in the clip. No human faces and no human hands. Do not add another animal."
+        "timed-beats": "Photorealistic vertical 9:16 video. The subject is the pet in the photo, not a human. No human faces and no human hands.\n\n0-4s: In an ordinary room, the pet from <Image 1> wears a plain raincoat after the wipe, phone-photo light.\n4-8s: The same ordinary room holds the pet from <Image 1> stays in the plain raincoat until the end, no second animal.\n\nThe blades exist only in the clip. Do not add another animal. Photorealistic, ordinary room.",
+        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Ordinary room, phone-photo light.\n\nLocked camera, no cut.\n\nCenter: <Image 1>, the pet, in a plain raincoat, standing in a plain raincoat after the wipe.\n\nDo not add another animal. The blades exist only in the clip. Photorealistic, ordinary room."
       },
       "script": {
         "timedHeader": "Photorealistic vertical 9:16 video. The subject is the pet in the photo, not a human. No human faces and no human hands.",
         "timedCues": [
           {
-            "label": "0.0-7.6s",
-            "camera": "Same ordinary room.",
-            "singleAction": "wears a plain raincoat after the wipe",
+            "label": "0-4s",
+            "startSec": 0,
+            "endSec": 4,
+            "opener": "In an ordinary room,",
             "subjects": [
               {
                 "roleId": "lead",
-                "action": "wears a plain raincoat. The blades exist only in the clip"
+                "authored": "the pet from <Image 1>",
+                "action": "wears a plain raincoat after the wipe",
+                "wardrobePhrase": "a plain raincoat"
               }
-            ]
+            ],
+            "closer": "phone-photo light",
+            "camera": "Ordinary room, medium shot,",
+            "anchor": "Ordinary room",
+            "singleAction": "wears a plain raincoat"
+          },
+          {
+            "label": "4-8s",
+            "startSec": 4,
+            "endSec": 8,
+            "opener": "The same ordinary room holds",
+            "subjects": [
+              {
+                "roleId": "lead",
+                "authored": "the pet from <Image 1>",
+                "action": "stays in the plain raincoat until the end",
+                "wardrobePhrase": "a plain raincoat"
+              }
+            ],
+            "closer": "no second animal",
+            "camera": "Same ordinary room,",
+            "anchor": "ordinary room",
+            "singleAction": "stays in the plain raincoat"
           }
         ],
-        "timedFooter": "Do not add another animal.",
-        "lockedCamera": "One continuous shot.",
-        "setting": "The same ordinary room. The blades exist only in the clip.",
+        "timedFooter": "The blades exist only in the clip. Do not add another animal. Photorealistic, ordinary room.",
+        "lockedIntro": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Ordinary room, phone-photo light.\n\nLocked camera, no cut.",
         "lockedLines": [
           {
             "roleId": "lead",
             "position": "Center",
+            "identity": "the pet",
             "wardrobe": "a plain raincoat",
-            "action": "standing after the wipe"
+            "action": "standing in a plain raincoat after the wipe"
           }
+        ],
+        "lockedExclusion": "Do not add another animal. The blades exist only in the clip. Photorealistic, ordinary room.",
+        "lockedCamera": "Locked camera, no cut.",
+        "setting": "An ordinary room. No fan in the photo. The blades exist only in the clip.",
+        "styleAnchors": [
+          "9:16",
+          "Photorealistic",
+          "ordinary room"
         ]
       }
     }
@@ -102,7 +191,11 @@
     "mode": "reference"
   },
   "provenance": {
-    "shotBoundariesSec": [7.6390025],
+    "boundaries": "manual",
+    "shotBoundariesSec": [
+      7.639
+    ],
+    "detail": "Even split of the 15.278005s pet outfit wipe. The fan is generated and is not in the photo.",
     "segmentStrategy": "even-split"
   }
 }

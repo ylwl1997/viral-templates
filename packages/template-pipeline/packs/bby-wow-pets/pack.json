@@ -5,15 +5,27 @@
   "version": "1.0.0",
   "aspectRatio": "9:16",
   "sourceDurationSec": 6.041667,
-  "styleLine": "Photorealistic vertical 9:16 bar-dance, ordinary room, phone-photo light, one pet, no people.",
+  "notes": "One pet bar-dance. A single generation segment covers the 6.041667s source. promptSeconds is 6.",
+  "styleLine": "Photorealistic vertical 9:16 bar-dance in an ordinary room, phone-photo light, one pet.",
+  "templateAnimalTerms": [],
   "roles": [
     {
       "id": "lead",
       "label": "Dancer",
       "required": true,
       "position": "Center",
+      "appearanceHints": "the customer pet",
       "wardrobe": "a casual collar or plain fur",
-      "promptToken": "<Image 1>"
+      "promptToken": "<Image 1>",
+      "staleTerms": []
+    }
+  ],
+  "storyBeats": [
+    {
+      "id": "dance",
+      "startSec": 0,
+      "endSec": 6.041667,
+      "summary": "One pet dances in an ordinary room."
     }
   ],
   "generationSegments": [
@@ -23,46 +35,71 @@
       "endSec": 6.041667,
       "durationSec": 6.041667,
       "promptSeconds": 6,
+      "beatIds": [
+        "dance"
+      ],
       "variantPrompts": {
-        "timed-beats": "Photorealistic vertical 9:16 video. Every performer is the pet in the photo, not a human. No human faces and no human hands.\n\n0.0-1.2s: Hard cut, close-up of the pet in <Image 1> in an ordinary room, phone-photo light, casual collar or plain fur.\n1.2-6.0s: Hard cut at 1.2s. The pet in <Image 1> dances through 6.0s in that same everyday room. Keep the dance and the timing. Do not add another animal.",
-        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts, from 0.0s to 6.0s. The pet in <Image 1> dances in an ordinary room, phone-photo light. The accent at 1.2s stays inside the shot. No human faces and no human hands. Do not add another animal."
+        "timed-beats": "Photorealistic vertical 9:16 video. Follow this time-coded direction. The performer is the pet in the photo, not a human. No human faces and no human hands.\n\n0-3s: In an ordinary room, the pet from <Image 1> faces the camera in a casual collar or plain fur, phone-photo light.\n3-6s: The same ordinary room holds the pet from <Image 1> dances through the bar-dance phrase, no second animal.\n\nKeep this animal exact. Do not add another animal. Photorealistic, ordinary room, phone-photo light.",
+        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Ordinary room, phone-photo light.\n\nLocked camera, no cut.\n\nCenter: <Image 1>, the pet, in a casual collar or plain fur, dancing through the bar-dance phrase.\n\nDo not add another animal. Photorealistic, ordinary room."
       },
       "script": {
-        "timedHeader": "Photorealistic vertical 9:16 video. Every performer is the pet in the photo, not a human. No human faces and no human hands.",
+        "timedHeader": "Photorealistic vertical 9:16 video. Follow this time-coded direction. The performer is the pet in the photo, not a human. No human faces and no human hands.",
         "timedCues": [
           {
-            "label": "0.0-1.2s",
-            "camera": "Hard cut, close-up of",
-            "singleAction": "in an ordinary room, phone-photo light, casual collar or plain fur",
+            "label": "0-3s",
+            "startSec": 0,
+            "endSec": 3,
+            "opener": "In an ordinary room,",
             "subjects": [
               {
                 "roleId": "lead",
-                "action": "in an ordinary room, phone-photo light, casual collar or plain fur"
+                "authored": "the pet from <Image 1>",
+                "action": "faces the camera in a casual collar or plain fur",
+                "wardrobePhrase": "a casual collar or plain fur"
               }
-            ]
+            ],
+            "closer": "phone-photo light",
+            "camera": "Hard cut, close-up,",
+            "anchor": "Hard cut",
+            "singleAction": "holds a close-up in the ordinary room"
           },
           {
-            "label": "1.2-6.0s",
-            "camera": "Hard cut at 1.2s.",
-            "singleAction": "dances through 6.0s in that same everyday room",
+            "label": "3-6s",
+            "startSec": 3,
+            "endSec": 6,
+            "opener": "The same ordinary room holds",
             "subjects": [
               {
                 "roleId": "lead",
-                "action": "dances through 6.0s in that same everyday room"
+                "authored": "the pet from <Image 1>",
+                "action": "dances through the bar-dance phrase",
+                "wardrobePhrase": "a casual collar or plain fur"
               }
-            ]
+            ],
+            "closer": "no second animal",
+            "camera": "Hard cut at the beat,",
+            "anchor": "Hard cut",
+            "singleAction": "dances through the rest of the phrase"
           }
         ],
-        "timedFooter": "Do not add another animal.",
-        "lockedCamera": "One continuous shot, no hard cuts.",
-        "setting": "An ordinary room, phone-photo light.",
+        "timedFooter": "Keep this animal exact. Do not add another animal. Photorealistic, ordinary room, phone-photo light.",
+        "lockedIntro": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Ordinary room, phone-photo light.\n\nLocked camera, no cut.",
         "lockedLines": [
           {
             "roleId": "lead",
             "position": "Center",
+            "identity": "the pet",
             "wardrobe": "a casual collar or plain fur",
-            "action": "dancing"
+            "action": "dancing through the bar-dance phrase"
           }
+        ],
+        "lockedExclusion": "Do not add another animal. Photorealistic, ordinary room.",
+        "lockedCamera": "Locked camera, no cut.",
+        "setting": "An ordinary room in phone-photo light.",
+        "styleAnchors": [
+          "9:16",
+          "Photorealistic",
+          "ordinary room"
         ]
       }
     }
@@ -74,7 +111,11 @@
     "mode": "reference"
   },
   "provenance": {
-    "shotBoundariesSec": [1.25],
+    "boundaries": "manual",
+    "shotBoundariesSec": [
+      1.25
+    ],
+    "detail": "One pet bar-dance. The source is about 6.04s, so it stays one generation segment.",
     "segmentStrategy": "single-segment"
   }
 }

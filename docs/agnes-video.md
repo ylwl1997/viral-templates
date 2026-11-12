@@ -4,7 +4,7 @@ Customer pages do not mention Agnes, Bailian, DashScope, or Waffo. This is the s
 
 Primary model: `agnes-video-2.5`, `mode=reference`. Live looks are pet remakes. Create runs `adaptPack`, then sends the adapted prompts and the customer’s pet photo URLs. There is no input video. Output is `720P` and `9:16`. A longer look is still split into even 4–12s pieces and joined here. Credits stay one charge.
 
-`wan2.2-animate-mix` stays the automatic fallback for a one-photo look. It cannot take a second image. A look with `photoCount` greater than 1 does not fall through to mix. See [`bailian-animate.md`](bailian-animate.md).
+Live pet looks do not fall through to `wan2.2-animate-mix`. If Agnes cannot run one of those looks, the job fails and the credits return. Mix remains only for the internal fixture path that still has a reference clip. See [`bailian-animate.md`](bailian-animate.md).
 
 ## Switch
 
@@ -68,7 +68,7 @@ Agnes cannot be given a private R2 object or a `*.pages.dev` / `*.workers.dev` /
 
 The photo URLs are `https://{PUBLIC_SITE_APEX}/api/media/jobs/{id}/photo?exp=&sig=` and, when the look takes a second photo, `.../photo-2?exp=&sig=`. Each is signed for 24 hours with `AUTH_SECRET`. The signature is the same media HMAC the account page uses. Agnes fetches them without a session cookie. The template URL is `https://{PUBLIC_SITE_APEX}/brand/templates/{slug}-demo.mp4`. Keyword hosts such as `bby-wow.swaystill.com` serve the same paths. The worker builds the apex URL so a drain call that hits `pages.dev` does not leak that host into the Agnes body.
 
-`PUBLIC_SITE_APEX` itself is unchanged. For Agnes to run, it must already be the custom domain (`swaystill.com`). If it is still `viral-templates.pages.dev`, every job uses mix.
+`PUBLIC_SITE_APEX` itself is unchanged. For Agnes to run, it must already be the custom domain (`swaystill.com`). If it is still `viral-templates.pages.dev`, a live pet look fails and refunds. It does not use mix.
 
 ## API
 

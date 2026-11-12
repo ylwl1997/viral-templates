@@ -1,0 +1,145 @@
+{
+  "$ref": "#/definitions/VisionRewrite",
+  "definitions": {
+    "VisionRewrite": {
+      "type": "object",
+      "properties": {
+        "appearances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "roleId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "appearance": {
+                "type": "object",
+                "properties": {
+                  "species": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "breed": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "colors": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "markings": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "eyes": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "clothing": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "count": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "phrase": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "roleId",
+              "appearance",
+              "phrase"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "petCount": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "countClass": {
+          "type": "string",
+          "enum": [
+            "single",
+            "multi"
+          ]
+        },
+        "photoLayout": {
+          "type": "string",
+          "enum": [
+            "single",
+            "solo-stills",
+            "grouped",
+            "mixed"
+          ]
+        },
+        "interaction": {
+          "type": "string",
+          "enum": [
+            "single-performer",
+            "ensemble-in-frame",
+            "grouped-together"
+          ]
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "variant": {
+                "type": "string",
+                "enum": [
+                  "timed-beats",
+                  "locked-segment",
+                  "single-performer"
+                ]
+              },
+              "prompt": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "id",
+              "variant",
+              "prompt"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "appearances",
+        "petCount",
+        "countClass",
+        "photoLayout",
+        "interaction",
+        "segments"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

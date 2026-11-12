@@ -49,7 +49,15 @@ import {
 import bbyWowPack from '../../packages/template-pipeline/packs/bby-wow-pets/pack.json' with { type: 'json' };
 import ceilingFanPack from '../../packages/template-pipeline/packs/ceiling-fan-pets/pack.json' with { type: 'json' };
 import tinyDeskPack from '../../packages/template-pipeline/packs/tiny-desk-pets/pack.json' with { type: 'json' };
-import { adaptPack, formatAgnesCreatePayload, parseTemplatePack } from '../../packages/template-pipeline/dist/index.js';
+import {
+  ImageAssignmentError,
+  MissingRequiredRoleError,
+  PackValidationError,
+  StaleIdentityError,
+  adaptPack,
+  formatAgnesCreatePayload,
+  parseTemplatePack,
+} from '../../packages/template-pipeline/dist/site/index.js';
 import {
   AGNES_IMAGE_TOTAL_MAX_BYTES,
   AGNES_POLL_MIN_MS,
@@ -117,6 +125,22 @@ const NOTES = {
   no_reference_video: {
     en: 'This look has no reference clip yet, so a video cannot be generated.',
     zh: '这个风格还没有参考视频，无法生成。',
+  },
+  missing_required_role: {
+    en: 'This look needs the lead pet photo. The clip was not generated, and the credits were returned.',
+    zh: '这个效果需要主宠物的照片。短片没有生成，积分已退回。',
+  },
+  stale_identity: {
+    en: 'This clip could not be started. The credits were returned.',
+    zh: '这条短片没有开始。积分已退回。',
+  },
+  invalid_pack: {
+    en: 'This clip could not be started. The credits were returned.',
+    zh: '这条短片没有开始。积分已退回。',
+  },
+  image_assignment: {
+    en: 'This clip could not be started. The credits were returned.',
+    zh: '这条短片没有开始。积分已退回。',
   },
   provider_task_taken: {
     en: 'This clip could not be started. Please try again from Create.',
@@ -366,17 +390,32 @@ function loadPack(id) {
 
 function pipelineCustomerImages(pack, row, urls) {
   const count = urls ? urls.length : storedPhotoCount(row);
-  const shared = count === 1 && row.pipeline_frame === 'together';
+  const together = count === 1 && row.pipeline_frame === 'together';
   const images = [];
   for (let index = 0; index < count; index += 1) {
     const role = pack.roles[index];
-    images.push({
-      roleId: role ? role.id : undefined,
+    if (!role) continue;
+    const image = {
+      roleId: role.id,
       url: urls ? urls[index] : `https://example.invalid/${index + 1}`,
-      shared: shared && index === 0,
-    });
+    };
+    if (together) {
+      image.groupId = 'together';
+      image.appearance = { count: 2 };
+    }
+    images.push(image);
   }
   return images;
+}
+
+function pipelineErrorCode(err) {
+  if (err instanceof MissingRequiredRoleError || err instanceof StaleIdentityError || err instanceof PackValidationError || err instanceof ImageAssignmentError) {
+    return err.code;
+  }
+  if (err && (err.code === 'missing_required_role' || err.code === 'stale_identity' || err.code === 'invalid_pack' || err.code === 'image_assignment')) {
+    return err.code;
+  }
+  return 'failed';
 }
 
 function agnesCreateInput(template, inputs, seconds) {
@@ -406,11 +445,12 @@ async function segmentInputs(ctx, row, prepared, segment) {
     if (!urls || !prepared.pack || !segment.id) return null;
     const adapted = await adaptPack(prepared.pack, pipelineCustomerImages(prepared.pack, row, urls.imageUrls));
     const formatted = formatAgnesCreatePayload(adapted, segment.id);
+    if (!formatted.create.body.images.length) return null;
     return {
       imageOnly: true,
-      imageUrls: formatted.body.images,
-      prompt: formatted.body.prompt,
-      seconds: formatted.body.seconds,
+      imageUrls: formatted.create.body.images,
+      prompt: formatted.create.body.prompt,
+      seconds: formatted.create.body.seconds,
     };
   }
   const segments = prepared.selection && prepared.selection.segments;
@@ -448,6 +488,7 @@ async function submitAgnesSegment(ctx, row, prepared, index) {
     inputs = await segmentInputs(ctx, row, prepared, segment);
   } catch (err) {
     console.error('agnes_input', row.id, err && err.code ? err.code : 'error');
+    if (prepared.pipeline) return failJob(db, row, pipelineErrorCode(err));
     if (index === 0) return { fallback: true };
     return failJob(db, row, 'failed');
   }
@@ -583,11 +624,20 @@ async function submitAgnesParallel(ctx, row, prepared) {
   try {
     for (const segment of segments) {
       const one = await segmentInputs(ctx, row, prepared, segment);
-      if (!one) return { fallback: true };
+      if (!one) {
+        if (prepared.pipeline) {
+          return failJob(db, row, 'failed', {
+            note_en: 'This clip could not be started. The credits were returned.',
+            note_zh: '这条短片没有开始。积分已退回。',
+          });
+        }
+        return { fallback: true };
+      }
       inputs.push(one);
     }
   } catch (err) {
     console.error('agnes_input', row.id, err && err.code ? err.code : 'error');
+    if (prepared.pipeline) return failJob(db, row, pipelineErrorCode(err));
     return { fallback: true };
   }
   const created = await Promise.all(segments.map((segment, index) => createPiece(ctx, prepared.template, inputs[index], segment)));
@@ -702,11 +752,11 @@ async function preparePipeline(ctx, row, template) {
     adapted = await adaptPack(pack, pipelineCustomerImages(pack, row));
     for (const segment of adapted.segments) formatAgnesCreatePayload(adapted, segment.id);
   } catch (err) {
-    return failJob(ctx.db, row, err && err.code === 'lead_required' ? 'no_photo' : 'failed');
+    return failJob(ctx.db, row, pipelineErrorCode(err));
   }
-  const segments = adapted.segments.map((segment) => ({
+  const segments = adapted.segments.map((segment, index) => ({
     id: segment.id,
-    index: segment.index,
+    index,
     start: segment.startSec,
     end: segment.endSec,
     seconds: String(segment.promptSeconds),
@@ -867,10 +917,17 @@ async function loadSplitPlan(ctx, row) {
     const view = { ...template, photoCount };
     const selection = chooseProvider(ctx, view, images, new Uint8Array());
     if (!selection || selection.provider !== 'agnes') return null;
-    const adapted = await adaptPack(pack, pipelineCustomerImages(pack, row));
-    const segments = adapted.segments.map((segment) => ({
+    let adapted;
+    try {
+      adapted = await adaptPack(pack, pipelineCustomerImages(pack, row));
+    } catch (err) {
+      const code = pipelineErrorCode(err);
+      if (code !== 'failed') throw err;
+      return null;
+    }
+    const segments = adapted.segments.map((segment, index) => ({
       id: segment.id,
-      index: segment.index,
+      index,
       start: segment.startSec,
       end: segment.endSec,
       seconds: String(segment.promptSeconds),
@@ -916,6 +973,8 @@ async function storeSplitPiece(ctx, row, info, videoUrl) {
     plan = await loadSplitPlan(ctx, row);
   } catch (err) {
     console.error('segment_plan', row.id, err && err.code ? err.code : 'error');
+    const pipelineCode = pipelineErrorCode(err);
+    if (pipelineCode !== 'failed') return failJob(ctx.db, row, pipelineCode);
     return failJob(ctx.db, row, err && err.code === 'reference_fetch' ? 'no_reference_video' : 'failed');
   }
   if (!plan) return failJob(ctx.db, row, 'failed');
@@ -979,7 +1038,8 @@ async function resumeSplit(ctx, row) {
     if (err && err.code === 'reference_fetch') {
       return { id: row.id, status: 'running', action: 'retry', error: 'reference_fetch', provider: 'agnes' };
     }
-    return failJob(ctx.db, row, 'failed');
+    const pipelineCode = pipelineErrorCode(err);
+    return failJob(ctx.db, row, pipelineCode === 'failed' ? 'failed' : pipelineCode);
   }
   if (!plan) return failJob(ctx.db, row, 'failed');
   const parts = await readPartBytes(ctx.bucket, row.user_id, row.id, plan.selection.segments.length);
@@ -1050,7 +1110,8 @@ async function pollAgnesParallel(ctx, row, info) {
     if (err && err.code === 'reference_fetch') {
       return { id: row.id, status: 'running', action: 'retry', error: 'reference_fetch', provider: 'agnes' };
     }
-    return failJob(db, row, 'failed');
+    const pipelineCode = pipelineErrorCode(err);
+    return failJob(db, row, pipelineCode === 'failed' ? 'failed' : pipelineCode);
   }
   if (!plan || !plan.selection.segments || plan.selection.segments.length !== info.count) {
     return failJob(db, row, 'failed');
@@ -1072,7 +1133,7 @@ async function pollAgnesParallel(ctx, row, info) {
       }
     } catch (err) {
       console.error('agnes_input', row.id, err && err.code ? err.code : 'error');
-      return failJob(db, row, 'failed');
+      return failJob(db, row, plan.pipeline ? pipelineErrorCode(err) : 'failed');
     }
     const created = await Promise.all(
       missing.map((index, pos) => createPiece(ctx, plan.template, inputs[pos], plan.selection.segments[index])),

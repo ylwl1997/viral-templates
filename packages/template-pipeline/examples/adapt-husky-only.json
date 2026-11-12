@@ -1,0 +1,13 @@
+{
+  "images": [
+    {
+      "roleId": "lead",
+      "path": "customers/husky.jpg",
+      "appearance": {
+        "breed": "Siberian husky",
+        "colors": ["solid grey"],
+        "eyes": "amber"
+      }
+    }
+  ]
+}

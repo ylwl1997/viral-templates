@@ -2,104 +2,140 @@
   "schemaVersion": "1.0.0",
   "id": "bby-wow-pets",
   "title": "Bby Wow pets",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "aspectRatio": "9:16",
-  "sourceDurationSec": 6.041667,
-  "notes": "One pet bar-dance. A single generation segment covers the 6.041667s source. promptSeconds is 6.",
-  "styleLine": "Photorealistic vertical 9:16 bar-dance in an ordinary room, phone-photo light, one pet.",
+  "sourceDurationSec": 6.042,
+  "notes": "Source template, not stored in this repo: 6.042s vertical 720x1280 nightclub dance. Hypit media probe confirmed duration and 24fps. hypit media boundaries --rate 8 --threshold 0.1 returned a single weak candidate at 4.5s (score 0.105); that is a head-toss inside a continuous locked shot, not a hard cut, so it was not used as a generation split. The source is inside the 4-12s range and stays one generation segment. Story beats follow the integer-second dance phrases 0-2s, 2-4s, and 4-6s. Role slots are the customer remake, not a human dancer.",
+  "styleLine": "Photorealistic vertical 9:16 packed nightclub dance, saturated purple and magenta practical lights, soft haze, shallow depth on the performer, no caption graphics.",
   "templateAnimalTerms": [],
   "roles": [
     {
       "id": "lead",
-      "label": "Dancer",
+      "label": "Lead dancer",
       "required": true,
-      "position": "Center",
-      "appearanceHints": "the customer pet",
-      "wardrobe": "a casual collar or plain fur",
+      "position": "Center, medium close-up",
+      "appearanceHints": "the exact pet in the reference photo",
+      "wardrobe": "a black ribbed camisole and black shorts",
       "promptToken": "<Image 1>",
-      "staleTerms": []
+      "staleTerms": [
+        "ordinary room",
+        "casual collar",
+        "plain fur"
+      ]
     }
   ],
   "storyBeats": [
     {
-      "id": "dance",
+      "id": "groove-open",
       "startSec": 0,
-      "endSec": 6.041667,
-      "summary": "One pet dances in an ordinary room."
+      "endSec": 2,
+      "summary": "Packed nightclub, saturated purple and magenta lights, soft haze, a blurred crowd behind. The pet faces the camera in a black ribbed camisole and black shorts, already swaying, fur in motion. Locked medium close-up slightly below eye level."
+    },
+    {
+      "id": "arms-up",
+      "startSec": 2,
+      "endSec": 4,
+      "summary": "The same locked medium close-up holds. The pet lifts both paws, raises its chin, and keeps grooving as the fur settles then moves again. The club lights and crowd stay behind."
+    },
+    {
+      "id": "hair-whip",
+      "startSec": 4,
+      "endSec": 6.042,
+      "summary": "The same locked shot holds. The pet tosses its head so fur flies across the frame (the 4.5s Hypit motion peak), then tilts, smiles slightly, and keeps dancing to the end."
     }
   ],
   "generationSegments": [
     {
       "id": "segment-1",
       "startSec": 0,
-      "endSec": 6.041667,
-      "durationSec": 6.041667,
+      "endSec": 6.042,
+      "durationSec": 6.042,
       "promptSeconds": 6,
       "beatIds": [
-        "dance"
+        "groove-open",
+        "arms-up",
+        "hair-whip"
       ],
       "variantPrompts": {
-        "timed-beats": "Photorealistic vertical 9:16 video. Follow this time-coded direction. The performer is the pet in the photo, not a human. No human faces and no human hands.\n\n0-3s: In an ordinary room, the pet from <Image 1> faces the camera in a casual collar or plain fur, phone-photo light.\n3-6s: The same ordinary room holds the pet from <Image 1> dances through the bar-dance phrase, no second animal.\n\nKeep this animal exact. Do not add another animal. Photorealistic, ordinary room, phone-photo light.",
-        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Ordinary room, phone-photo light.\n\nLocked camera, no cut.\n\nCenter: <Image 1>, the pet, in a casual collar or plain fur, dancing through the bar-dance phrase.\n\nDo not add another animal. Photorealistic, ordinary room."
+        "timed-beats": "Photorealistic vertical 9:16 video. Follow this time-coded direction. The only performer is the exact pet in the photo, not a human and not a different animal. No human faces and no human hands.\n\n0-2s: In a packed nightclub washed in saturated purple and magenta practical lights, the pet from <Image 1> faces the camera in a black ribbed camisole and black shorts, already swaying, fur and head in motion, soft haze, a blurred crowd dancing behind, locked medium close-up slightly below eye level.\n2-4s: The same locked medium close-up holds the pet from <Image 1> lifts both paws and raises its chin in a black ribbed camisole and black shorts, still grooving as the fur settles then moves again, the purple club lights and the crowd stay behind the pet, no cut and no camera move.\n4-6s: The same locked medium close-up holds the pet from <Image 1> tosses its head so fur flies across the frame, then tilts and keeps dancing in a black ribbed camisole and black shorts, a slight smile, still in the packed purple nightclub through the end of the clip, no cut.\n\nKeep the pet's exact face, fur, and markings from the photo. Do not leave a human dancer in the shot. Photorealistic, packed nightclub, saturated purple and magenta practical lights, soft haze, no caption graphics.",
+        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. This is a packed nightclub dance floor held for the full segment, saturated purple and magenta practical lights, soft haze in the air, out-of-focus dancers crowding the background, and ceiling fixtures glowing magenta.\n\nLocked medium close-up slightly below eye level, no cut, no camera move, no wide pull-back.\n\nThe only performer is an animal, not a human. No human faces and no human hands. The face, fur, and paws must match the identity photo.\n\nCenter, medium close-up: <Image 1>, the pet, in a black ribbed camisole and black shorts, sways and grooves on the packed nightclub floor, then tosses its head so fur flies across the frame and keeps dancing through the end of the shot.\n\nDo not introduce a human dancer, a second animal, or an ordinary living room. Keep the pet clearly recognizable for the whole shot. Photorealistic, packed nightclub, saturated purple and magenta practical lights, soft haze, no caption graphics."
       },
       "script": {
-        "timedHeader": "Photorealistic vertical 9:16 video. Follow this time-coded direction. The performer is the pet in the photo, not a human. No human faces and no human hands.",
+        "timedHeader": "Photorealistic vertical 9:16 video. Follow this time-coded direction. The only performer is the exact pet in the photo, not a human and not a different animal. No human faces and no human hands.",
         "timedCues": [
           {
-            "label": "0-3s",
+            "label": "0-2s",
             "startSec": 0,
-            "endSec": 3,
-            "opener": "In an ordinary room,",
+            "endSec": 2,
+            "opener": "In a packed nightclub washed in saturated purple and magenta practical lights,",
             "subjects": [
               {
                 "roleId": "lead",
                 "authored": "the pet from <Image 1>",
-                "action": "faces the camera in a casual collar or plain fur",
-                "wardrobePhrase": "a casual collar or plain fur"
+                "action": "faces the camera in a black ribbed camisole and black shorts, already swaying, fur and head in motion",
+                "wardrobePhrase": "a black ribbed camisole and black shorts"
               }
             ],
-            "closer": "phone-photo light",
-            "camera": "Hard cut, close-up,",
-            "anchor": "Hard cut",
-            "singleAction": "holds a close-up in the ordinary room"
+            "closer": "soft haze, a blurred crowd dancing behind, locked medium close-up slightly below eye level",
+            "camera": "In a packed nightclub washed in saturated purple and magenta practical lights, locked medium close-up slightly below eye level,",
+            "anchor": "locked medium close-up",
+            "singleAction": "faces the camera and sways, fur already in motion"
           },
           {
-            "label": "3-6s",
-            "startSec": 3,
-            "endSec": 6,
-            "opener": "The same ordinary room holds",
+            "label": "2-4s",
+            "startSec": 2,
+            "endSec": 4,
+            "opener": "The same locked medium close-up holds",
             "subjects": [
               {
                 "roleId": "lead",
                 "authored": "the pet from <Image 1>",
-                "action": "dances through the bar-dance phrase",
-                "wardrobePhrase": "a casual collar or plain fur"
+                "action": "lifts both paws and raises its chin in a black ribbed camisole and black shorts, still grooving as the fur settles then moves again",
+                "wardrobePhrase": "a black ribbed camisole and black shorts"
               }
             ],
-            "closer": "no second animal",
-            "camera": "Hard cut at the beat,",
-            "anchor": "Hard cut",
-            "singleAction": "dances through the rest of the phrase"
+            "closer": "the purple club lights and the crowd stay behind the pet, no cut and no camera move",
+            "camera": "The same locked medium close-up holds in the packed nightclub,",
+            "anchor": "locked medium close-up",
+            "singleAction": "lifts both paws and raises its chin, still grooving"
+          },
+          {
+            "label": "4-6s",
+            "startSec": 4,
+            "endSec": 6,
+            "opener": "The same locked medium close-up holds",
+            "subjects": [
+              {
+                "roleId": "lead",
+                "authored": "the pet from <Image 1>",
+                "action": "tosses its head so fur flies across the frame, then tilts and keeps dancing in a black ribbed camisole and black shorts",
+                "wardrobePhrase": "a black ribbed camisole and black shorts"
+              }
+            ],
+            "closer": "a slight smile, still in the packed purple nightclub through the end of the clip, no cut",
+            "camera": "The same locked medium close-up holds in the packed purple nightclub,",
+            "anchor": "locked medium close-up",
+            "singleAction": "tosses its head so fur flies across the frame, then tilts and keeps dancing"
           }
         ],
-        "timedFooter": "Keep this animal exact. Do not add another animal. Photorealistic, ordinary room, phone-photo light.",
-        "lockedIntro": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Ordinary room, phone-photo light.\n\nLocked camera, no cut.",
+        "timedFooter": "Keep the pet's exact face, fur, and markings from the photo. Do not leave a human dancer in the shot. Photorealistic, packed nightclub, saturated purple and magenta practical lights, soft haze, no caption graphics.",
+        "lockedIntro": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. This is a packed nightclub dance floor held for the full segment, saturated purple and magenta practical lights, soft haze in the air, out-of-focus dancers crowding the background, and ceiling fixtures glowing magenta.\n\nLocked medium close-up slightly below eye level, no cut, no camera move, no wide pull-back.\n\nThe only performer is an animal, not a human. No human faces and no human hands. The face, fur, and paws must match the identity photo.",
         "lockedLines": [
           {
             "roleId": "lead",
-            "position": "Center",
+            "position": "Center, medium close-up",
             "identity": "the pet",
-            "wardrobe": "a casual collar or plain fur",
-            "action": "dancing through the bar-dance phrase"
+            "wardrobe": "a black ribbed camisole and black shorts",
+            "action": "sways and grooves on the packed nightclub floor, then tosses its head so fur flies across the frame and keeps dancing through the end of the shot"
           }
         ],
-        "lockedExclusion": "Do not add another animal. Photorealistic, ordinary room.",
-        "lockedCamera": "Locked camera, no cut.",
-        "setting": "An ordinary room in phone-photo light.",
+        "lockedExclusion": "Do not introduce a human dancer, a second animal, or an ordinary living room. Keep the pet clearly recognizable for the whole shot. Photorealistic, packed nightclub, saturated purple and magenta practical lights, soft haze, no caption graphics.",
+        "lockedCamera": "Locked medium close-up slightly below eye level, no cut, no camera move, no wide pull-back.",
+        "setting": "A packed nightclub dance floor, saturated purple and magenta practical lights, soft haze, out-of-focus dancers in the background, ceiling fixtures glowing magenta.",
         "styleAnchors": [
           "9:16",
           "Photorealistic",
-          "ordinary room"
+          "packed nightclub"
         ]
       }
     }
@@ -111,11 +147,9 @@
     "mode": "reference"
   },
   "provenance": {
-    "boundaries": "manual",
-    "shotBoundariesSec": [
-      1.25
-    ],
-    "detail": "One pet bar-dance. The source is about 6.04s, so it stays one generation segment.",
+    "boundaries": "hypit",
+    "shotBoundariesSec": [],
+    "detail": "Hypit media probe 6.042s, 720x1280, 24fps. boundaries --rate 8 --threshold 0.1 returned one weak candidate at 4.5s (score 0.105), a head-toss in a continuous locked shot, not accepted as a hard cut. The pack stays one generation segment. The source video is not stored in this repository.",
     "segmentStrategy": "single-segment"
   }
 }

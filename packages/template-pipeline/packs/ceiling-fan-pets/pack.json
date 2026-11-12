@@ -2,184 +2,230 @@
   "schemaVersion": "1.0.0",
   "id": "ceiling-fan-pets",
   "title": "Ceiling Fan pets",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "aspectRatio": "9:16",
-  "sourceDurationSec": 15.278005,
-  "notes": "Even split of 15.278005s. Both pieces stay inside 4–12s. promptSeconds is 8 and 8.",
-  "styleLine": "Photorealistic vertical 9:16 outfit wipe on one pet in an ordinary room. No fan in the photo.",
+  "sourceDurationSec": 15.279,
+  "notes": "Source template, not stored in this repo: 15.279s vertical 720x1280 overhead costume-wipe under a spinning ceiling fan. Hypit media probe confirmed duration and 30fps. hypit media boundaries --rate 8 --threshold 0.1 returned no candidates because the camera is locked overhead; costume changes happen as out-of-focus wooden blades wipe the frame. Editorial story beats were taken from a 0.5s frame pass: formal look 0-5s, maid heart 5-8s, green tracksuit 8-12s, cream cardigan hug 12-13.5s, blue-hoodie wave 13.5-15.279s. Generation segments are an editorial grouping, 0-8s and 8-15.279s, so the join sits on the maid-to-tracksuit wipe instead of an even 7.639s cut through the maid beat. An ending at 12s would leave a 3.279s last segment, which is under 4s and is not used. Role slots are the customer remake, not a human. The fan is generated and is not in the customer's photo.",
+  "styleLine": "Photorealistic vertical 9:16 overhead costume-wipe, cream living-room sofa, wooden ceiling-fan blades spinning in the immediate foreground, soft warm indoor light, no caption graphics.",
   "templateAnimalTerms": [],
   "roles": [
     {
       "id": "lead",
-      "label": "Pet",
+      "label": "Pet on the sofa",
       "required": true,
-      "position": "Center",
-      "appearanceHints": "the customer pet",
-      "wardrobe": "a casual sweater, then a plain raincoat",
+      "position": "Lying on its back at the center of the cream sofa, shot from directly above",
+      "appearanceHints": "the exact pet in the reference photo",
+      "wardrobe": "a pale formal dress with light-blue trim and white formal boots, then a black-and-white maid dress, a green zip tracksuit with white piping, a cream cardigan with a blue bow, then a light-blue cropped hoodie, a visor cap, and a short pleated skirt as wooden ceiling-fan blades wipe the frame",
       "promptToken": "<Image 1>",
-      "staleTerms": []
+      "staleTerms": [
+        "ordinary room",
+        "casual sweater",
+        "raincoat",
+        "no fan in the photo"
+      ]
     }
   ],
   "storyBeats": [
     {
-      "id": "sweater",
+      "id": "formal-look-up",
       "startSec": 0,
-      "endSec": 7.639,
-      "summary": "The pet wears a casual sweater. No fan in the photo."
+      "endSec": 5,
+      "summary": "Locked overhead shot of a cream living-room sofa. The pet lies on its back in a pale formal dress with light-blue trim and white formal boots, one paw raised behind its head, a small stuffed toy at its side. Wooden ceiling-fan blades rotate, out of focus, in the immediate foreground."
     },
     {
-      "id": "raincoat",
-      "startSec": 7.639,
-      "endSec": 15.278005,
-      "summary": "After the wipe the pet wears a plain raincoat."
+      "id": "maid-heart",
+      "startSec": 5,
+      "endSec": 8,
+      "summary": "The same locked overhead shot. A passing blade wipes the frame and the formal dress becomes a black-and-white maid dress with a white lace apron and maid headpiece. The pet forms a heart with both paws. The stuffed toy stays on the sofa."
+    },
+    {
+      "id": "tracksuit",
+      "startSec": 8,
+      "endSec": 12,
+      "summary": "The same locked overhead shot. A passing blade wipes the frame into a green zip tracksuit with white piping. The pet lies on its back with both paws raised behind its head. The stuffed toy stays on the sofa."
+    },
+    {
+      "id": "cardigan-hug",
+      "startSec": 12,
+      "endSec": 13.5,
+      "summary": "The same locked overhead shot. A passing blade wipes the frame into a cream cardigan with a blue bow. The pet hugs the stuffed toy already on the sofa."
+    },
+    {
+      "id": "sporty-wave",
+      "startSec": 13.5,
+      "endSec": 15.279,
+      "summary": "The same locked overhead shot. Another passing blade wipes the frame into a light-blue cropped hoodie, a visor cap, and a short pleated skirt. The pet waves both paws up at the camera."
     }
   ],
   "generationSegments": [
     {
       "id": "segment-1",
       "startSec": 0,
-      "endSec": 7.639,
-      "durationSec": 7.639,
+      "endSec": 8,
+      "durationSec": 8,
       "promptSeconds": 8,
       "beatIds": [
-        "sweater"
+        "formal-look-up",
+        "maid-heart"
       ],
       "variantPrompts": {
-        "timed-beats": "Photorealistic vertical 9:16 video. The subject is the pet in the photo, not a human. No human faces and no human hands.\n\n0-4s: In an ordinary room, the pet from <Image 1> stands in a casual sweater with no fan in the photo, phone-photo light.\n4-8s: The same ordinary room holds the pet from <Image 1> reaches the generated blade wipe, no second animal.\n\nThe blades exist only in the clip. Do not add another animal. Photorealistic, ordinary room.",
-        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Ordinary room, phone-photo light.\n\nLocked camera, no cut.\n\nCenter: <Image 1>, the pet, in a casual sweater, standing with no fan in the photo.\n\nDo not add another animal. The blades exist only in the clip. Photorealistic, ordinary room."
+        "timed-beats": "Photorealistic vertical 9:16 video. Follow this time-coded direction. The only performer is the exact pet in the photo, not a human and not a different animal. No human faces and no human hands.\n\n0-5s: From a locked overhead camera shooting straight down, the pet from <Image 1> lies on its back on a cream living-room sofa in a pale formal dress with light-blue trim and white formal boots, one paw raised behind its head, a small stuffed toy already on the sofa to its side, out-of-focus wooden ceiling-fan blades rotating in the immediate foreground, a knitted throw at the foot of the sofa, a small round side table with white flowers at the upper left, soft warm indoor light.\n5-8s: The same locked overhead camera holds on the same cream sofa the pet from <Image 1> stays on its back as a passing wooden blade wipes the frame and the pale formal dress becomes a black-and-white maid dress with a white lace apron and a maid headpiece, then forms a heart with both paws at its chest, the stuffed toy stays on the sofa, the ceiling-fan blades keep rotating in the foreground, no camera move and no cut.\n\nKeep the pet's exact face, fur, and markings from the photo. Do not leave a human in the shot. The wooden ceiling-fan blades exist only in the generated clip, spinning in the immediate foreground; they are not in the customer's photo. The room, the cream sofa, and the locked overhead camera stay the same for the whole clip. Photorealistic, soft warm indoor light, no caption graphics.",
+        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. This is the first half of an overhead costume-wipe, held for the full segment: a cream living-room sofa seen from directly above, a knitted throw at the foot of the sofa, a small round side table with white flowers at the upper left, and out-of-focus wooden ceiling-fan blades already spinning in the immediate foreground under soft warm indoor light.\n\nLocked overhead camera shooting straight down through slowly rotating wooden ceiling-fan blades in the immediate foreground, no cut, no camera move.\n\nThe only performer is an animal, not a human. No human faces and no human hands. The face, fur, and paws must match the identity photo. The blades are generated and are not in the customer's photo.\n\nLying on its back in the center of the cream sofa, shot from directly above: <Image 1>, the pet, in a pale formal dress with light-blue trim and white formal boots, then a black-and-white maid dress after the blade wipe, starts lying on its back in a pale formal dress with light-blue trim and white formal boots, one paw raised behind its head, then as a wooden blade wipes across the frame changes into a black-and-white maid dress with a white lace apron and a maid headpiece and forms a heart with both paws, a small stuffed toy already on the sofa to its side.\n\nDo not introduce a human, a second pet, a standing full-body shot, or a different room. Do not start in an ordinary room with no ceiling-fan blades. Keep the pet clearly recognizable for the whole shot. Photorealistic, cream sofa, wooden ceiling-fan blades in the foreground, soft warm indoor light, no caption graphics."
       },
       "script": {
-        "timedHeader": "Photorealistic vertical 9:16 video. The subject is the pet in the photo, not a human. No human faces and no human hands.",
+        "timedHeader": "Photorealistic vertical 9:16 video. Follow this time-coded direction. The only performer is the exact pet in the photo, not a human and not a different animal. No human faces and no human hands.",
         "timedCues": [
           {
-            "label": "0-4s",
+            "label": "0-5s",
             "startSec": 0,
-            "endSec": 4,
-            "opener": "In an ordinary room,",
+            "endSec": 5,
+            "opener": "From a locked overhead camera shooting straight down,",
             "subjects": [
               {
                 "roleId": "lead",
                 "authored": "the pet from <Image 1>",
-                "action": "stands in a casual sweater with no fan in the photo",
-                "wardrobePhrase": "a casual sweater"
+                "action": "lies on its back on a cream living-room sofa in a pale formal dress with light-blue trim and white formal boots, one paw raised behind its head, a small stuffed toy already on the sofa to its side",
+                "wardrobePhrase": "a pale formal dress with light-blue trim and white formal boots"
               }
             ],
-            "closer": "phone-photo light",
-            "camera": "Ordinary room, medium shot,",
-            "anchor": "Ordinary room",
-            "singleAction": "stands in a casual sweater with no fan in the photo"
+            "closer": "out-of-focus wooden ceiling-fan blades rotating in the immediate foreground, a knitted throw at the foot of the sofa, a small round side table with white flowers at the upper left, soft warm indoor light",
+            "camera": "From a locked overhead camera shooting straight down through slowly rotating wooden ceiling-fan blades in the immediate foreground,",
+            "anchor": "locked overhead camera",
+            "singleAction": "lies on its back on the cream sofa, one paw raised behind its head"
           },
           {
-            "label": "4-8s",
-            "startSec": 4,
+            "label": "5-8s",
+            "startSec": 5,
             "endSec": 8,
-            "opener": "The same ordinary room holds",
+            "opener": "The same locked overhead camera holds on the same cream sofa",
             "subjects": [
               {
                 "roleId": "lead",
                 "authored": "the pet from <Image 1>",
-                "action": "reaches the generated blade wipe",
-                "wardrobePhrase": "a casual sweater"
+                "action": "stays on its back as a passing wooden blade wipes the frame and the pale formal dress becomes a black-and-white maid dress with a white lace apron and a maid headpiece, then forms a heart with both paws at its chest",
+                "wardrobePhrase": "a black-and-white maid dress with a white lace apron and a maid headpiece"
               }
             ],
-            "closer": "no second animal",
-            "camera": "Same ordinary room,",
-            "anchor": "ordinary room",
-            "singleAction": "meets the generated blade wipe"
+            "closer": "the stuffed toy stays on the sofa, the ceiling-fan blades keep rotating in the foreground, no camera move and no cut",
+            "camera": "The same locked overhead camera holds on the same cream sofa, wooden ceiling-fan blades still in the immediate foreground,",
+            "anchor": "locked overhead camera",
+            "singleAction": "stays on its back as a passing blade wipes the frame into a maid dress, then forms a heart with both paws"
           }
         ],
-        "timedFooter": "The blades exist only in the clip. Do not add another animal. Photorealistic, ordinary room.",
-        "lockedIntro": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Ordinary room, phone-photo light.\n\nLocked camera, no cut.",
+        "timedFooter": "Keep the pet's exact face, fur, and markings from the photo. Do not leave a human in the shot. The wooden ceiling-fan blades exist only in the generated clip, spinning in the immediate foreground; they are not in the customer's photo. The room, the cream sofa, and the locked overhead camera stay the same for the whole clip. Photorealistic, soft warm indoor light, no caption graphics.",
+        "lockedIntro": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. This is the first half of an overhead costume-wipe, held for the full segment: a cream living-room sofa seen from directly above, a knitted throw at the foot of the sofa, a small round side table with white flowers at the upper left, and out-of-focus wooden ceiling-fan blades already spinning in the immediate foreground under soft warm indoor light.\n\nLocked overhead camera shooting straight down through slowly rotating wooden ceiling-fan blades in the immediate foreground, no cut, no camera move.\n\nThe only performer is an animal, not a human. No human faces and no human hands. The face, fur, and paws must match the identity photo. The blades are generated and are not in the customer's photo.",
         "lockedLines": [
           {
             "roleId": "lead",
-            "position": "Center",
+            "position": "Lying on its back in the center of the cream sofa, shot from directly above",
             "identity": "the pet",
-            "wardrobe": "a casual sweater",
-            "action": "standing with no fan in the photo"
+            "wardrobe": "a pale formal dress with light-blue trim and white formal boots, then a black-and-white maid dress after the blade wipe",
+            "action": "starts lying on its back in a pale formal dress with light-blue trim and white formal boots, one paw raised behind its head, then as a wooden blade wipes across the frame changes into a black-and-white maid dress with a white lace apron and a maid headpiece and forms a heart with both paws, a small stuffed toy already on the sofa to its side"
           }
         ],
-        "lockedExclusion": "Do not add another animal. The blades exist only in the clip. Photorealistic, ordinary room.",
-        "lockedCamera": "Locked camera, no cut.",
-        "setting": "An ordinary room. No fan in the photo. The blades exist only in the clip.",
+        "lockedExclusion": "Do not introduce a human, a second pet, a standing full-body shot, or a different room. Do not start in an ordinary room with no ceiling-fan blades. Keep the pet clearly recognizable for the whole shot. Photorealistic, cream sofa, wooden ceiling-fan blades in the foreground, soft warm indoor light, no caption graphics.",
+        "lockedCamera": "Locked overhead camera shooting straight down through slowly rotating wooden ceiling-fan blades in the immediate foreground, no cut, no camera move.",
+        "setting": "A cream living-room sofa shot from directly above, a knitted throw at the foot of the sofa, a small round side table with white flowers at the upper left, and out-of-focus wooden ceiling-fan blades rotating in the immediate foreground under soft warm indoor light.",
         "styleAnchors": [
           "9:16",
           "Photorealistic",
-          "ordinary room"
+          "cream sofa",
+          "ceiling-fan blades"
         ]
       }
     },
     {
       "id": "segment-2",
-      "startSec": 7.639,
-      "endSec": 15.278005,
-      "durationSec": 7.639005,
-      "promptSeconds": 8,
+      "startSec": 8,
+      "endSec": 15.279,
+      "durationSec": 7.279,
+      "promptSeconds": 7,
       "beatIds": [
-        "raincoat"
+        "tracksuit",
+        "cardigan-hug",
+        "sporty-wave"
       ],
       "variantPrompts": {
-        "timed-beats": "Photorealistic vertical 9:16 video. The subject is the pet in the photo, not a human. No human faces and no human hands.\n\n0-4s: In an ordinary room, the pet from <Image 1> wears a plain raincoat after the wipe, phone-photo light.\n4-8s: The same ordinary room holds the pet from <Image 1> stays in the plain raincoat until the end, no second animal.\n\nThe blades exist only in the clip. Do not add another animal. Photorealistic, ordinary room.",
-        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Ordinary room, phone-photo light.\n\nLocked camera, no cut.\n\nCenter: <Image 1>, the pet, in a plain raincoat, standing in a plain raincoat after the wipe.\n\nDo not add another animal. The blades exist only in the clip. Photorealistic, ordinary room."
+        "timed-beats": "Photorealistic vertical 9:16 video. Follow this time-coded direction. The only performer is the exact pet in the photo, not a human and not a different animal. No human faces and no human hands.\n\n0-4s: The same locked overhead camera continues on the same cream living-room sofa, the pet from <Image 1> is already lying on its back in the same spot in a green zip tracksuit with white piping, both paws raised behind its head, the small stuffed toy still on the sofa to its side, out-of-focus wooden ceiling-fan blades already rotating in the immediate foreground, knitted throw and flowered side table unchanged, soft warm indoor light.\n4-6s: The same locked overhead camera holds the pet from <Image 1> stays on its back as a passing wooden blade wipes the frame and the green tracksuit becomes a cream cardigan with a blue bow, then hugs the stuffed toy already on the sofa, the cream sofa and the rotating ceiling-fan blades stay exactly the same, no camera move and no cut.\n6-7s: The same locked overhead camera holds the pet from <Image 1> stays on its back as another passing blade wipes the frame and the cream cardigan becomes a light-blue cropped hoodie, a visor cap, and a short pleated skirt, then waves both paws up at the camera, still on the same cream sofa under the rotating ceiling-fan blades through the end of the clip, no cut.\n\nKeep the pet's exact face, fur, and markings from the photo. Do not leave a human in the shot. The wooden ceiling-fan blades exist only in the generated clip, spinning in the immediate foreground; they are not in the customer's photo. The room, the cream sofa, and the locked overhead camera stay the same for the whole clip. Photorealistic, soft warm indoor light, no caption graphics.",
+        "locked-segment": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. This is the second half of the same overhead costume-wipe, already in progress: the same cream living-room sofa seen from directly above, the same knitted throw, the same small round side table with white flowers at the upper left, and the same out-of-focus wooden ceiling-fan blades already spinning in the immediate foreground under soft warm indoor light. Do not reset to a different room.\n\nLocked overhead camera shooting straight down through slowly rotating wooden ceiling-fan blades in the immediate foreground, no cut, no camera move.\n\nThe only performer is an animal, not a human. No human faces and no human hands. The face, fur, and paws must match the identity photo. The blades are generated and are not in the customer's photo.\n\nAlready lying on its back in the same spot on the cream sofa, shot from directly above: <Image 1>, the pet, in a green zip tracksuit with white piping, then a cream cardigan, then a light-blue cropped hoodie and visor cap after later blade wipes, is already lying on its back in a green zip tracksuit with white piping, both paws behind its head, then as wooden blades wipe across the frame changes into a cream cardigan with a blue bow and hugs the stuffed toy, then into a light-blue cropped hoodie, visor cap, and short pleated skirt, and waves both paws up at the camera.\n\nDo not introduce a human, a second pet, a standing full-body shot, or a different room. Do not reset the sofa or drop the ceiling-fan blades. Keep the pet clearly recognizable for the whole shot. Photorealistic, cream sofa, wooden ceiling-fan blades in the foreground, soft warm indoor light, no caption graphics."
       },
       "script": {
-        "timedHeader": "Photorealistic vertical 9:16 video. The subject is the pet in the photo, not a human. No human faces and no human hands.",
+        "timedHeader": "Photorealistic vertical 9:16 video. Follow this time-coded direction. The only performer is the exact pet in the photo, not a human and not a different animal. No human faces and no human hands.",
         "timedCues": [
           {
             "label": "0-4s",
             "startSec": 0,
             "endSec": 4,
-            "opener": "In an ordinary room,",
+            "opener": "The same locked overhead camera continues on the same cream living-room sofa,",
             "subjects": [
               {
                 "roleId": "lead",
                 "authored": "the pet from <Image 1>",
-                "action": "wears a plain raincoat after the wipe",
-                "wardrobePhrase": "a plain raincoat"
+                "action": "is already lying on its back in the same spot in a green zip tracksuit with white piping, both paws raised behind its head, the small stuffed toy still on the sofa to its side",
+                "wardrobePhrase": "a green zip tracksuit with white piping"
               }
             ],
-            "closer": "phone-photo light",
-            "camera": "Ordinary room, medium shot,",
-            "anchor": "Ordinary room",
-            "singleAction": "wears a plain raincoat"
+            "closer": "out-of-focus wooden ceiling-fan blades already rotating in the immediate foreground, knitted throw and flowered side table unchanged, soft warm indoor light",
+            "camera": "The same locked overhead camera continues on the same cream living-room sofa, wooden ceiling-fan blades already rotating in the immediate foreground,",
+            "anchor": "locked overhead camera",
+            "singleAction": "is already lying on its back in the same spot, both paws raised behind its head"
           },
           {
-            "label": "4-8s",
+            "label": "4-6s",
             "startSec": 4,
-            "endSec": 8,
-            "opener": "The same ordinary room holds",
+            "endSec": 6,
+            "opener": "The same locked overhead camera holds",
             "subjects": [
               {
                 "roleId": "lead",
                 "authored": "the pet from <Image 1>",
-                "action": "stays in the plain raincoat until the end",
-                "wardrobePhrase": "a plain raincoat"
+                "action": "stays on its back as a passing wooden blade wipes the frame and the green tracksuit becomes a cream cardigan with a blue bow, then hugs the stuffed toy already on the sofa",
+                "wardrobePhrase": "a cream cardigan with a blue bow"
               }
             ],
-            "closer": "no second animal",
-            "camera": "Same ordinary room,",
-            "anchor": "ordinary room",
-            "singleAction": "stays in the plain raincoat"
+            "closer": "the cream sofa and the rotating ceiling-fan blades stay exactly the same, no camera move and no cut",
+            "camera": "The same locked overhead camera holds on the same cream sofa, ceiling-fan blades still in the foreground,",
+            "anchor": "locked overhead camera",
+            "singleAction": "stays on its back as a passing blade wipes the frame into a cream cardigan, then hugs the stuffed toy"
+          },
+          {
+            "label": "6-7s",
+            "startSec": 6,
+            "endSec": 7,
+            "opener": "The same locked overhead camera holds",
+            "subjects": [
+              {
+                "roleId": "lead",
+                "authored": "the pet from <Image 1>",
+                "action": "stays on its back as another passing blade wipes the frame and the cream cardigan becomes a light-blue cropped hoodie, a visor cap, and a short pleated skirt, then waves both paws up at the camera",
+                "wardrobePhrase": "a light-blue cropped hoodie, a visor cap, and a short pleated skirt"
+              }
+            ],
+            "closer": "still on the same cream sofa under the rotating ceiling-fan blades through the end of the clip, no cut",
+            "camera": "The same locked overhead camera holds on the same cream sofa, ceiling-fan blades still in the foreground,",
+            "anchor": "locked overhead camera",
+            "singleAction": "stays on its back as a passing blade wipes the frame into a light-blue cropped hoodie and visor, then waves both paws at the camera"
           }
         ],
-        "timedFooter": "The blades exist only in the clip. Do not add another animal. Photorealistic, ordinary room.",
-        "lockedIntro": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. Ordinary room, phone-photo light.\n\nLocked camera, no cut.",
+        "timedFooter": "Keep the pet's exact face, fur, and markings from the photo. Do not leave a human in the shot. The wooden ceiling-fan blades exist only in the generated clip, spinning in the immediate foreground; they are not in the customer's photo. The room, the cream sofa, and the locked overhead camera stay the same for the whole clip. Photorealistic, soft warm indoor light, no caption graphics.",
+        "lockedIntro": "Photorealistic vertical 9:16 video of a single continuous shot, no hard cuts. This is the second half of the same overhead costume-wipe, already in progress: the same cream living-room sofa seen from directly above, the same knitted throw, the same small round side table with white flowers at the upper left, and the same out-of-focus wooden ceiling-fan blades already spinning in the immediate foreground under soft warm indoor light. Do not reset to a different room.\n\nLocked overhead camera shooting straight down through slowly rotating wooden ceiling-fan blades in the immediate foreground, no cut, no camera move.\n\nThe only performer is an animal, not a human. No human faces and no human hands. The face, fur, and paws must match the identity photo. The blades are generated and are not in the customer's photo.",
         "lockedLines": [
           {
             "roleId": "lead",
-            "position": "Center",
+            "position": "Already lying on its back in the same spot on the cream sofa, shot from directly above",
             "identity": "the pet",
-            "wardrobe": "a plain raincoat",
-            "action": "standing in a plain raincoat after the wipe"
+            "wardrobe": "a green zip tracksuit with white piping, then a cream cardigan, then a light-blue cropped hoodie and visor cap after later blade wipes",
+            "action": "is already lying on its back in a green zip tracksuit with white piping, both paws behind its head, then as wooden blades wipe across the frame changes into a cream cardigan with a blue bow and hugs the stuffed toy, then into a light-blue cropped hoodie, visor cap, and short pleated skirt, and waves both paws up at the camera"
           }
         ],
-        "lockedExclusion": "Do not add another animal. The blades exist only in the clip. Photorealistic, ordinary room.",
-        "lockedCamera": "Locked camera, no cut.",
-        "setting": "An ordinary room. No fan in the photo. The blades exist only in the clip.",
+        "lockedExclusion": "Do not introduce a human, a second pet, a standing full-body shot, or a different room. Do not reset the sofa or drop the ceiling-fan blades. Keep the pet clearly recognizable for the whole shot. Photorealistic, cream sofa, wooden ceiling-fan blades in the foreground, soft warm indoor light, no caption graphics.",
+        "lockedCamera": "Locked overhead camera shooting straight down through slowly rotating wooden ceiling-fan blades in the immediate foreground, no cut, no camera move.",
+        "setting": "A cream living-room sofa shot from directly above, a knitted throw at the foot of the sofa, a small round side table with white flowers at the upper left, and out-of-focus wooden ceiling-fan blades rotating in the immediate foreground under soft warm indoor light.",
         "styleAnchors": [
           "9:16",
           "Photorealistic",
-          "ordinary room"
+          "cream sofa",
+          "ceiling-fan blades"
         ]
       }
     }
@@ -193,9 +239,12 @@
   "provenance": {
     "boundaries": "manual",
     "shotBoundariesSec": [
-      7.639
+      5,
+      8,
+      12,
+      13.5
     ],
-    "detail": "Even split of the 15.278005s pet outfit wipe. The fan is generated and is not in the photo.",
-    "segmentStrategy": "even-split"
+    "detail": "Hypit media probe 15.279s, 720x1280, 30fps. boundaries --rate 8 --threshold 0.1 returned no candidates because the camera is locked overhead. Editorial wipe times from a 0.5s frame pass: 5s formal to maid, 8s maid to tracksuit, 12s tracksuit to cardigan, 13.5s cardigan to blue-hoodie wave. Generation segments are 0-8s and 8-15.279s so the join is the maid-to-tracksuit wipe, not an even 7.639s cut through the maid beat. The source video is not stored in this repository.",
+    "segmentStrategy": "editorial-beat-groups"
   }
 }

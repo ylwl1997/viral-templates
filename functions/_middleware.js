@@ -32,6 +32,10 @@ function apexFromEnv(env) {
     .toLowerCase();
 }
 
+function takenDownHome(pathname) {
+  return String(pathname || '').startsWith('/zh/') ? '/zh/' : '/';
+}
+
 function parseCookies(request) {
   const raw = request.headers.get('cookie') || '';
   const out = {};
@@ -167,12 +171,17 @@ export async function onRequest(context) {
     return next();
   }
 
-  // Already on a brand path (/t/{slug}/…): keep vt_brand for later /account/* visits.
-  if (/^\/(?:zh\/)?t\/kiss-cam(?:\/|$)/.test(url.pathname)) {
-    const home = url.pathname.startsWith('/zh/') ? '/zh/' : '/';
-    return Response.redirect(new URL(home, url), 302);
+  // Retired host. Same-host "/" stays on kiss-cam.* and loops.
+  if (host === `kiss-cam.${apex}`) {
+    return Response.redirect(`https://${apex}${takenDownHome(url.pathname)}`, 301);
   }
 
+  // Path fallback on apex, www, or pages.dev. Same-host home does not loop there.
+  if (/^\/(?:zh\/)?t\/kiss-cam(?:\/|$)/.test(url.pathname)) {
+    return Response.redirect(new URL(takenDownHome(url.pathname), url), 301);
+  }
+
+  // Already on a brand path (/t/{slug}/…): keep vt_brand for later /account/* visits.
   const pathBrand = brandFromPath(url.pathname);
   if (pathBrand) {
     const res = await next();
@@ -188,9 +197,6 @@ export async function onRequest(context) {
   if (!isApex && host.endsWith(suffix)) {
     const sub = host.slice(0, -suffix.length);
     if (sub && sub !== 'www' && !sub.includes('.')) {
-      if (sub === 'kiss-cam') {
-        return Response.redirect(new URL('/', url), 302);
-      }
       if (!KNOWN_SLUGS.has(sub)) {
         const notFound = new URL('/unknown-site/', url);
         const res = await serve(context, notFound);

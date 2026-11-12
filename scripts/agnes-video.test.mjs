@@ -29,7 +29,7 @@ import { queueJobWithMedia } from '../functions/_lib/job-media.js';
 import { ensureSchema } from '../functions/_lib/account-db.js';
 import { processRemakeJobs } from '../functions/_lib/bailian-worker.js';
 import bbyWowPack from '../packages/template-pipeline/packs/bby-wow-pets/pack.json' with { type: 'json' };
-import { adaptPack, parseTemplatePack } from '../packages/template-pipeline/dist/index.js';
+import { adaptPack, parseTemplatePack } from '../packages/template-pipeline/dist/site/index.js';
 import { getTemplate, TEMPLATE_CATALOG } from '../functions/_lib/templates.js';
 import { plannedReferenceImages, resolveVideoProvider, selectRemakeProvider } from '../functions/_lib/video-provider.js';
 import { CLASSIC_DASHSCOPE_BASE } from '../functions/_lib/bailian.js';
@@ -594,6 +594,7 @@ assert(bbyBody.images.length === 1, JSON.stringify(bbyBody.images.map((url) => n
 const bbyAdapted = await adaptPack(parseTemplatePack(bbyWowPack), [{ roleId: 'lead', url: 'https://swaystill.com/pet.jpg' }]);
 assert(bbyBody.prompt === bbyAdapted.segments[0].prompt, 'create did not call adaptPack');
 assert(bbyAdapted.segments[0].promptSeconds === 6, 'bby prompt seconds');
+assert(bbyBody.n === 1, 'image-only body n');
 assert(!/\bperson\b/i.test(bbyBody.prompt), bbyBody.prompt);
 assert(new URL(bbyBody.images[0]).origin === 'https://swaystill.com', 'bby image origin');
 assert(new URL(bbyBody.images[0]).pathname.endsWith('/photo'), 'bby image kind');

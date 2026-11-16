@@ -2,9 +2,11 @@
  * Process queued remake jobs.
  *
  * Primary path is Agnes Video 2.5 reference mode when VIDEO_PROVIDER is agnes
- * (the default) and PUBLIC_SITE_APEX is a public custom domain. A template
- * that fits in 2–12s is one job. A longer template is cut into 4–12s pieces,
- * every piece is submitted together, and the results are joined here.
+ * (the default) and PUBLIC_SITE_APEX is a public custom domain. VIDEO_PROVIDER
+ * imagine uses official xAI grok-imagine-video-1.5 on the same queue. A missing
+ * XAI_API_KEY fails that job and refunds. It does not call Agnes.
+ * A template that fits in 2–12s is one job. A longer template is cut into 4–12s
+ * pieces, every piece is submitted together, and the results are joined here.
  * wan2.2-animate-mix
  * is the fallback only when a split cannot make every piece fit, or for fps,
  * size, format, a missing public origin, or an Agnes refusal before a task exists.
@@ -59,6 +61,19 @@ import {
   parseTemplatePack,
 } from '../../packages/template-pipeline/dist/site/index.js';
 import {
+  IMAGINE_POLL_MIN_MS,
+  createImagineVideo,
+  downloadImagineVideo,
+  formatImagineCreatePayload,
+  getImagineVideo,
+  imaginePollDelayMs,
+  imagineResultUrl,
+  packImagineTaskId,
+  packImagineTaskSet,
+  redactImagineDetail,
+  unpackImagineTaskId,
+} from './imagine.js';
+import {
   AGNES_IMAGE_TOTAL_MAX_BYTES,
   AGNES_POLL_MIN_MS,
   AGNES_VIDEO_MAX_BYTES,
@@ -105,6 +120,15 @@ import {
   VIDEO_MAX_BYTES,
 } from './r2-media.js';
 import { plannedReferenceImages, providerConfigured, videoBackends, selectRemakeProvider } from './video-provider.js';
+
+const IMAGINE_START_NOTE = {
+  note_en: 'Video generation did not start. Please try again from Create.',
+  note_zh: '视频生成没有开始。请在创作页再试一次。',
+};
+const IMAGINE_CLOSED_NOTE = {
+  note_en: 'This clip could not be started. The credits were returned.',
+  note_zh: '这条短片没有开始。积分已退回。',
+};
 
 // The stale clock starts at claim. After that the job is `running` with no
 // task id while two temp uploads (60s each) and synthesis (30s) run.
@@ -157,6 +181,10 @@ const NOTES = {
   reference_photos: {
     en: 'This look needs every uploaded photo in the clip. The clip was not generated, and the charge was returned.',
     zh: '这个效果需要把上传的每张照片都用进成片。短片没有生成，积分已退回。',
+  },
+  xai_unset: {
+    en: IMAGINE_CLOSED_NOTE.note_en,
+    zh: IMAGINE_CLOSED_NOTE.note_zh,
   },
 };
 
@@ -444,6 +472,18 @@ async function segmentInputs(ctx, row, prepared, segment) {
     const urls = await agnesPhotoUrls(ctx.env, row.id, photoCount);
     if (!urls || !prepared.pack || !segment.id) return null;
     const adapted = await adaptPack(prepared.pack, pipelineCustomerImages(prepared.pack, row, urls.imageUrls));
+    if (prepared.selection && prepared.selection.provider === 'imagine') {
+      const formatted = formatImagineCreatePayload(adapted, segment.id);
+      const images = formatted.create.body.reference_images || [];
+      if (!images.length || formatted.create.body.video || formatted.create.body.videos) return null;
+      return {
+        imageOnly: true,
+        imagine: true,
+        imageUrls: images.map((item) => item.url),
+        prompt: formatted.create.body.prompt,
+        seconds: formatted.create.body.duration,
+      };
+    }
     const formatted = formatAgnesCreatePayload(adapted, segment.id);
     if (!formatted.create.body.images.length) return null;
     return {
@@ -565,14 +605,14 @@ function createFailureKind(err) {
   return 'hard';
 }
 
-function rateLimitResult(row, wait, queued) {
+function rateLimitResult(row, wait, queued, provider = 'agnes') {
   return {
     id: row.id,
     status: queued ? 'queued' : 'running',
     action: 'retry',
     error: 'retry_later',
     retry_after_ms: wait,
-    provider: 'agnes',
+    provider,
   };
 }
 
@@ -697,7 +737,188 @@ async function submitAgnes(ctx, row, prepared) {
   return submitAgnesSegment(ctx, row, prepared, 0);
 }
 
+function imagineCode(err) {
+  if (!err) return 'failed';
+  if (err.code === 'imagine_error') return `imagine_${err.providerCode || 'error'}`;
+  return err.code || 'failed';
+}
+
+function imagineFailureKind(err) {
+  if (!err) return 'hard';
+  if (err.httpStatus === 429) return 'rate';
+  if (err.transient && err.httpStatus !== 429) return 'outage';
+  return 'hard';
+}
+
+async function rememberImagineSlots(ctx, row, slots) {
+  let packed;
+  try {
+    packed = packImagineTaskSet(slots);
+  } catch (err) {
+    console.error('imagine_create', row.id, 'imagine_bad_task');
+    return failJob(ctx.db, row, 'imagine_submit_uncertain', IMAGINE_START_NOTE);
+  }
+  try {
+    if (!row.provider_task_id) {
+      await saveProviderTask(ctx.db, row.id, packed);
+    } else if (row.provider_task_id !== packed) {
+      const replaced = await replaceProviderTask(ctx.db, row.id, row.provider_task_id, packed);
+      if (!replaced) return { id: row.id, status: 'running', action: 'busy', provider: 'imagine' };
+    }
+  } catch (err) {
+    if (err && err.code === 'provider_task_taken') return failJob(ctx.db, row, 'provider_task_taken');
+    if (err && err.code === 'storage_error') {
+      console.error('imagine_create', row.id, 'task_not_saved');
+      return { id: row.id, status: 'running', action: 'submit_unsaved', error: 'storage_error', provider: 'imagine' };
+    }
+    throw err;
+  }
+  row.provider_task_id = packed;
+  return null;
+}
+
+async function createImaginePiece(ctx, inputs) {
+  if (!inputs || !inputs.imagine || !inputs.imageOnly || inputs.videoUrl) return { err: fail('imagine_bad_prompt') };
+  try {
+    const created = await createImagineVideo(ctx.imagine, ctx.fetchImpl, {
+      imageUrls: inputs.imageUrls,
+      prompt: inputs.prompt,
+      duration: inputs.seconds,
+    });
+    return { requestId: created.requestId };
+  } catch (err) {
+    return { err };
+  }
+}
+
+async function submitImagineSegment(ctx, row, prepared, index) {
+  const { db, imagine, fetchImpl } = ctx;
+  const segments = (prepared.selection && prepared.selection.segments) || [
+    { index: 0, seconds: prepared.seconds },
+  ];
+  const segment = segments[index];
+  if (!segment) return failJob(db, row, 'failed');
+  if (!imagine || !imagine.configured) return failJob(db, row, 'xai_unset', IMAGINE_CLOSED_NOTE);
+  let inputs;
+  try {
+    inputs = await segmentInputs(ctx, row, prepared, segment);
+  } catch (err) {
+    console.error('imagine_input', row.id, err && err.code ? err.code : 'error');
+    return failJob(db, row, pipelineErrorCode(err));
+  }
+  if (!inputs || !inputs.imagine || inputs.videoUrl) return failJob(db, row, 'failed', IMAGINE_CLOSED_NOTE);
+  let created;
+  try {
+    created = await createImagineVideo(imagine, fetchImpl, {
+      imageUrls: inputs.imageUrls,
+      prompt: inputs.prompt,
+      duration: inputs.seconds,
+    });
+  } catch (err) {
+    if (err && (err.httpStatus === 429 || (err.transient && !err.rejected))) {
+      const wait = imaginePollDelayMs(prepared.backoffMs);
+      const code = `retry_later_${wait}`;
+      const deferred = index === 0 ? await deferQueuedJob(db, row.id, code) : await noteIdleBackoff(db, row.id, code);
+      if (!deferred) return { id: row.id, status: 'running', action: 'busy', provider: 'imagine' };
+      return rateLimitResult(row, wait, index === 0, 'imagine');
+    }
+    const code = err && err.code === 'imagine_submit_uncertain' ? 'imagine_submit_uncertain' : imagineCode(err);
+    console.error('imagine_create', row.id, code);
+    return failJob(db, row, code, {
+      ...IMAGINE_START_NOTE,
+      detail: redactImagineDetail(err && err.providerMessage, imagine.apiKey),
+    });
+  }
+  let storedId;
+  try {
+    storedId = packImagineTaskId(created.requestId);
+  } catch (err) {
+    console.error('imagine_create', row.id, 'imagine_bad_task');
+    return failJob(db, row, 'imagine_submit_uncertain', IMAGINE_START_NOTE);
+  }
+  try {
+    await saveProviderTask(db, row.id, storedId);
+    return { id: row.id, status: 'running', action: 'submitted', task_id: storedId, provider: 'imagine' };
+  } catch (err) {
+    if (err && err.code === 'provider_task_taken') return failJob(db, row, 'provider_task_taken');
+    if (err && err.code === 'storage_error') {
+      console.error('imagine_create', row.id, 'task_not_saved');
+      return { id: row.id, status: 'running', action: 'submit_unsaved', error: 'storage_error', provider: 'imagine' };
+    }
+    throw err;
+  }
+}
+
+async function submitImagineParallel(ctx, row, prepared) {
+  const { db } = ctx;
+  if (!ctx.imagine || !ctx.imagine.configured) return failJob(db, row, 'xai_unset', IMAGINE_CLOSED_NOTE);
+  const segments = prepared.selection.segments;
+  const inputs = [];
+  try {
+    for (const segment of segments) {
+      const one = await segmentInputs(ctx, row, prepared, segment);
+      if (!one || !one.imagine || one.videoUrl) return failJob(db, row, 'failed', IMAGINE_CLOSED_NOTE);
+      inputs.push(one);
+    }
+  } catch (err) {
+    console.error('imagine_input', row.id, err && err.code ? err.code : 'error');
+    return failJob(db, row, pipelineErrorCode(err));
+  }
+  const created = await Promise.all(inputs.map((one) => createImaginePiece(ctx, one)));
+  const slots = created.map((item) => (item && item.requestId ? item.requestId : ''));
+  const kinds = created.map((item) => (item && item.requestId ? 'ok' : imagineFailureKind(item && item.err)));
+  const anyId = slots.some(Boolean);
+  const anyRate = kinds.includes('rate');
+  const anyOutage = kinds.includes('outage');
+  const anyHard = kinds.includes('hard');
+  if (!anyId) {
+    if ((anyRate || anyOutage) && !anyHard) {
+      const wait = imaginePollDelayMs(prepared.backoffMs);
+      const deferred = await deferQueuedJob(db, row.id, `retry_later_${wait}`);
+      if (!deferred) return { id: row.id, status: 'running', action: 'busy', provider: 'imagine' };
+      return rateLimitResult(row, wait, true, 'imagine');
+    }
+    const failed = created.find((item) => item && item.err);
+    const code = failed && failed.err && failed.err.code === 'imagine_submit_uncertain'
+      ? 'imagine_submit_uncertain'
+      : imagineCode(failed && failed.err);
+    return failJob(db, row, code, {
+      ...IMAGINE_START_NOTE,
+      detail: redactImagineDetail(failed && failed.err && failed.err.providerMessage, ctx.imagine.apiKey),
+    });
+  }
+  if (anyHard) {
+    const failed = created.find((item) => item && item.err && !item.requestId);
+    const code = imagineCode(failed && failed.err);
+    console.error('imagine_create', row.id, code);
+    return failJob(db, row, code, {
+      detail: redactImagineDetail(failed && failed.err && failed.err.providerMessage, ctx.imagine.apiKey),
+    });
+  }
+  const saved = await rememberImagineSlots(ctx, row, slots);
+  if (saved) return saved;
+  if (anyRate || anyOutage) {
+    const wait = imaginePollDelayMs(prepared.backoffMs);
+    await noteRunningBackoff(db, row.id, `retry_later_${wait}`);
+    return rateLimitResult(row, wait, false, 'imagine');
+  }
+  return { id: row.id, status: 'running', action: 'submitted', task_id: row.provider_task_id, provider: 'imagine' };
+}
+
+async function submitImagine(ctx, row, prepared) {
+  if (!prepared.pipeline) return failJob(ctx.db, row, 'failed', IMAGINE_CLOSED_NOTE);
+  const segments = prepared.selection && prepared.selection.segments;
+  if (segments && segments.length > 1) return submitImagineParallel(ctx, row, prepared);
+  return submitImagineSegment(ctx, row, prepared, 0);
+}
+
 async function submitRouted(ctx, row, prepared) {
+  if (prepared.selection && prepared.selection.provider === 'imagine') {
+    if (prepared.selection.failed || !ctx.imagine || !ctx.imagine.configured) {
+      return failJob(ctx.db, row, 'xai_unset', IMAGINE_CLOSED_NOTE);
+    }
+    return submitImagine(ctx, row, prepared);
+  }
   if (!plannedReferenceImages(prepared.template, prepared.selection.provider)) {
     return failReferencePhotos(ctx.db, row, prepared.template);
   }
@@ -727,7 +948,8 @@ async function preparePipeline(ctx, row, template) {
   const photoCount = storedPhotoCount(row);
   if (photoCount < (template.minPhotos || 1)) return failJob(ctx.db, row, 'no_photo');
   const view = { ...template, photoCount };
-  if (!plannedReferenceImages(view, 'agnes')) return failReferencePhotos(ctx.db, row, view);
+  const want = ctx.backends && ctx.backends.selected === 'imagine' ? 'imagine' : 'agnes';
+  if (!plannedReferenceImages(view, want)) return failReferencePhotos(ctx.db, row, view);
   let images;
   try {
     images = await readSubjects(ctx.bucket, row, photoCount);
@@ -738,19 +960,22 @@ async function preparePipeline(ctx, row, template) {
     throw err;
   }
   const selection = chooseProvider(ctx, view, images, new Uint8Array());
-  if (!selection || selection.provider !== 'agnes') {
+  if (want === 'imagine') {
+    if (!selection || selection.failed || selection.provider !== 'imagine') {
+      const reason = selection && selection.reason;
+      return failJob(ctx.db, row, reason === 'xai_unset' ? 'xai_unset' : 'failed', IMAGINE_CLOSED_NOTE);
+    }
+  } else if (!selection || selection.provider !== 'agnes') {
     if (images.some((image) => image.bytes.byteLength > BAILIAN_IMAGE_MAX_BYTES)) {
       return failJob(ctx.db, row, 'photo_too_large');
     }
-    return failJob(ctx.db, row, 'failed', {
-      note_en: 'This clip could not be started. The credits were returned.',
-      note_zh: '这条短片没有开始。积分已退回。',
-    });
+    return failJob(ctx.db, row, 'failed', IMAGINE_CLOSED_NOTE);
   }
   let adapted;
   try {
     adapted = await adaptPack(pack, pipelineCustomerImages(pack, row));
-    for (const segment of adapted.segments) formatAgnesCreatePayload(adapted, segment.id);
+    const format = want === 'imagine' ? formatImagineCreatePayload : formatAgnesCreatePayload;
+    for (const segment of adapted.segments) format(adapted, segment.id);
   } catch (err) {
     return failJob(ctx.db, row, pipelineErrorCode(err));
   }
@@ -793,6 +1018,10 @@ async function prepareQueued(ctx, row) {
     });
   }
   if (template.packId) return preparePipeline(ctx, row, template);
+  if (ctx.backends && ctx.backends.selected === 'imagine') {
+    const missing = !ctx.backends.imagine || !ctx.backends.imagine.configured;
+    return failJob(ctx.db, row, missing ? 'xai_unset' : 'failed', IMAGINE_CLOSED_NOTE);
+  }
   if (!template.referenceVideo) return failJob(ctx.db, row, 'no_reference_video');
   if (!referencePhotoKinds(template.photoCount)) return failReferencePhotos(ctx.db, row, template);
   if (!row.upload_key || (template.photoCount > 1 && !row.upload_key_2)) {
@@ -870,6 +1099,7 @@ async function pollRunning(ctx, row) {
   if (hold) {
     return { id: row.id, status: 'running', action: 'retry_poll', error: 'retry_later', retry_after_ms: hold };
   }
+  if (unpackImagineTaskId(row.provider_task_id)) return pollImagine(ctx, row);
   if (unpackAgnesTaskId(row.provider_task_id)) return pollAgnes(ctx, row);
   return pollBailian(ctx, row);
 }
@@ -916,7 +1146,7 @@ async function loadSplitPlan(ctx, row) {
     const images = await readSubjects(ctx.bucket, row, photoCount);
     const view = { ...template, photoCount };
     const selection = chooseProvider(ctx, view, images, new Uint8Array());
-    if (!selection || selection.provider !== 'agnes') return null;
+    if (!selection || selection.failed || (selection.provider !== 'agnes' && selection.provider !== 'imagine')) return null;
     let adapted;
     try {
       adapted = await adaptPack(pack, pipelineCustomerImages(pack, row));
@@ -953,7 +1183,7 @@ async function loadSplitPlan(ctx, row) {
   return { template, reference, selection, image: images[0], images };
 }
 
-async function stitchParts(ctx, row, parts) {
+async function stitchParts(ctx, row, parts, provider = 'agnes') {
   let joined;
   try {
     joined = concatMp4(parts);
@@ -963,7 +1193,7 @@ async function stitchParts(ctx, row, parts) {
   }
   const stored = await persistVideo(ctx, row, joined);
   if (stored && stored.status === 'ready') await discardSplitObjects(ctx.bucket, row.user_id, row.id, parts.length);
-  if (stored && !stored.provider) stored.provider = 'agnes';
+  if (stored && !stored.provider) stored.provider = provider;
   return stored;
 }
 
@@ -1042,6 +1272,7 @@ async function resumeSplit(ctx, row) {
     return failJob(ctx.db, row, pipelineCode === 'failed' ? 'failed' : pipelineCode);
   }
   if (!plan) return failJob(ctx.db, row, 'failed');
+  if (plan.selection && plan.selection.provider === 'imagine') return failJob(ctx.db, row, 'failed', IMAGINE_CLOSED_NOTE);
   const parts = await readPartBytes(ctx.bucket, row.user_id, row.id, plan.selection.segments.length);
   if (parts.length >= plan.selection.segments.length) return stitchParts(ctx, row, parts);
   return submitAgnesSegment(ctx, row, { ...plan, backoffMs: 0 }, parts.length);
@@ -1333,6 +1564,295 @@ async function pollAgnes(ctx, row) {
   return { id: row.id, status: 'running', action: 'polling', task_status: status || 'unknown', provider: 'agnes' };
 }
 
+async function storeImagineSuccess(ctx, row, videoUrl) {
+  let bytes;
+  try {
+    bytes = await downloadImagineVideo(ctx.fetchImpl, videoUrl, VIDEO_MAX_BYTES);
+  } catch (err) {
+    const permanent =
+      err &&
+      (err.code === 'video_too_large' ||
+        err.code === 'imagine_bad_result' ||
+        err.rejected ||
+        err.httpStatus === 404 ||
+        err.httpStatus === 410);
+    if (!permanent && err && (err.transient || err.code === 'imagine_error')) {
+      return {
+        id: row.id,
+        status: 'running',
+        action: 'retry_download',
+        error: imagineCode(err),
+        detail: redactImagineDetail(err.providerMessage, ctx.imagine && ctx.imagine.apiKey),
+        retry_after_ms: err.httpStatus === 429 ? imaginePollDelayMs(0) : 0,
+        provider: 'imagine',
+      };
+    }
+    return failJob(ctx.db, row, err && err.code === 'imagine_error' ? imagineCode(err) : (err && err.code) || 'failed');
+  }
+  const stored = await persistVideo(ctx, row, bytes);
+  if (stored && !stored.provider) stored.provider = 'imagine';
+  return stored;
+}
+
+async function storeImaginePart(ctx, row, index, videoUrl) {
+  let bytes;
+  try {
+    bytes = await downloadImagineVideo(ctx.fetchImpl, videoUrl, VIDEO_MAX_BYTES);
+  } catch (err) {
+    const permanent =
+      err &&
+      (err.code === 'video_too_large' ||
+        err.code === 'imagine_bad_result' ||
+        err.rejected ||
+        err.httpStatus === 404 ||
+        err.httpStatus === 410);
+    if (!permanent && err && (err.transient || err.code === 'imagine_error')) {
+      return {
+        status: 'retry',
+        action: 'retry_download',
+        error: imagineCode(err),
+        detail: redactImagineDetail(err.providerMessage, ctx.imagine && ctx.imagine.apiKey),
+        retry_after_ms: err.httpStatus === 429 ? imaginePollDelayMs(0) : 0,
+        provider: 'imagine',
+      };
+    }
+    return failJob(ctx.db, row, err && err.code === 'imagine_error' ? imagineCode(err) : (err && err.code) || 'failed');
+  }
+  if (!sniffMp4(bytes)) return failJob(ctx.db, row, 'bad_video');
+  await putMedia(ctx.bucket, partObjectKey(row.user_id, row.id, index), bytes, {
+    contentType: 'video/mp4',
+    customMetadata: { kind: 'part', job_id: row.id },
+  });
+  return { status: 'stored', bytes };
+}
+
+async function pollImagineParallel(ctx, row, info) {
+  const { db, imagine, fetchImpl } = ctx;
+  if (!imagine || !imagine.configured) return failJob(db, row, 'xai_unset', IMAGINE_CLOSED_NOTE);
+  const claimed = await claimProviderPoll(db, row.id, row.updated_at, IMAGINE_POLL_MIN_MS);
+  if (!claimed) {
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'retry_poll',
+      error: 'retry_later',
+      retry_after_ms: IMAGINE_POLL_MIN_MS,
+      provider: 'imagine',
+    };
+  }
+  let plan;
+  try {
+    plan = await loadSplitPlan(ctx, row);
+  } catch (err) {
+    return failJob(db, row, pipelineErrorCode(err));
+  }
+  if (!plan || !plan.selection.segments || plan.selection.segments.length !== info.count || plan.selection.provider !== 'imagine') {
+    return failJob(db, row, 'failed', IMAGINE_CLOSED_NOTE);
+  }
+  const parts = await readPartMap(ctx.bucket, row.user_id, row.id, info.count);
+  if (parts.every(Boolean)) return stitchParts(ctx, row, parts, 'imagine');
+  const slots = info.slots.slice();
+  const missing = [];
+  for (let index = 0; index < slots.length; index += 1) {
+    if (!slots[index] && !parts[index]) missing.push(index);
+  }
+  if (missing.length) {
+    const inputs = [];
+    try {
+      for (const index of missing) {
+        const one = await segmentInputs(ctx, row, plan, plan.selection.segments[index]);
+        if (!one || !one.imagine || one.videoUrl) return failJob(db, row, 'failed', IMAGINE_CLOSED_NOTE);
+        inputs.push(one);
+      }
+    } catch (err) {
+      console.error('imagine_input', row.id, err && err.code ? err.code : 'error');
+      return failJob(db, row, pipelineErrorCode(err));
+    }
+    const created = await Promise.all(inputs.map((one) => createImaginePiece(ctx, one)));
+    let retry = false;
+    for (let pos = 0; pos < missing.length; pos += 1) {
+      const item = created[pos];
+      if (item && item.requestId) {
+        slots[missing[pos]] = item.requestId;
+        continue;
+      }
+      const kind = imagineFailureKind(item && item.err);
+      if (kind === 'rate' || kind === 'outage') {
+        retry = true;
+        continue;
+      }
+      const code = imagineCode(item && item.err);
+      console.error('imagine_create', row.id, code);
+      return failJob(db, row, code, {
+        detail: redactImagineDetail(item && item.err && item.err.providerMessage, imagine.apiKey),
+      });
+    }
+    const saved = await rememberImagineSlots(ctx, row, slots);
+    if (saved) return saved;
+    if (retry || slots.some((id, index) => !id && !parts[index])) {
+      const previous = /^retry_later_(\d+)$/.exec(row.error_code || '');
+      const wait = imaginePollDelayMs(previous ? Number(previous[1]) : 0);
+      await noteRunningBackoff(db, row.id, `retry_later_${wait}`);
+      return rateLimitResult(row, wait, false, 'imagine');
+    }
+  }
+  const pending = [];
+  for (let index = 0; index < slots.length; index += 1) {
+    if (slots[index] && !parts[index]) pending.push(index);
+  }
+  if (!pending.length) return stitchParts(ctx, row, parts, 'imagine');
+  const polls = await Promise.all(
+    pending.map(async (index) => {
+      try {
+        const task = await getImagineVideo(imagine, fetchImpl, slots[index]);
+        return { index, task };
+      } catch (err) {
+        return { index, err };
+      }
+    }),
+  );
+  if (polls.some((item) => item.err && item.err.httpStatus === 429)) {
+    const previous = /^retry_later_(\d+)$/.exec(row.error_code || '');
+    const wait = imaginePollDelayMs(previous ? Number(previous[1]) : 0);
+    await noteRunningBackoff(db, row.id, `retry_later_${wait}`);
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'retry_poll',
+      error: 'retry_later',
+      retry_after_ms: wait,
+      provider: 'imagine',
+    };
+  }
+  const transient = polls.find((item) => item.err);
+  if (transient) {
+    console.error('imagine_poll', row.id, transient.err.providerCode || transient.err.code);
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'retry_poll',
+      error: imagineCode(transient.err),
+      detail: redactImagineDetail(transient.err.providerMessage, imagine.apiKey),
+      retry_after_ms: IMAGINE_POLL_MIN_MS,
+      provider: 'imagine',
+    };
+  }
+  let stillRunning = false;
+  for (const item of polls) {
+    const status = String((item.task && item.task.status) || '').toLowerCase();
+    if (status === 'pending' || status === 'processing' || status === 'queued' || status === 'in_progress' || status === 'running' || !status) {
+      stillRunning = true;
+      continue;
+    }
+    if (status === 'failed') {
+      const message = item.task.error && typeof item.task.error === 'object' ? item.task.error.message : item.task.error;
+      console.error('imagine_task', row.id, 'failed');
+      return failJob(db, row, 'imagine_failed', { detail: redactImagineDetail(message, imagine.apiKey) });
+    }
+    if (status !== 'done') {
+      stillRunning = true;
+      continue;
+    }
+    const videoUrl = imagineResultUrl(item.task);
+    if (!videoUrl) return failJob(db, row, 'imagine_no_result');
+    const stored = await storeImaginePart(ctx, row, item.index, videoUrl);
+    if (!stored || stored.status !== 'stored') {
+      if (stored && stored.status === 'retry') {
+        return {
+          id: row.id,
+          status: 'running',
+          action: stored.action,
+          error: stored.error,
+          detail: stored.detail,
+          retry_after_ms: stored.retry_after_ms,
+          provider: 'imagine',
+        };
+      }
+      return stored;
+    }
+    parts[item.index] = stored.bytes;
+  }
+  if (parts.every(Boolean)) return stitchParts(ctx, row, parts, 'imagine');
+  if (stillRunning) await noteRunningBackoff(db, row.id, `retry_later_${IMAGINE_POLL_MIN_MS}`);
+  return {
+    id: row.id,
+    status: 'running',
+    action: 'polling',
+    provider: 'imagine',
+    retry_after_ms: IMAGINE_POLL_MIN_MS,
+  };
+}
+
+async function pollImagine(ctx, row) {
+  const { db, imagine, fetchImpl } = ctx;
+  const info = unpackImagineTaskId(row.provider_task_id);
+  if (info && info.parallel) return pollImagineParallel(ctx, row, info);
+  const requestId = info && info.requestId;
+  if (!requestId || !imagine || !imagine.configured) return failJob(db, row, 'xai_unset', IMAGINE_CLOSED_NOTE);
+  const claimed = await claimProviderPoll(db, row.id, row.updated_at, IMAGINE_POLL_MIN_MS);
+  if (!claimed) {
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'retry_poll',
+      error: 'retry_later',
+      retry_after_ms: IMAGINE_POLL_MIN_MS,
+      provider: 'imagine',
+    };
+  }
+  let task;
+  try {
+    task = await getImagineVideo(imagine, fetchImpl, requestId);
+  } catch (err) {
+    console.error('imagine_poll', row.id, err && err.providerCode ? err.providerCode : err && err.code);
+    if (err && err.httpStatus === 429) {
+      const previous = /^retry_later_(\d+)$/.exec(row.error_code || '');
+      const wait = imaginePollDelayMs(previous ? Number(previous[1]) : 0);
+      await noteRunningBackoff(db, row.id, `retry_later_${wait}`);
+      return {
+        id: row.id,
+        status: 'running',
+        action: 'retry_poll',
+        error: 'retry_later',
+        retry_after_ms: wait,
+        provider: 'imagine',
+      };
+    }
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'retry_poll',
+      error: imagineCode(err),
+      detail: redactImagineDetail(err && err.providerMessage, imagine.apiKey),
+      retry_after_ms: imaginePollDelayMs(0),
+      provider: 'imagine',
+    };
+  }
+  const status = String(task.status || '').toLowerCase();
+  if (status === 'pending' || status === 'processing' || status === 'queued' || status === 'in_progress' || status === 'running') {
+    await noteRunningBackoff(db, row.id, `retry_later_${IMAGINE_POLL_MIN_MS}`);
+    return {
+      id: row.id,
+      status: 'running',
+      action: 'polling',
+      task_status: status,
+      retry_after_ms: IMAGINE_POLL_MIN_MS,
+      provider: 'imagine',
+    };
+  }
+  if (status === 'done') {
+    const videoUrl = imagineResultUrl(task);
+    if (!videoUrl) return failJob(db, row, 'imagine_no_result');
+    return storeImagineSuccess(ctx, row, videoUrl);
+  }
+  if (status === 'failed') {
+    const message = task.error && typeof task.error === 'object' ? task.error.message : task.error;
+    console.error('imagine_task', row.id, 'failed');
+    return failJob(db, row, 'imagine_failed', { detail: redactImagineDetail(message, imagine.apiKey) });
+  }
+  return { id: row.id, status: 'running', action: 'polling', task_status: status || 'unknown', provider: 'imagine' };
+}
+
 async function pollBailian(ctx, row) {
   const { db, runtime, fetchImpl } = ctx;
   let task;
@@ -1525,6 +2045,14 @@ function summarizeProvider(backends, processed) {
       base_host: new URL(backends.agnes.base).host,
     };
   }
+  if (name === 'imagine') {
+    return {
+      name: 'imagine',
+      model: backends.imagine.model,
+      mode: 'reference',
+      base_host: new URL(backends.imagine.base).host,
+    };
+  }
   if (name === 'mixed') {
     return {
       name: 'mixed',
@@ -1571,6 +2099,7 @@ export async function processRemakeJobs({
     fetchImpl,
     runtime,
     agnes: backends.agnes,
+    imagine: backends.imagine,
     backends,
     bucket,
     origin: requestOrigin(request),

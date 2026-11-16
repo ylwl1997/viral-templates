@@ -113,7 +113,7 @@ Auth + account APIs (Pages Functions):
 - `GET /api/account/credits`
 - `POST /api/jobs` — signed-in Generate queues a job, then `waitUntil` starts Bailian for that job. Photo bytes are stored in R2 when the `MEDIA` binding is present; otherwise the job still queues and `media.error` is `r2_unbound`. The browser does not send `JOB_PROCESS_SECRET`.
 - `POST /api/jobs/continue` — signed-in. Submits or polls one of that user's queued or running jobs. No process secret.
-- `POST /api/jobs/process` — ops-only drain for every user. Claims queued jobs, calls Agnes Video 2.5 reference mode (mix is the fallback), stores the MP4 in R2, and marks the job `ready` or `failed`. Requires `JOB_PROCESS_SECRET` and `AGNES_API_KEY` or `BAILIAN_API_KEY`. See [`docs/agnes-video.md`](docs/agnes-video.md).
+- `POST /api/jobs/process` — ops-only drain for every user. Claims queued jobs, calls Agnes Video 2.5 reference mode (mix is the fallback), stores the MP4 in R2, and marks the job `ready` or `failed`. `VIDEO_PROVIDER=imagine` uses official xAI `grok-imagine-video-1.5` instead. Requires `JOB_PROCESS_SECRET` and `AGNES_API_KEY` or `BAILIAN_API_KEY`, or an explicit Imagine switch with `XAI_API_KEY`. See [`docs/agnes-video.md`](docs/agnes-video.md) and [`docs/imagine-video.md`](docs/imagine-video.md).
 - `POST /api/jobs/{id}/result` — ops-only manual ingest. Stores a finished MP4 and sets `result_url`. Requires `RESULT_INGEST_SECRET`. Does not call Bailian.
 - `GET /api/media/jobs/{id}/{photo|photo-2|result}` — private download (owner session or signed `exp` + `sig`).
 
@@ -196,7 +196,7 @@ Details and env names: [`docs/credits-checkout.md`](docs/credits-checkout.md).
 
 ### Known limits
 
-- Google sign-in runs when the secrets in [`docs/google-oauth.md`](docs/google-oauth.md) are set. Remakes use Agnes Video 2.5 reference mode when `AGNES_API_KEY` is set. Live looks send pet photos and adapted prompts only — no template video. Bby Wow (about 6s) is one job. Ceiling Fan (about 15s) is an even 4–12s split. Tiny Desk (17.76s) uses the pack’s editorial pieces, 0–12s and 12–17.76s. Mix is not used for these looks. Create starts generation with `waitUntil`. Pages has no cron trigger; `workers/job-drain` posts `POST /api/jobs/process` every two minutes once that Worker is deployed ([`docs/agnes-video.md`](docs/agnes-video.md)). Agnes inputs are public `https://{PUBLIC_SITE_APEX}/…` URLs. Mix uploads bytes to DashScope temporary storage (`oss://`). Do not pass `*.pages.dev`, `*.workers.dev`, or `*.r2.dev` media URLs to either provider.
+- Google sign-in runs when the secrets in [`docs/google-oauth.md`](docs/google-oauth.md) are set. Remakes use Agnes Video 2.5 reference mode when `AGNES_API_KEY` is set. `VIDEO_PROVIDER=imagine` plus `XAI_API_KEY` uses official xAI `grok-imagine-video-1.5` instead ([`docs/imagine-video.md`](docs/imagine-video.md)); the key alone does not switch providers. Live looks send pet photos and adapted prompts only — no template video. Bby Wow (about 6s) is one job. Ceiling Fan (about 15s) is an even 4–12s split. Tiny Desk (17.76s) uses the pack’s editorial pieces, 0–12s and 12–17.76s. Mix is not used for these looks. Create starts generation with `waitUntil`. Pages has no cron trigger; `workers/job-drain` posts `POST /api/jobs/process` every two minutes once that Worker is deployed ([`docs/agnes-video.md`](docs/agnes-video.md)). Agnes inputs are public `https://{PUBLIC_SITE_APEX}/…` URLs. Mix uploads bytes to DashScope temporary storage (`oss://`). Do not pass `*.pages.dev`, `*.workers.dev`, or `*.r2.dev` media URLs to a provider.
 - A pack refund or chargeback from the payment provider does not remove credits by itself. The credits page can store a short note for that case.
 - Session cookie is **host-only** (not shared across brand hosts). The database is shared. The same Google account maps to the same `user_id` on every host after signing in there, so credits and jobs follow the person. `/t/{slug}/` on the apex is the same host and the same cookie.
 - Brand Account link needs a prior brand-page visit (cookie) or open Sign in with `?next=/t/{slug}/…`
@@ -227,7 +227,8 @@ Details and env names: [`docs/credits-checkout.md`](docs/credits-checkout.md).
 | `RESULT_INGEST_SECRET` | Bearer token for `POST /api/jobs/{id}/result`. 16+ characters. Not a customer feature |
 | `AGNES_API_KEY` | Pages secret for Agnes Video 2.5. Do not commit. Required for the primary remake path |
 | `AGNES_BASE_URL` | Optional text. Default `https://api.agnes-ai.cn/v1` |
-| `VIDEO_PROVIDER` | Optional text. `agnes` (default) or `bailian`. `bailian` forces mix and does not call Agnes |
+| `VIDEO_PROVIDER` | Optional text. `agnes` (default), `bailian`, or `imagine`. `imagine` calls official xAI video only when this is set. A configured `XAI_API_KEY` does not switch the provider by itself |
+| `XAI_API_KEY` | Pages secret for `grok-imagine-video-1.5`. Do not commit. Required only after `VIDEO_PROVIDER=imagine`. Missing key fails the job and refunds; it does not call Agnes |
 | `BAILIAN_API_KEY` | Pages secret for DashScope mix, used when Agnes is unset or the template does not fit. Do not commit. `DASHSCOPE_API_KEY` is used only when this is unset |
 | `BAILIAN_DASHSCOPE_BASE_URL` | Optional text. Default `https://llm-g1ozpdi7y5eyp1mh.cn-beijing.maas.aliyuncs.com/api/v1`. Set `https://dashscope.aliyuncs.com/api/v1` to use the classic host |
 | `BAILIAN_MODE` | Optional text. `wan-std` (default, cheaper) or `wan-pro` |

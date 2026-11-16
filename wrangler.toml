@@ -37,7 +37,8 @@ migrations_dir = "migrations"
 # Remake worker (values are NOT stored in this file):
 #   AGNES_API_KEY                Pages secret. Do not commit. Primary reference model.
 #   AGNES_BASE_URL               optional text. Default https://api.agnes-ai.cn/v1
-#   VIDEO_PROVIDER               optional text: agnes (default) or bailian
+#   VIDEO_PROVIDER               optional text: agnes (default), bailian, or imagine
+#   XAI_API_KEY                  Pages secret. Do not commit. Used only when VIDEO_PROVIDER=imagine.
 #   BAILIAN_API_KEY              Pages secret. Do not commit. Fallback mix model.
 #   JOB_PROCESS_SECRET           Pages secret for POST /api/jobs/process
 # Pages cannot run a cron. workers/job-drain is a separate Worker

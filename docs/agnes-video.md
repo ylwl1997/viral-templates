@@ -12,6 +12,7 @@ Live pet looks do not fall through to `wan2.2-animate-mix`. If Agnes cannot run 
 |---|---|
 | unset or `agnes` | Agnes for templates that fit one reference job. Mix for everything else. |
 | `bailian` | Mix only. Agnes is not called. |
+| `imagine` | Official xAI `grok-imagine-video-1.5` for pack remakes. See [`imagine-video.md`](imagine-video.md). A set `XAI_API_KEY` does not select this by itself. |
 
 Set it in **Workers & Pages → viral-templates → Settings → Variables and Secrets**, for **Production** and **Preview**. Do not commit it.
 
@@ -90,7 +91,7 @@ Do not commit these. Do not put them in `wrangler.toml` or `.env`.
 |---|---|---|---|
 | `AGNES_API_KEY` | Secret | Yes, for Agnes | China Agnes API key. |
 | `AGNES_BASE_URL` | Text | No | Default `https://api.agnes-ai.cn/v1`. |
-| `VIDEO_PROVIDER` | Text | No | `agnes` (default) or `bailian`. |
+| `VIDEO_PROVIDER` | Text | No | `agnes` (default), `bailian`, or `imagine`. `imagine` is documented in [`imagine-video.md`](imagine-video.md). |
 | `BAILIAN_API_KEY` | Secret | Yes, for mix fallback | Still required for Ceiling Fan and for any Agnes refusal. |
 | `JOB_PROCESS_SECRET` | Secret | Yes | Unchanged. Not the Agnes key. |
 | `AUTH_SECRET` | Secret | Yes | Signs the photo URL Agnes fetches. |
